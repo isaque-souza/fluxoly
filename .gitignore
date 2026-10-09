@@ -42,6 +42,10 @@ htmlcov/
 # Gerado em runtime — não precisa ir pro repo
 integrations.json
 
+# Ferramenta pessoal do usuário (relatório de comissão), sempre local — não faz parte do Fluxoly
+scripts/relatorio_comissao_tecnico_mercadophone.py
+scripts/config/
+
 # Artefatos do graphify (knowledge graph local, não versionado)
 graphify-out/
 
