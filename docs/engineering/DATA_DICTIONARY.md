@@ -47,13 +47,13 @@ perfil autenticado, ver achado no topo do documento).
 **Quem vê:** qualquer perfil autenticado.
 **Origem:** formulário de nova OS (frontend) ou importação via integração MercadoPhone
 (`origem_integracao='mercado_phone'`).
-**Destino:** relatórios (IR Phones, Técnicos), dashboard, `shopping_list` (peças sugeridas).
+**Destino:** relatórios (Técnicos), dashboard, `shopping_list` (peças sugeridas).
 
 | Campo | Tipo | Obrigatório | Editável após criação? | Observação |
 |---|---|---|---|---|
 | `id` | INTEGER | — (auto) | Não | PK |
-| `tipo` | TEXT | Sim | Sim | `Assistencia`\|`Garantia`\|`Upgrade` |
-| `cliente` | TEXT | Sim | Sim | **Texto solto, não FK** — ver `docs/engineering/DOMAIN_MODEL.md` seção 2; valor especial `"IR Phones"` isenta a OS da validação de vendedor (BR-014) |
+| `tipo` | TEXT | Sim | Sim | `Assistencia`\|`Garantia` (opções exibidas; `Upgrade` removido em 2026-11-06, ADR-014 — o campo continua texto livre) |
+| `cliente` | TEXT | Sim | Sim | **Texto solto, não FK** — ver `docs/engineering/DOMAIN_MODEL.md` seção 2; sem valor especial desde 2026-11-06 (ADR-014) |
 | `aparelho` | TEXT | Sim (via `modelo`) | Sim | Espelha `modelo` |
 | `tecnico` | TEXT | Sim | Sim | Texto solto, não FK para `usuarios` |
 | `reparo_id` | INTEGER | Não | Sim (derivado) | Legado — 1 reparo; ver `os_reparos` para o modelo N:N atual |
@@ -66,7 +66,7 @@ perfil autenticado, ver achado no topo do documento).
 | `modelo` | TEXT | Sim | Sim | Normalizado via `normalizar_modelo_iphone` |
 | `cor` | TEXT | Não | Sim | — |
 | `imei` | TEXT | Não | Sim | Normalizado via `normalizar_imei`; **sem unicidade declarada** — dois registros de `os` podem ter o mesmo IMEI hoje |
-| `vendedor` | TEXT | Não | Sim | Deve ser vendedor cadastrado válido, exceto cliente `"IR Phones"` (BR-014) |
+| `vendedor` | TEXT | Não | Sim | Deve ser vendedor cadastrado válido (BR-014) |
 | `observacoes` | TEXT | Não | Sim | — |
 | `origem_integracao` / `id_externo_integracao` | TEXT | Não | Não (setado só na criação via integração) | Usado para deduplicação (`integracao_os_vistas`) |
 

@@ -11,7 +11,11 @@ do CTO: remover tudo que liga o sistema à IR Phones e desligar a integração M
 (com job CI `estoque_app` e workflow `estoque-sync.yml`); ADR-013 substituída, BR-070..082 revogadas —
 as pendências operacionais do app listadas abaixo deixam de valer e viram tarefas manuais do CTO
 (desligar projetos Vercel `estoque`/`estoque-fluxoly`, Upstash Redis, secrets do GitHub, revogar
-`MERCADOPHONE_API_KEY`). PR 2 (remover OS interna IR Phones) e PR 3 (flag
+`MERCADOPHONE_API_KEY`). PR 1 mergeado (#69). **PR 2 (`feat/remover-os-interna-ir-phones`):** OS interna IR Phones
+removida — tipo "Upgrade", campo `interna_ir_phones`, tabela de preço `ir_phones`, exclusão das
+garantias, relatório IR Phones (JSON/PDF/aba) e padrão `ir.phones.flow@gmail.com` do e-mail de backup;
+BR-014 sem exceção. Suíte backend 802 passed / 5 failed (as 5 = KI-030, limitação Windows local,
+idênticas na `main`), frontend 153/153, lint 0 erros, build ok. PR 3 (flag
 `MERCADO_PHONE_INTEGRATION_ENABLED`, desligada por padrão) a seguir. **Backend de produção no Render
 retirado do ar pelo CTO**; o banco será recriado do zero, sem dados herdados. Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela

@@ -54,7 +54,7 @@ Autenticação e perfis de acesso.
 | Coluna | Tipo | Observação |
 |--------|------|------------|
 | `id` | INTEGER | PK AUTOINCREMENT |
-| `tipo` | TEXT | `Assistencia` \| `Garantia` \| `Upgrade` |
+| `tipo` | TEXT | `Assistencia` \| `Garantia` (`Upgrade` removido das opções em 2026-11-06, ADR-014) |
 | `cliente` | TEXT | |
 | `aparelho` | TEXT | |
 | `tecnico` | TEXT | |
