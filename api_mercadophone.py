@@ -19,6 +19,7 @@ from datetime import datetime
 from flask import Blueprint, abort, jsonify, request, session
 
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
+import fluxoly_config
 from fluxoly_config import MERCADO_PHONE_WEBHOOK_TOKEN, integracao_externa_bloqueada_neste_ambiente
 from fluxoly_core import texto_limpo
 from fluxoly_logging import get_logger
@@ -35,6 +36,14 @@ logger = get_logger("api_mercadophone")
 
 def create_api_mercadophone_blueprint(deps):
     api_mercadophone = Blueprint("api_mercadophone", __name__, url_prefix="/api")
+
+    @api_mercadophone.before_request
+    def _bloquear_se_integracao_desligada():
+        # ADR-014: integração desligada por padrão -- todas as rotas do blueprint (inclusive o
+        # webhook) respondem 404, como se não existissem.
+        if not fluxoly_config.integracao_mercadophone_habilitada():
+            abort(404)
+
     conectar = deps["conectar"]
     sincronizar_mercado_phone = deps["sincronizar_mercado_phone"]
     reimportar_todas_os_mercado_phone = deps["reimportar_todas_os_mercado_phone"]

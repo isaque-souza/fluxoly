@@ -9,6 +9,15 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-06 — integração MercadoPhone desligada por padrão, ADR-014 PR 3/3)
+- **feat: flag `MERCADO_PHONE_INTEGRATION_ENABLED` (padrão `0`)** — com a flag desligada, todas as
+  rotas `/api/integracoes/mercadophone/*` (inclusive o webhook `/os`) respondem 404 e o sync em
+  background não inicia, mesmo com token no ambiente ou em `integrations.json`. O código da integração
+  permanece no repositório; religar com `MERCADO_PHONE_INTEGRATION_ENABLED=1`.
+- Frontend: removido o objeto `integracoes.mercadophone` de `client.js` (não era usado por nenhuma tela).
+- 6 testes novos (`tests/test_mercadophone_integracao_desligada.py`); a suíte liga a flag no
+  `conftest.py` para manter a cobertura das rotas existentes.
+
 ### Removido (2026-11-06 — OS interna IR Phones, ADR-014 PR 2/3)
 - **feat: remover a OS interna "IR Phones"** — sai a conversão do tipo "Upgrade" (e do campo
   `interna_ir_phones`) em OS interna com cliente "IR Phones"; o tipo "Upgrade" sai das opções

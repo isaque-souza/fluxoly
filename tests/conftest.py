@@ -8,6 +8,9 @@ _tmp_dir = tempfile.mkdtemp()
 os.environ["IR_FLOW_DATA_DIR"] = _tmp_dir
 os.environ["IR_FLOW_ENABLE_BACKGROUND_JOBS"] = "0"
 os.environ["MERCADO_PHONE_SYNC_ENABLED"] = "0"
+# ADR-014: a integração MercadoPhone é desligada por padrão; a suíte liga a flag para continuar cobrindo
+# as rotas existentes. O estado desligado é coberto em test_mercadophone_integracao_desligada.py.
+os.environ["MERCADO_PHONE_INTEGRATION_ENABLED"] = "1"
 # IR_FLOW_DATA_DIR acima liga IS_SERVER_RUNTIME em app.py, que agora exige
 # FLASK_SECRET_KEY (SECURITY_AUDIT_2026-07.md item 3) -- valor fixo só para teste,
 # nunca usado fora deste processo.

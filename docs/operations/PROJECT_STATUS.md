@@ -15,8 +15,10 @@ as pendências operacionais do app listadas abaixo deixam de valer e viram taref
 removida — tipo "Upgrade", campo `interna_ir_phones`, tabela de preço `ir_phones`, exclusão das
 garantias, relatório IR Phones (JSON/PDF/aba) e padrão `ir.phones.flow@gmail.com` do e-mail de backup;
 BR-014 sem exceção. Suíte backend 802 passed / 5 failed (as 5 = KI-030, limitação Windows local,
-idênticas na `main`), frontend 153/153, lint 0 erros, build ok. PR 3 (flag
-`MERCADO_PHONE_INTEGRATION_ENABLED`, desligada por padrão) a seguir. **Backend de produção no Render
+idênticas na `main`), frontend 153/153, lint 0 erros, build ok. PR 2 mergeado (#70). **PR 3 (`feat/desligar-integracao-mercadophone`):** flag
+`MERCADO_PHONE_INTEGRATION_ENABLED` (padrão `0`) — rotas MercadoPhone respondem 404 e o sync em
+background não inicia; código mantido no repositório. Suíte backend 808 passed / 5 failed (KI-030),
+frontend 153/153, lint 0 erros, build ok. PR #22 (teste do Render Preview, INC-003) fechada sem merge. **Backend de produção no Render
 retirado do ar pelo CTO**; o banco será recriado do zero, sem dados herdados. Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —
