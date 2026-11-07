@@ -60,7 +60,7 @@ Cada módulo tem uma responsabilidade única (SRP — ver `ENGINEERING_GUIDE.md`
 | `irflow_os.py` | Lógica de negócio de Ordens de Serviço (consumo/devolução de peças, validação de reparos) |
 | `irflow_price_tables.py` | Tabela de preços por modelo/reparo e endpoint de sugestão de valor |
 | `irflow_reference_data.py` | Dados de referência (modelos de iPhone, cores, técnicos, vendedores) |
-| `irflow_reports.py` | Geração de relatórios agregados e PDF (IR Phones, Técnicos) |
+| `irflow_reports.py` | Geração de relatórios agregados e PDF (Técnicos, Custos Operacionais) |
 | `irflow_storage.py` | Backup (local, e-mail, Google Drive) |
 | `irflow_mercadophone.py` | Integração externa com o sistema MercadoPhone (importação de OS, sincronização por webhook/polling) |
 | `irflow_web.py` | Utilitário de redirecionamento com preservação de query string |

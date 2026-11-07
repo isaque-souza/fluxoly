@@ -12,26 +12,12 @@ from fluxoly_api_helpers import err, ok, usuario_logado
 
 def create_api_reports_blueprint(deps):
     api_reports = Blueprint("api_reports", __name__, url_prefix="/api")
-    agrupar_relatorio_ir_phones = deps["agrupar_relatorio_ir_phones"]
     agrupar_relatorio_tecnicos = deps["agrupar_relatorio_tecnicos"]
     agrupar_relatorio_custos_operacionais = deps["agrupar_relatorio_custos_operacionais"]
-    montar_linhas_relatorio_ir_phones = deps["montar_linhas_relatorio_ir_phones"]
     montar_linhas_relatorio_tecnicos = deps["montar_linhas_relatorio_tecnicos"]
     montar_linhas_relatorio_custos_operacionais = deps["montar_linhas_relatorio_custos_operacionais"]
     formatar_periodo_relatorio = deps["formatar_periodo_relatorio"]
     montar_pdf_texto = deps["montar_pdf_texto"]
-
-    @api_reports.route("/relatorios/ir-phones")
-    def relatorio_ir_phones():
-        if not usuario_logado():
-            return err("Não autenticado.", 401)
-
-        start_date = (request.args.get("start_date") or "").strip()
-        end_date = (request.args.get("end_date") or "").strip()
-        resumo = agrupar_relatorio_ir_phones(start_date, end_date)
-        total_os = sum(v["total_os"] for v in resumo.values())
-        total_lucro = sum(v["lucro"] for v in resumo.values())
-        return ok(meses=resumo, total_os=total_os, total_lucro=round(total_lucro, 2))
 
     @api_reports.route("/relatorios/tecnicos")
     def relatorio_tecnicos():
@@ -65,21 +51,6 @@ def create_api_reports_blueprint(deps):
             total_lancamentos=total_lancamentos,
             total_custos=round(total_custos, 2),
             categorias=categorias_ordenadas,
-        )
-
-    @api_reports.route("/relatorios/pdf/ir-phones")
-    def pdf_ir_phones():
-        if not usuario_logado():
-            return err("Não autenticado.", 401)
-        data_inicio = (request.args.get("start_date") or "").strip()
-        data_fim = (request.args.get("end_date") or "").strip()
-        linhas = montar_linhas_relatorio_ir_phones(data_inicio, data_fim)
-        periodo = formatar_periodo_relatorio(data_inicio, data_fim)
-        return montar_pdf_texto(
-            "Relatorio Mensal - IR Phones",
-            f"Servicos finalizados, gastos com pecas e lucro. Periodo: {periodo}",
-            linhas,
-            "relatorio-ir-phones.pdf",
         )
 
     @api_reports.route("/relatorios/pdf/tecnicos")

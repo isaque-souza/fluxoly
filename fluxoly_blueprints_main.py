@@ -6,7 +6,6 @@ from fluxoly_web import redirecionar_com_query_string
 def create_main_blueprint(deps):
     bp = Blueprint("main_views", __name__)
     formatar_periodo_relatorio = deps["formatar_periodo_relatorio"]
-    montar_linhas_relatorio_ir_phones = deps["montar_linhas_relatorio_ir_phones"]
     montar_linhas_relatorio_tecnicos = deps["montar_linhas_relatorio_tecnicos"]
     montar_pdf_texto = deps["montar_pdf_texto"]
     backup_dir = deps["backup_dir"]
@@ -19,19 +18,6 @@ def create_main_blueprint(deps):
     @bp.route("/index.html")
     def index():
         return redirecionar_com_query_string(request, "/app")
-
-    @bp.route("/relatorios/pdf/ir-phones")
-    def relatorio_pdf_ir_phones():
-        data_inicio = (request.args.get("start_date") or request.args.get("data_ini") or "").strip()
-        data_fim = (request.args.get("end_date") or request.args.get("data_fim") or "").strip()
-        linhas = montar_linhas_relatorio_ir_phones(data_inicio, data_fim)
-        periodo = formatar_periodo_relatorio(data_inicio, data_fim)
-        return montar_pdf_texto(
-            "Relatorio Mensal - IR Phones",
-            f"Servicos finalizados, gastos com pecas e lucro. Periodo: {periodo}",
-            linhas,
-            "relatorio-ir-phones.pdf",
-        )
 
     @bp.route("/relatorios")
     def relatorios():

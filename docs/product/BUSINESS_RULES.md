@@ -101,10 +101,12 @@ sem reenviar `status` a reabria e apagava `data_finalizado` sem erro. Corrigido 
 existiam prontas na branch `test/sprint-2-4-regras-negocio-os` desde 2026-07-07 mas nunca haviam chegado
 a `main`.
 
-**BR-014 — ✅ Implementado**
-O vendedor informado em uma OS deve ser um vendedor cadastrado válido, **exceto** quando o cliente é
-`"IR Phones"` — um bucket interno de relatório, isento dessa validação.
-*Fonte: `irflow_os.py::vendedor_valido`, usado em `atualizar_ordem`.*
+**BR-014 — ✅ Implementado (exceção revogada em 2026-11-06, ADR-014)**
+O vendedor informado em uma OS deve ser um vendedor cadastrado válido, sem exceção. Até 2026-11-06 o
+cliente `"IR Phones"` (bucket interno de relatório) era isento dessa validação, e o tipo "Upgrade" / campo
+`interna_ir_phones` convertiam a OS em OS interna IR Phones (tabela de preço `ir_phones`, fora da lista
+de garantias, relatório mensal próprio). Tudo isso foi removido no desvínculo com a IR Phones (ADR-014).
+*Fonte: `irflow_os.py::vendedor_valido`, usado em `criar_ordem` e `atualizar_ordem`.*
 
 ---
 
@@ -351,7 +353,7 @@ visão inteira.
 **BR-045 — ✅ Implementado (2026-07-29, V1.4, `7076c79`)**
 Escopo de acesso do `financeiro` nesta sprint: histórico e Detalhe de vendas (`GET /api/vendas`,
 `GET /api/vendas/<id>` — já existentes, hoje liberados a qualquer perfil autenticado), Dashboard, e os
-relatórios já existentes (IR Phones, Técnicos, Custos Operacionais). Nenhuma rota nova de leitura é criada
+relatórios já existentes (Técnicos, Custos Operacionais — o relatório IR Phones foi removido em 2026-11-06, ADR-014). Nenhuma rota nova de leitura é criada
 para isso — é extensão de permissão sobre rotas já existentes, mais a nova capacidade de atribuir
 comissão (BR-048).
 *Fonte: `VENDAS.md` — "V1.4 — Comissão".*

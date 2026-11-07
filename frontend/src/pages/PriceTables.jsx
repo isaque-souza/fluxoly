@@ -17,7 +17,6 @@ import {
 import { formatCurrency } from "@/lib/constants";
 
 const TABELAS = [
-  { id: "ir_phones", label: "IR Phones (Interna)" },
   { id: "clientes",  label: "Clientes" },
 ];
 
@@ -30,7 +29,7 @@ export default function PriceTables() {
   const [modelos, setModelos]       = useState([]);
 
   const [dialog, setDialog]         = useState(false);
-  const [form, setForm]             = useState({ tabela: "ir_phones", servico: "", modelo: "", valor: "" });
+  const [form, setForm]             = useState({ tabela: "clientes", servico: "", modelo: "", valor: "" });
   const [submitting, setSubmitting] = useState(false);
   const [toDelete, setToDelete]     = useState(null); // { tabela, servico, modelo }
 
@@ -73,7 +72,7 @@ export default function PriceTables() {
       if (res?.ok) {
         toast.success("Entrada salva!");
         setDialog(false);
-        setForm({ tabela: "ir_phones", servico: "", modelo: "", valor: "" });
+        setForm({ tabela: "clientes", servico: "", modelo: "", valor: "" });
         fetchData();
       } else toast.error(res?.erro || "Erro ao salvar");
     } catch { toast.error("Erro ao salvar"); }

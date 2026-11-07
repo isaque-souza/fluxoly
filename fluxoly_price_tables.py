@@ -7,7 +7,7 @@ from fluxoly_reference_data import IPHONE_ALIAS_MAP, normalizar_modelo_iphone
 
 
 def tabelas_preco_vazias():
-    return {"ir_phones": {}, "clientes": {}}
+    return {"clientes": {}}
 
 
 _SERVICO_STOPWORDS = {"troca", "reparo", "de", "do", "da", "dos", "das", "com"}
@@ -233,7 +233,6 @@ def carregar_tabelas_preco(caminho_arquivo):
     except (OSError, json.JSONDecodeError):
         return tabelas_preco_vazias()
     return {
-        "ir_phones": _normalizar_tabela_preco((tabelas or {}).get("ir_phones", {})),
         "clientes": _normalizar_tabela_preco((tabelas or {}).get("clientes", {})),
     }
 

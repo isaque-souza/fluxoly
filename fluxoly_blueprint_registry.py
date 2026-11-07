@@ -112,11 +112,9 @@ from fluxoly_reference_data import (
 )
 from fluxoly_reports import (
     agrupar_relatorio_custos_operacionais,
-    agrupar_relatorio_ir_phones,
     agrupar_relatorio_tecnicos,
     formatar_periodo_relatorio,
     montar_linhas_relatorio_custos_operacionais,
-    montar_linhas_relatorio_ir_phones,
     montar_linhas_relatorio_tecnicos,
     montar_pdf_texto,
     texto_reparos_os,
@@ -183,12 +181,8 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
                 "calcular_lucro_os": calcular_lucro_os,
                 "listar_custos_operacionais": runtime.listar_custos_operacionais,
                 "categorias_custos_operacionais": CATEGORIAS_CUSTOS_OPERACIONAIS,
-                "agrupar_relatorio_ir_phones": functools.partial(agrupar_relatorio_ir_phones, conectar=conectar),
                 "agrupar_relatorio_tecnicos": functools.partial(agrupar_relatorio_tecnicos, conectar=conectar),
                 "formatar_periodo_relatorio": formatar_periodo_relatorio,
-                "montar_linhas_relatorio_ir_phones": functools.partial(
-                    montar_linhas_relatorio_ir_phones, conectar=conectar
-                ),
                 "montar_linhas_relatorio_tecnicos": functools.partial(
                     montar_linhas_relatorio_tecnicos, conectar=conectar
                 ),
@@ -302,13 +296,9 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
     app.register_blueprint(
         create_api_reports_blueprint(
             {
-                "agrupar_relatorio_ir_phones": functools.partial(agrupar_relatorio_ir_phones, conectar=conectar),
                 "agrupar_relatorio_tecnicos": functools.partial(agrupar_relatorio_tecnicos, conectar=conectar),
                 "agrupar_relatorio_custos_operacionais": functools.partial(
                     agrupar_relatorio_custos_operacionais, conectar=conectar
-                ),
-                "montar_linhas_relatorio_ir_phones": functools.partial(
-                    montar_linhas_relatorio_ir_phones, conectar=conectar
                 ),
                 "montar_linhas_relatorio_tecnicos": functools.partial(
                     montar_linhas_relatorio_tecnicos, conectar=conectar

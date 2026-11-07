@@ -375,11 +375,6 @@ export const vendas = {
 
 // ── Relatórios ───────────────────────────────────────────────────────────────
 export const relatorios = {
-  irphones:  (params = {}) => {
-    const normalized = normalizeQueryParams(params);
-    const qs = new URLSearchParams(normalized).toString();
-    return get(`/relatorios/ir-phones${qs ? "?" + qs : ""}`);
-  },
   tecnicos:  (params = {}) => {
     const normalized = normalizeQueryParams(params);
     const qs = new URLSearchParams(normalized).toString();
@@ -393,14 +388,14 @@ export const relatorios = {
   pdfUrl:    (tipo, params = {}) => {
     const normalized = normalizeQueryParams(params);
     const qs = new URLSearchParams(normalized).toString();
-    const endpoint = tipo === "irphones" ? "ir-phones" : tipo === "custos" ? "custos-operacionais" : tipo;
+    const endpoint = tipo === "custos" ? "custos-operacionais" : tipo;
     return `${BASE}/relatorios/pdf/${endpoint}${qs ? "?" + qs : ""}`;
   },
   downloadPdf: async (tipo, params = {}, fileName = "") => {
     // Faz download do PDF com autenticação (credentials inclusos)
     const normalized = normalizeQueryParams(params);
     const qs = new URLSearchParams(normalized).toString();
-    const endpoint = tipo === "irphones" ? "ir-phones" : tipo === "custos" ? "custos-operacionais" : tipo;
+    const endpoint = tipo === "custos" ? "custos-operacionais" : tipo;
     const url = `${BASE}/relatorios/pdf/${endpoint}${qs ? "?" + qs : ""}`;
     
     try {

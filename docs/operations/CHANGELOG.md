@@ -9,6 +9,20 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Removido (2026-11-06 — OS interna IR Phones, ADR-014 PR 2/3)
+- **feat: remover a OS interna "IR Phones"** — sai a conversão do tipo "Upgrade" (e do campo
+  `interna_ir_phones`) em OS interna com cliente "IR Phones"; o tipo "Upgrade" sai das opções
+  (`OS_TIPOS_OPCOES`, `OS_TYPES_FALLBACK`). A validação de vendedor (BR-014) passa a valer para todo
+  cliente. OS com cliente "IR Phones" deixam de ser excluídas da lista de garantias.
+- **Tabela de preço `ir_phones` removida** — `/api/precos` só aceita `clientes`; Nova/Editar OS sempre
+  sugerem preço pela tabela `clientes`; uma chave `ir_phones` legada no arquivo é descartada na leitura.
+- **Relatório mensal IR Phones removido** — rotas `/api/relatorios/ir-phones`,
+  `/api/relatorios/pdf/ir-phones` e `/relatorios/pdf/ir-phones`, funções em `fluxoly_reports.py` e a aba
+  em `Reports.jsx` (a tela agora abre em "Técnicos").
+- **E-mail de backup sem padrão da IR Phones** — `IR_FLOW_BACKUP_EMAIL`/`IR_FLOW_BACKUP_EMAIL_DESTINO`
+  deixam de ter `ir.phones.flow@gmail.com` como padrão (vazio = envio desligado).
+- `installer.iss`: publisher passa de "IR Phones" para "Fluxoly".
+
 ### Removido (2026-11-06 — app "Lista de Aparelhos Disponíveis", ADR-014)
 - **chore: remover `apps/lista-aparelhos-disponiveis/`** — o app standalone de estoque da IR Phones
   (ADR-013) sai do repositório, junto com o job de CI `estoque_app` e o workflow `estoque-sync.yml`

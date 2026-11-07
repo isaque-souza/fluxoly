@@ -114,7 +114,7 @@ separado hoje está registrado como está — ver seção 3.
 
 | Aspecto | Hoje |
 |---|---|
-| Responsabilidade | Agregações e exportação em PDF (IR Phones, Técnicos) |
+| Responsabilidade | Agregações e exportação em PDF (Técnicos, Custos Operacionais) |
 | Lógica | `irflow_reports.py` |
 | HTTP | `irflow_blueprints_main.py` (views legadas `/relatorios`); rotas de PDF em `irflow_blueprints_api.py` |
 | Frontend | Tela de relatórios |
