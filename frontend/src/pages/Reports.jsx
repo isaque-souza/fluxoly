@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/constants";
 
 const TABS = [
-  { key: "irphones", label: "IR Phones" },
   { key: "tecnicos", label: "Técnicos" },
   { key: "custos", label: "Custos Operacionais" },
 ];
@@ -36,7 +35,7 @@ function formatMonthLabel(key) {
 
 export default function Reports() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("irphones");
+  const [activeTab, setActiveTab] = useState("tecnicos");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,11 +61,9 @@ export default function Reports() {
       const params = {};
       if (startDate) params.start_date = startDate;
       if (endDate) params.end_date = endDate;
-      const fn = activeTab === "irphones"
-        ? relatoriosApi.irphones
-        : activeTab === "tecnicos"
-          ? relatoriosApi.tecnicos
-          : relatoriosApi.custosOperacionais;
+      const fn = activeTab === "tecnicos"
+        ? relatoriosApi.tecnicos
+        : relatoriosApi.custosOperacionais;
       const res = await fn(params);
       if (res?.ok) setResults(res);
       else toast.error(res?.erro || "Erro ao gerar relatório");
@@ -84,7 +81,6 @@ export default function Reports() {
       if (endDate) params.end_date = endDate;
       
       const tipoMap = {
-        irphones: "irphones",
         tecnicos: "tecnicos",
         custos: "custos",
       };
@@ -152,58 +148,6 @@ export default function Reports() {
       {loading && (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      )}
-
-      {results && activeTab === "irphones" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { label: "Total OS", value: results.total_os ?? "—" },
-              { label: "Lucro Total", value: formatCurrency(results.total_lucro) },
-              { label: "Meses", value: monthlyRows.length },
-              { label: "Média por mês", value: monthlyRows.length ? Math.round((results.total_os || 0) / monthlyRows.length) : 0 },
-            ].map((s) => (
-              <div key={s.label} className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xl font-bold text-card-foreground">{s.value}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {monthlyRows.length > 0 && (
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      {["Mês", "OS", "Faturamento", "Gastos", "Lucro", "Serviços"].map((h) => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {monthlyRows.map(([month, summary]) => (
-                      <tr key={month} className="hover:bg-accent/30">
-                        <td className="px-4 py-2 font-medium text-card-foreground">{formatMonthLabel(month)}</td>
-                        <td className="px-4 py-2 text-muted-foreground">{summary.total_os}</td>
-                        <td className="px-4 py-2 text-card-foreground">{formatCurrency(summary.faturamento)}</td>
-                        <td className="px-4 py-2 text-destructive">{formatCurrency(summary.gastos)}</td>
-                        <td className="px-4 py-2 text-success font-medium">{formatCurrency(summary.lucro)}</td>
-                        <td className="px-4 py-2 text-muted-foreground">
-                          {Object.entries(summary.servicos || {})
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, 2)
-                            .map(([name, count]) => `${name} (${count})`)
-                            .join(", ") || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

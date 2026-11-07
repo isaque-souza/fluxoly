@@ -251,49 +251,6 @@ def buscar_dados_relatorios(conectar):
     return ordens, custos, reparos_por_os
 
 
-def agrupar_relatorio_ir_phones(data_inicio="", data_fim="", conectar=None):
-    """Agrega dados de relatorio para IR Phones por mes."""
-    ordens, custos, reparos_por_os = buscar_dados_relatorios(conectar)
-    meses = defaultdict(lambda: {
-        "total_os": 0,
-        "faturamento": 0.0,
-        "gastos": 0.0,
-        "lucro": 0.0,
-        "servicos": defaultdict(int),
-    })
-
-    for row in ordens:
-        os_id, cliente, tecnico, tipo, status, valor_cobrado, valor_descontado, data_os, data_finalizado, modelo = row
-        if normalizar_status_os(status) != STATUS_FINALIZADO:
-            continue
-        if (cliente or "").strip().lower() != "ir phones":
-            continue
-
-        data_ref = obter_data_referencia_os(data_finalizado, data_os)
-        if not data_ref:
-            continue
-        if data_inicio and data_ref < data_inicio:
-            continue
-        if data_fim and data_ref > data_fim:
-            continue
-
-        chave_mes = data_ref[:7]
-        custo = custos.get(os_id, 0)
-        faturamento = calcular_faturamento_os(valor_cobrado, valor_descontado)
-        lucro = calcular_lucro_os(tipo, valor_cobrado, valor_descontado, custo)
-        servicos = reparos_por_os.get(os_id, {}).get("nomes", []) or [tipo or "Servico nao informado"]
-
-        bucket = meses[chave_mes]
-        bucket["total_os"] += 1
-        bucket["faturamento"] += faturamento
-        bucket["gastos"] += custo
-        bucket["lucro"] += lucro
-        for servico in servicos:
-            bucket["servicos"][servico] += 1
-
-    return dict(sorted(meses.items()))
-
-
 def agrupar_relatorio_tecnicos(data_inicio="", data_fim="", conectar=None):
     """Agrega dados de relatorio por tecnico e mes."""
     ordens, custos, reparos_por_os = buscar_dados_relatorios(conectar)
@@ -400,72 +357,6 @@ def agrupar_relatorio_custos_operacionais(data_inicio="", data_fim="", conectar=
             "itens": resumo["itens"],
         }
     return resultado
-
-
-def montar_linhas_relatorio_ir_phones(data_inicio="", data_fim="", conectar=None):
-    """Monta linhas de relatorio formatadas para IR Phones."""
-    agrupado = agrupar_relatorio_ir_phones(data_inicio, data_fim, conectar)
-    linhas = []
-    total_geral_os = 0
-    total_geral_faturamento = 0.0
-    total_geral_gastos = 0.0
-    total_geral_lucro = 0.0
-
-    if not agrupado:
-        linhas.append("Nenhuma OS finalizada da IR Phones encontrada para o periodo informado.")
-        return linhas
-
-    for chave_mes, resumo in agrupado.items():
-        total_geral_os += resumo["total_os"]
-        total_geral_faturamento += resumo["faturamento"]
-        total_geral_gastos += resumo["gastos"]
-        total_geral_lucro += resumo["lucro"]
-
-        linhas.append(f"IR PHONES - {formatar_mes_referencia(chave_mes)}")
-        linhas.append("-" * 92)
-        linhas.append(
-            linha_tabela(
-                [
-                    limitar_texto("OS finalizadas", 18),
-                    limitar_texto("Faturamento", 16),
-                    limitar_texto("Gasto pecas", 16),
-                    limitar_texto("Lucro", 16),
-                    limitar_texto("Ticket medio", 16),
-                ]
-            )
-        )
-        ticket_medio = resumo["faturamento"] / resumo["total_os"] if resumo["total_os"] else 0
-        linhas.append(
-            linha_tabela(
-                [
-                    limitar_texto(str(resumo["total_os"]), 18),
-                    limitar_texto(moeda_pdf(resumo["faturamento"]), 16),
-                    limitar_texto(moeda_pdf(resumo["gastos"]), 16),
-                    limitar_texto(moeda_pdf(resumo["lucro"]), 16),
-                    limitar_texto(moeda_pdf(ticket_medio), 16),
-                ]
-            )
-        )
-        linhas.append("")
-        linhas.append("Servicos realizados no mes")
-        linhas.append(linha_tabela([limitar_texto("Servico", 56), limitar_texto("Quantidade", 12)]))
-        for servico, quantidade in sorted(resumo["servicos"].items(), key=lambda item: (-item[1], item[0])):
-            linhas.append(linha_tabela([limitar_texto(servico, 56), limitar_texto(str(quantidade), 12)]))
-        linhas.append("")
-
-    linhas.append("=" * 92)
-    linhas.append("RESUMO GERAL DO PERIODO")
-    linhas.append(
-        linha_tabela(
-            [
-                limitar_texto(f"OS: {total_geral_os}", 18),
-                limitar_texto(f"Fat.: {moeda_pdf(total_geral_faturamento)}", 22),
-                limitar_texto(f"Gastos: {moeda_pdf(total_geral_gastos)}", 22),
-                limitar_texto(f"Lucro: {moeda_pdf(total_geral_lucro)}", 22),
-            ]
-        )
-    )
-    return linhas
 
 
 def montar_linhas_relatorio_tecnicos(data_inicio="", data_fim="", conectar=None):

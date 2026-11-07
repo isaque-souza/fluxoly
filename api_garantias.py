@@ -82,8 +82,6 @@ def create_api_garantias_blueprint(deps):
                 tipo_garantia_id,
                 garantia_data_fim_raw,
             ) = r
-            if (cliente or "").strip().lower() == "ir phones":
-                continue
             if q and q not in f"{cliente} {modelo} {imei} {reparo_nome}".lower():
                 continue
 

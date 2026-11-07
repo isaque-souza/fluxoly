@@ -142,34 +142,31 @@ class TestCriarOrdemValida:
         assert sorted(detalhe["reparo_ids"]) == sorted(dois_reparos_ids)
         _limpar_os(os_id)
 
-    def test_tipo_upgrade_e_normalizado_para_assistencia_com_cliente_ir_phones(
-        self, client, login_como, usuario_tecnico, payload_os_valido
-    ):
+    def test_tipo_upgrade_nao_sobrescreve_o_cliente(self, client, login_como, usuario_tecnico, payload_os_valido):
+        """ADR-014: a conversão "Upgrade → OS interna IR Phones" foi removida -- o cliente informado é mantido."""
         login_como(client, usuario_tecnico)
 
         resp = client.post("/api/ordens", json=payload_os_valido(tipo="Upgrade", cliente="Qualquer Um"))
 
         os_id = resp.get_json()["os_id"]
         row = _obter_os_no_banco(os_id)
-        assert row[0] == "Assistencia"
-        assert row[1] == "IR Phones"
+        assert row[1] == "Qualquer Um"
         _limpar_os(os_id)
 
-    def test_interna_ir_phones_forca_cliente_e_zera_vendedor(
-        self, client, login_como, usuario_tecnico, payload_os_valido
-    ):
+    def test_flag_interna_ir_phones_e_ignorada(self, client, login_como, usuario_tecnico, payload_os_valido):
+        """ADR-014: o campo legado `interna_ir_phones` não altera mais cliente nem vendedor."""
         login_como(client, usuario_tecnico)
 
         resp = client.post(
             "/api/ordens",
-            json=payload_os_valido(interna_ir_phones=True, cliente="Sera Sobrescrito", vendedor="Camila"),
+            json=payload_os_valido(interna_ir_phones=True, cliente="Cliente Real", vendedor="Camila"),
         )
 
         os_id = resp.get_json()["os_id"]
         row = _obter_os_no_banco(os_id)
         assert row[0] == "Assistencia"
-        assert row[1] == "IR Phones"
-        assert row[7] == ""
+        assert row[1] == "Cliente Real"
+        assert row[7] == "Camila"
         _limpar_os(os_id)
 
 
@@ -233,18 +230,17 @@ class TestCriarOrdemDependencias:
 
         assert resp.status_code == 400
 
-    def test_vendedor_invalido_e_ignorado_quando_cliente_e_ir_phones(
+    def test_vendedor_invalido_rejeitado_mesmo_com_cliente_ir_phones(
         self, client, login_como, usuario_tecnico, payload_os_valido
     ):
-        """vendedor_valido() só é checado quando cliente != 'IR Phones' (fluxoly_blueprints_api.py::criar_ordem)."""
+        """ADR-014: a exceção que pulava vendedor_valido() para o cliente 'IR Phones' foi removida."""
         login_como(client, usuario_tecnico)
 
         resp = client.post(
             "/api/ordens", json=payload_os_valido(cliente="IR Phones", vendedor="Vendedor Que Nao Existe")
         )
 
-        assert resp.status_code == 201
-        _limpar_os(resp.get_json()["os_id"])
+        assert resp.status_code == 400
 
     def test_tecnico_fora_da_lista_canonica_e_aceito(self, client, login_como, usuario_tecnico, payload_os_valido):
         """

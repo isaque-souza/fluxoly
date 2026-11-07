@@ -63,7 +63,7 @@ export default function NewOrder() {
       return;
     }
 
-    const tabela = form.tipo === "Upgrade" ? "ir_phones" : "clientes";
+    const tabela = "clientes";
     precosApi.sugerir({
       modelo: form.modelo,
       reparo_ids: selectedReparos.join(","),
@@ -78,7 +78,7 @@ export default function NewOrder() {
         setSuggestedPrice(null);
       }
     });
-  }, [form.modelo, form.tipo, form.valor_cobrado, selectedReparos]);
+  }, [form.modelo, form.valor_cobrado, selectedReparos]);
 
   const toggleReparo = (id) => {
     setSelectedReparos((prev) =>

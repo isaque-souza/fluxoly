@@ -30,9 +30,18 @@ from fluxoly_price_tables import (
 
 
 class TestTabelasPrecoVazias:
-    def test_estrutura_padrao_tem_as_duas_tabelas(self):
+    def test_estrutura_padrao_tem_so_a_tabela_clientes(self):
+        """ADR-014: a tabela interna `ir_phones` foi removida."""
         vazio = tabelas_preco_vazias()
-        assert vazio == {"ir_phones": {}, "clientes": {}}
+        assert vazio == {"clientes": {}}
+
+    def test_tabela_ir_phones_legada_no_arquivo_e_descartada_na_leitura(self, tmp_path):
+        caminho = tmp_path / "precos.json"
+        bruto = {"clientes": {}, "ir_phones": {"TROCA DE TELA": {"iPhone 13": 100.0}}}
+        with open(caminho, "w", encoding="utf-8") as f:
+            json.dump(bruto, f)
+
+        assert "ir_phones" not in carregar_tabelas_preco(str(caminho))
 
 
 class TestCarregarTabelasPreco:
@@ -47,7 +56,7 @@ class TestCarregarTabelasPreco:
 
     def test_round_trip_salvar_e_carregar_preserva_valor(self, tmp_path):
         caminho = tmp_path / "precos.json"
-        tabelas = {"clientes": {"TROCA DE TELA": {"iPhone 13": 350.0}}, "ir_phones": {}}
+        tabelas = {"clientes": {"TROCA DE TELA": {"iPhone 13": 350.0}}}
 
         salvar_tabelas_preco(str(caminho), tabelas)
         carregado = carregar_tabelas_preco(str(caminho))
@@ -57,7 +66,7 @@ class TestCarregarTabelasPreco:
     def test_carregar_normaliza_modelo_e_servico(self, tmp_path):
         caminho = tmp_path / "precos.json"
         # servico em minusculo, modelo com variacao de escrita — devem ser normalizados na leitura
-        bruto = {"clientes": {"troca de tela": {"iphone 13 pro max": 450.0}}, "ir_phones": {}}
+        bruto = {"clientes": {"troca de tela": {"iphone 13 pro max": 450.0}}}
         with open(caminho, "w", encoding="utf-8") as f:
             json.dump(bruto, f)
 
@@ -270,3 +279,32 @@ class TestPrecosAdmin:
             json={"tabela": "clientes", "servico": "NAO EXISTE", "modelo": "Nao Existe"},
         )
         assert resp.status_code == 404
+
+
+class TestTabelaIrPhonesRemovida:
+    """ADR-014: a tabela de preço interna `ir_phones` deixou de existir."""
+
+    def test_salvar_na_tabela_ir_phones_retorna_400(self, client, login_como, usuario_admin):
+        login_como(client, usuario_admin)
+        resp = client.post(
+            "/api/precos",
+            json={"tabela": "ir_phones", "servico": "TROCA DE TELA", "modelo": "iPhone 13", "valor": 100.0},
+        )
+        assert resp.status_code == 400
+
+    def test_excluir_da_tabela_ir_phones_retorna_400(self, client, login_como, usuario_admin):
+        login_como(client, usuario_admin)
+        resp = client.post(
+            "/api/precos/excluir",
+            json={"tabela": "ir_phones", "servico": "TROCA DE TELA", "modelo": "iPhone 13"},
+        )
+        assert resp.status_code == 400
+
+
+class TestRelatorioIrPhonesRemovido:
+    """ADR-014: o relatório mensal IR Phones (JSON e PDF) foi removido."""
+
+    def test_rotas_do_relatorio_ir_phones_nao_existem(self, client, login_como, usuario_admin):
+        login_como(client, usuario_admin)
+        for rota in ("/api/relatorios/ir-phones", "/api/relatorios/pdf/ir-phones", "/relatorios/pdf/ir-phones"):
+            assert client.get(rota).status_code == 404, rota

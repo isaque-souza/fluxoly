@@ -739,8 +739,6 @@ def obter_alertas_sistema(limit=8):
     for os_id, cliente, _modelo, data_finalizado, data_os, status in cursor.fetchall():
         if normalizar_status_os(status) != STATUS_FINALIZADO:
             continue
-        if (cliente or "").strip().lower() == "ir phones":
-            continue
         inicio = parse_data_ymd(data_finalizado) or parse_data_ymd(data_os)
         if not inicio:
             continue
@@ -866,7 +864,6 @@ ROUTE_PERMISSIONS: dict[str, list[str] | None] = {
     "main_views.relatorios": ["admin"],
     "main_views.backup": ["admin"],
     "main_views.backup_download": ["admin"],
-    "main_views.relatorio_pdf_ir_phones": ["admin"],
     "main_views.relatorio_pdf_tecnicos": ["admin"],
 }
 

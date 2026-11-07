@@ -588,22 +588,13 @@ def create_api_os_blueprint(deps):
         data = (body.get("data_os") or "").strip() or datetime.now().strftime("%Y-%m-%d")
         status_raw = (body.get("status") or "Em andamento").strip()
 
-        # Upgrade → internal
-        if tipo.lower() == "upgrade":
-            tipo = "Assistencia"
-            cliente = "IR Phones"
-        if body.get("interna_ir_phones"):
-            tipo = "Assistencia"
-            cliente = "IR Phones"
-            vendedor = ""
-
         status = normalizar_status_os(status_raw)
 
         if not tipo or not cliente or not modelo or not tecnico or valor_cobrado is None or valor_descontado is None:
             return err("Preencha tipo, cliente, modelo, técnico e valores válidos.")
         if not reparo_ids:
             return err("Selecione ao menos um reparo.")
-        if not vendedor_valido(vendedor, vendedores) and cliente != "IR Phones":
+        if not vendedor_valido(vendedor, vendedores):
             return err("Vendedor inválido.")
 
         conn = conectar()
@@ -702,7 +693,7 @@ def create_api_os_blueprint(deps):
             return err("Preencha todos os campos obrigatórios.")
         if not reparo_ids:
             return err("Selecione ao menos um reparo.")
-        if not vendedor_valido(vendedor, vendedores) and cliente != "IR Phones":
+        if not vendedor_valido(vendedor, vendedores):
             return err("Vendedor inválido.")
 
         conn = conectar()

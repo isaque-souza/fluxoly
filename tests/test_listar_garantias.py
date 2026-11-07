@@ -105,12 +105,15 @@ class TestListarGarantiasPorLinhaDeReparo:
         resp = client.get(f"/api/garantias?q={nome}")
         assert any(g["id"] == os_id for g in resp.get_json()["ordens"])
 
-    def test_ir_phones_excluido(self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id):
+    def test_cliente_ir_phones_tratado_como_cliente_comum(
+        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id
+    ):
+        """ADR-014: a exclusão do cliente 'IR Phones' da lista de garantias foi removida."""
         login_como(client, usuario_tecnico)
         os_id = criar_os(status="Finalizado", cliente="IR Phones", reparo_ids=[reparo_padrao_id])
 
         resp = client.get("/api/garantias")
-        assert all(g["id"] != os_id for g in resp.get_json()["ordens"])
+        assert any(g["id"] == os_id for g in resp.get_json()["ordens"])
 
     def test_os_nao_finalizada_nao_aparece(self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id):
         login_como(client, usuario_tecnico)

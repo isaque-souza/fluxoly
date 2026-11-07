@@ -1,7 +1,7 @@
 #define MyAppName "IR FLOW"
 #define MyAppVersion "1.0.2"
-#define MyAppPublisher "IR Phones"
-#define MyAppURL "https://irphones.local"
+#define MyAppPublisher "Fluxoly"
+#define MyAppURL "https://fluxoly.com"
 #define MyAppExeName "IR FLOW.exe"
 
 [Setup]

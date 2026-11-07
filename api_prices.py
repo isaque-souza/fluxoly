@@ -34,7 +34,7 @@ def create_api_prices_blueprint(deps):
         modelo = (body.get("modelo") or "").strip()
         valor = parse_float(body.get("valor"), default=-1.0)
 
-        if tabela not in ("ir_phones", "clientes"):
+        if tabela != "clientes":
             return err("Tabela inválida.")
         if not servico or not modelo or valor is None or valor < 0:
             return err("Preencha serviço, modelo e valor.")
@@ -54,7 +54,7 @@ def create_api_prices_blueprint(deps):
         servico = (body.get("servico") or "").strip()
         modelo = (body.get("modelo") or "").strip()
 
-        if tabela not in ("ir_phones", "clientes"):
+        if tabela != "clientes":
             return err("Tabela inválida.")
 
         tabelas = carregar_tabelas_preco()
@@ -83,7 +83,7 @@ def create_api_prices_blueprint(deps):
         if not reparo_ids:
             return ok(valor=0, encontrado=False)
 
-        if tabela not in ("ir_phones", "clientes"):
+        if tabela != "clientes":
             tabela = "clientes"
 
         conn = conectar()

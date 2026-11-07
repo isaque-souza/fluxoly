@@ -24,7 +24,7 @@ STATUS_OS_OPCOES = [
 # Tipo de OS não é validado contra lista fechada no backend hoje (aceita
 # qualquer texto, só usa "Assistencia" como default) — esta lista é a fonte
 # única de exibição (GET /api/constantes), não uma whitelist de gravação.
-OS_TIPOS_OPCOES = ["Assistencia", "Garantia", "Upgrade"]
+OS_TIPOS_OPCOES = ["Assistencia", "Garantia"]
 
 # Prazo padrão de garantia de reparo (dias) — distinto da futura garantia de
 # venda (docs/product/PRODUCT_GLOSSARY.md), que terá prazo próprio por tipo

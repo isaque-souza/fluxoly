@@ -2,7 +2,7 @@
 // STATUS_OS_OPCOES/OS_TIPOS_OPCOES (fluxoly_core.py). Fonte de verdade real é
 // a API — mesmo padrão de Produtos.jsx/Stock.jsx.
 export const STATUS_OPTIONS_FALLBACK = ["Em andamento", "Aguardando peca", "Finalizado", "Cancelado"];
-export const OS_TYPES_FALLBACK = ["Assistencia", "Garantia", "Upgrade"];
+export const OS_TYPES_FALLBACK = ["Assistencia", "Garantia"];
 
 export function formatCurrency(value) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
