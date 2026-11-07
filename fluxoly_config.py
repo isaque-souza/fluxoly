@@ -100,6 +100,18 @@ def integracao_externa_bloqueada_neste_ambiente():
     return IS_PULL_REQUEST or IS_DEMO_ENVIRONMENT
 
 
+# ADR-014: a integração MercadoPhone fica desligada por padrão (desvínculo com a IR Phones). Com a flag
+# desligada, as rotas /api/integracoes/mercadophone/* respondem 404 e o sync em background não inicia,
+# mesmo com token configurado no ambiente ou em integrations.json. Religar: MERCADO_PHONE_INTEGRATION_ENABLED=1.
+MERCADO_PHONE_INTEGRATION_ENABLED = os.environ.get("MERCADO_PHONE_INTEGRATION_ENABLED", "0") == "1"
+
+
+def integracao_mercadophone_habilitada():
+    """Ponto único de verdade da flag ADR-014. Lê o atributo do módulo a cada chamada (não uma cópia
+    importada), para que testes possam alternar a flag via monkeypatch -- mesmo padrão do KI-037."""
+    return MERCADO_PHONE_INTEGRATION_ENABLED
+
+
 APP_HOST = os.environ.get("IR_FLOW_HOST", "0.0.0.0" if IS_SERVER_RUNTIME else "127.0.0.1")
 APP_PORT = int(os.environ.get("IR_FLOW_PORT", "5080"))
 VERCEL_URL = (os.environ.get("VERCEL_URL") or "").strip()  # Ex: https://assistencia-system.vercel.app

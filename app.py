@@ -60,6 +60,7 @@ from fluxoly_blueprint_registry import RuntimeDeps, registrar_blueprints
 # fluxoly_config.py. app.py só importa os nomes; MERCADO_PHONE_SYNC_ENABLED/
 # _INTERVAL_SECONDS/_START_DATE continuam sendo reatribuídos mais abaixo (seção "CONFIGURAÇÃO
 # MERCADO PHONE") ao mesclar com integrations.json -- mesmo comportamento de antes.
+import fluxoly_config  # noqa: E402
 from fluxoly_config import (  # noqa: E402
     APP_HOST,
     APP_PORT,
@@ -1087,6 +1088,10 @@ def iniciar_sync_mercadophone_se_habilitado():
         return
 
     if not BACKGROUND_JOBS_ENABLED:
+        return
+
+    # ADR-014: integração MercadoPhone desligada por padrão, independente de token/config.
+    if not fluxoly_config.integracao_mercadophone_habilitada():
         return
 
     if not (MERCADO_PHONE_SYNC_ENABLED and MERCADO_PHONE_API_TOKEN):
