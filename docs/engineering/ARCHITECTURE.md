@@ -61,7 +61,7 @@ Cada módulo tem uma responsabilidade única (SRP — ver `ENGINEERING_GUIDE.md`
 | `irflow_price_tables.py` | Tabela de preços por modelo/reparo e endpoint de sugestão de valor |
 | `irflow_reference_data.py` | Dados de referência (modelos de iPhone, cores, técnicos, vendedores) |
 | `irflow_reports.py` | Geração de relatórios agregados e PDF (Técnicos, Custos Operacionais) |
-| `irflow_storage.py` | Backup (local, e-mail, Google Drive) |
+| `irflow_storage.py` | Backup local (destinos externos removidos em 2026-11-06, KI-043) |
 | `irflow_mercadophone.py` | Integração externa com o sistema MercadoPhone (importação de OS, sincronização por webhook/polling) |
 | `irflow_web.py` | Utilitário de redirecionamento com preservação de query string |
 
@@ -168,8 +168,9 @@ usam autenticação própria por token, fora do `ROUTE_PERMISSIONS` (ver R-07 em
 ## 7. Backup e Persistência
 
 - Banco único SQLite em modo WAL (`database.db`), sem réplica (ver R-01 em `PROJECT_STATUS.md`).
-- `irflow_storage.py` gera backups locais, opcionalmente envia por e-mail e/ou sincroniza com Google
-  Drive. Falhas de envio são apenas logadas (ver KI-006).
+- `irflow_storage.py` gera backups só no disco local (`<IR_FLOW_DATA_DIR>/backups`, retenção de 90
+  backups automáticos). O envio por e-mail e a cópia para Google Drive foram removidos em 2026-11-06
+  (KI-043). Falhas do backup diário são apenas logadas (ver KI-006).
 - Testes automatizados **nunca** tocam `database.db` — isolamento via variável de ambiente
   `IR_FLOW_DATA_DIR`, que redireciona o caminho do banco para um diretório temporário antes do
   import de `app.py` (ver `tests/conftest.py`).

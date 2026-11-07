@@ -139,6 +139,10 @@ backup (`irflow_storage.py`) para `logger.warning`/`logger.error` estruturado, e
 depois de configurada — mas continua sem nenhuma notificação visível na interface para o usuário da
 loja, que é o gap original descrito acima. Não fechar este KI só por causa da mudança de logging.
 
+**Atualização (2026-11-06):** o envio de backup por e-mail foi removido (KI-043). O gap continua valendo
+para o backup diário local: se `executar_backup_diario_automatico` falhar, só há `logger.error` — nenhuma
+notificação na interface. Mantido aberto com esse escopo.
+
 Sprint prevista:
 Sprint 3 — Segurança e Observabilidade (concluída parcialmente nesse ponto por
 `docs/operations/SPRINTS/SPRINT_OBSERVABILIDADE.md`, 2026-07-25).
@@ -1606,7 +1610,7 @@ Responsável:
 
 ---
 
-## ~~KI-043~~ — MITIGADO (contenção); criptografia de backup pendente (pós-release)
+## ~~KI-043~~ — DESTINOS EXTERNOS REMOVIDOS (2026-11-06); criptografia do backup local pendente (pós-release)
 
 Descrição:
 Nenhum backup do banco de dados é criptografado em nenhum ponto do fluxo. `criar_backup()`
@@ -1632,6 +1636,14 @@ Status:
 (6 testes) e validado em QA Manual contra servidor real com os dois destinos configurados. Backup local
 não afetado. **Criptografia de backup em repouso permanece pendente** — decisão de escopo/gestão de
 chave/rotação/recuperação, pós-release.
+
+**Atualização (2026-11-06, branch `feat/remover-backup-externo`):** por decisão do CTO, os dois destinos
+externos foram **removidos do código** (não só contidos): saem `enviar_backup_email`, as funções de
+Google Drive em `fluxoly_storage.py`, as variáveis `IR_FLOW_GOOGLE_DRIVE_BACKUP_DIR`/`IR_FLOW_BACKUP_EMAIL*`
+e a própria contenção `EXTERNAL_BACKUP_DESTINATIONS_ENABLED`, que perdeu o objeto. O backup fica só no
+disco local (`<IR_FLOW_DATA_DIR>/backups`). `tests/test_backup_contencao_externa.py` substituído por
+`tests/test_backup_somente_local.py`. **Risco remanescente:** o backup local continua sem criptografia
+em repouso — a parte "pendente" deste KI segue aberta.
 
 Sprint prevista:
 Não definida — candidato a entrar no escopo de qualquer sprint de implementação de medidas de LGPD.

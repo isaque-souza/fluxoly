@@ -9,6 +9,15 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Removido (2026-11-06 — destinos externos de backup, KI-043)
+- **feat: remover backup para Google Drive e por e-mail** — decisão do CTO. Saem `enviar_backup_email`
+  e as funções de Google Drive (`fluxoly_storage.py`), as variáveis `IR_FLOW_GOOGLE_DRIVE_BACKUP_DIR`,
+  `IR_FLOW_BACKUP_EMAIL`, `IR_FLOW_BACKUP_EMAIL_SENHA` e `IR_FLOW_BACKUP_EMAIL_DESTINO`, e a contenção
+  `EXTERNAL_BACKUP_DESTINATIONS_ENABLED` (sem destino externo, não há o que conter). O backup manual,
+  o diário automático e a retenção de 90 seguem iguais, só no disco local.
+- `POST /api/backup/criar` deixa de devolver `destino_drive`/`erro_drive` (a tela de Backup não usava).
+- `tests/test_backup_contencao_externa.py` substituído por `tests/test_backup_somente_local.py`.
+
 ### Alterado (2026-11-06 — integração MercadoPhone desligada por padrão, ADR-014 PR 3/3)
 - **feat: flag `MERCADO_PHONE_INTEGRATION_ENABLED` (padrão `0`)** — com a flag desligada, todas as
   rotas `/api/integracoes/mercadophone/*` (inclusive o webhook `/os`) respondem 404 e o sync em
