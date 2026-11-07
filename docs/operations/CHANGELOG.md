@@ -9,6 +9,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Removido (2026-11-06 — app "Lista de Aparelhos Disponíveis", ADR-014)
+- **chore: remover `apps/lista-aparelhos-disponiveis/`** — o app standalone de estoque da IR Phones
+  (ADR-013) sai do repositório, junto com o job de CI `estoque_app` e o workflow `estoque-sync.yml`
+  (sync 20/20min). Primeiro de 3 PRs do desvínculo do Fluxoly com a IR Phones (ADR-014). ADR-013 vira
+  "Substituída"; BR-070..082 viram "Revogadas". Sem impacto no Fluxoly-plataforma (o app não
+  compartilhava código com ele).
+
 ### Alterado (2026-09-11 — ordem do desempate corrigida para cor → GB → bateria, `apps/lista-aparelhos-disponiveis/`)
 - **fix(estoque): cor decide antes do GB (BR-080)** — troca a ordem: cor (alfabética) → GB crescente →
   saúde de bateria decrescente. Correção sobre o ajuste anterior do mesmo dia, que tinha GB antes de cor.

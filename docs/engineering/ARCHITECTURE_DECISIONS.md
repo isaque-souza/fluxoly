@@ -23,6 +23,8 @@ Para criar uma nova ADR: copie [`templates/ADR_TEMPLATE.md`](templates/ADR_TEMPL
 | [ADR-010](adr/ADR-010.md) | Ciclo obrigatório para features com regra de negócio — Discovery → Plano Técnico → Implementação → Testes → QA Manual → Revisão Arquitetural → Encerramento, com gates explícitos | Aceita | 2026-07-28 |
 | [ADR-011](adr/ADR-011.md) | Atualização da ADR-002 — escopo desatualizado (6→13 domínios); rename de `irflow_blueprints_api.py` concluído na Housekeeping, decomposição (TD-01) adiada para sprint própria | Aceita | 2026-08-03 |
 | [ADR-012](adr/ADR-012.md) | Ambiente de Demonstração/Homologação — Render+Vercel dedicados, `IR_FLOW_ENVIRONMENT=demo`, KI-037 vira bloqueante, isolamento de credenciais por design (lição do INC-003) | Aceita | 2026-08-11 |
+| [ADR-013](adr/ADR-013.md) | "Lista de Aparelhos Disponíveis": app standalone, fonte MercadoPhone, acesso em 2 níveis por senha | Substituída por ADR-014 | 2026-09-03 |
+| [ADR-014](adr/ADR-014.md) | Desvincular o Fluxoly da IR Phones (remove app de estoque e OS interna) e desligar a integração MercadoPhone por flag | Aceita | 2026-11-06 |
 
 ---
 

@@ -1,9 +1,0 @@
-node_modules/
-.vercel/
-.env
-.env.local
-*.log
-coverage/
-cookies.txt
-.vercel
-.env*

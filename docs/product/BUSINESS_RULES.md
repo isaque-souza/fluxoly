@@ -557,6 +557,10 @@ Sprint Segurança 1.0, decisão de negócio do usuário (CTO) sobre quais perfis
 
 ## Lista de Aparelhos Disponíveis (ferramenta interna — `apps/lista-aparelhos-disponiveis/`)
 
+> **⛔ REVOGADAS (2026-11-06, ADR-014):** BR-070 a BR-082 estão revogadas. O app foi removido do
+> repositório por decisão do CTO (desvínculo do Fluxoly com a IR Phones). As regras abaixo ficam apenas
+> como registro histórico.
+
 Ferramenta **fora do Fluxoly-plataforma** (ADR-013), consulta ao estoque de aparelhos da loja IR
 Phones. Fonte: API nova do MercadoPhone. Duas áreas atrás de senha compartilhada: **Geral** (vendedores)
 e **Estoque** (organizador). Ciclo ADR-010 completo, mergeada em `main` via PR #68 (`eb13e836`,
