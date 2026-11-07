@@ -1,10 +1,5 @@
-import email.mime.application
-import email.mime.multipart
-import email.mime.text
 import json
 import os
-import shutil
-import smtplib
 import sqlite3
 import threading
 import time
@@ -54,24 +49,6 @@ def salvar_configuracoes_integracoes(integrations_config_path, dados):
         json.dump(dados, arquivo, ensure_ascii=False, indent=2)
 
 
-def diretorio_google_drive_disponivel(google_drive_backup_dir):
-    pasta = (google_drive_backup_dir or "").strip()
-    if pasta and os.path.isdir(pasta):
-        return pasta
-    return ""
-
-
-def garantir_pasta_backup_google_drive(google_drive_backup_dir):
-    pasta = (google_drive_backup_dir or "").strip()
-    if not pasta:
-        return ""
-    try:
-        os.makedirs(pasta, exist_ok=True)
-    except OSError:
-        return ""
-    return pasta
-
-
 def criar_arquivo_backup(destino, conectar):
     origem = conectar()
     copia = sqlite3.connect(destino)
@@ -82,33 +59,22 @@ def criar_arquivo_backup(destino, conectar):
         origem.close()
 
 
-def criar_backup(backup_dir, google_drive_backup_dir, conectar, nome_arquivo=None):
+def criar_backup(backup_dir, conectar, nome_arquivo=None):
+    """Cria o backup só no diretório local (`backup_dir`). Destinos externos (Google Drive, e-mail)
+    foram removidos em 2026-11-06 -- ver docs/operations/KNOWN_ISSUES.md KI-043."""
     os.makedirs(backup_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     nome = nome_arquivo or f"backup-{timestamp}.db"
     destino_local = os.path.join(backup_dir, nome)
     criar_arquivo_backup(destino_local, conectar)
 
-    destino_drive = ""
-    erro_drive = ""
-    drive_dir = garantir_pasta_backup_google_drive(google_drive_backup_dir)
-    if drive_dir:
-        try:
-            destino_drive = os.path.join(drive_dir, nome)
-            shutil.copy2(destino_local, destino_drive)
-        except (OSError, shutil.Error) as exc:
-            destino_drive = ""
-            erro_drive = str(exc)
-
     return {
         "nome": nome,
         "destino_local": destino_local,
-        "destino_drive": destino_drive,
-        "erro_drive": erro_drive,
     }
 
 
-def aplicar_retencao_backups_automaticos(backup_dir, google_drive_backup_dir, limite=90):
+def aplicar_retencao_backups_automaticos(backup_dir, limite=90):
     def coletar_backups_automaticos(diretorio):
         if not diretorio or not os.path.isdir(diretorio):
             return []
@@ -124,85 +90,39 @@ def aplicar_retencao_backups_automaticos(backup_dir, google_drive_backup_dir, li
         arquivos.sort(key=lambda item: item[0])
         return arquivos
 
-    for diretorio in [backup_dir, diretorio_google_drive_disponivel(google_drive_backup_dir)]:
-        arquivos = coletar_backups_automaticos(diretorio)
-        excedentes = max(0, len(arquivos) - limite)
-        for _, caminho in arquivos[:excedentes]:
-            try:
-                os.remove(caminho)
-            except OSError as exc:
-                logger.warning("backup_retencao_falha_ao_remover", extra={"caminho": caminho, "erro": str(exc)})
+    arquivos = coletar_backups_automaticos(backup_dir)
+    excedentes = max(0, len(arquivos) - limite)
+    for _, caminho in arquivos[:excedentes]:
+        try:
+            os.remove(caminho)
+        except OSError as exc:
+            logger.warning("backup_retencao_falha_ao_remover", extra={"caminho": caminho, "erro": str(exc)})
 
 
-def executar_backup_diario_automatico(backup_dir, google_drive_backup_dir, conectar):
+def executar_backup_diario_automatico(backup_dir, conectar):
     hoje = datetime.now().strftime("%Y%m%d")
     nome_arquivo = f"backup-auto-{hoje}.db"
     destino_local = os.path.join(backup_dir, nome_arquivo)
     if os.path.exists(destino_local):
-        aplicar_retencao_backups_automaticos(backup_dir, google_drive_backup_dir, limite=90)
+        aplicar_retencao_backups_automaticos(backup_dir, limite=90)
         return None
     try:
-        info = criar_backup(backup_dir, google_drive_backup_dir, conectar, nome_arquivo=nome_arquivo)
-        if info.get("erro_drive"):
-            logger.warning("backup_diario_sem_copia_no_drive", extra={"erro": info["erro_drive"]})
-        aplicar_retencao_backups_automaticos(backup_dir, google_drive_backup_dir, limite=90)
+        info = criar_backup(backup_dir, conectar, nome_arquivo=nome_arquivo)
+        aplicar_retencao_backups_automaticos(backup_dir, limite=90)
         return info
     except Exception as exc:
         logger.error("backup_diario_falhou", extra={"erro": str(exc)}, exc_info=True)
         return None
 
 
-def enviar_backup_email(caminho_arquivo, email_remetente, email_senha_app, email_destino):
-    """Envia o arquivo de backup como anexo por e-mail via Gmail SMTP."""
-    if not all([email_remetente, email_senha_app, email_destino, caminho_arquivo]):
-        return {"ok": False, "erro": "Configuração de e-mail incompleta."}
-    if not os.path.isfile(caminho_arquivo):
-        return {"ok": False, "erro": f"Arquivo não encontrado: {caminho_arquivo}"}
-
-    nome_arquivo = os.path.basename(caminho_arquivo)
-    data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    msg = email.mime.multipart.MIMEMultipart()
-    msg["From"] = email_remetente
-    msg["To"] = email_destino
-    msg["Subject"] = f"[Fluxoly] Backup automático — {data_str}"
-
-    corpo = (
-        f"Backup automático do Fluxoly gerado em {data_str}.\n\n"
-        f"Arquivo: {nome_arquivo}\n"
-        f"Tamanho: {os.path.getsize(caminho_arquivo) / 1024:.1f} KB\n\n"
-        "Este e-mail foi gerado automaticamente."
-    )
-    msg.attach(email.mime.text.MIMEText(corpo, "plain", "utf-8"))
-
-    with open(caminho_arquivo, "rb") as f:
-        anexo = email.mime.application.MIMEApplication(f.read(), Name=nome_arquivo)
-    anexo["Content-Disposition"] = f'attachment; filename="{nome_arquivo}"'
-    msg.attach(anexo)
-
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as servidor:
-            servidor.login(email_remetente, email_senha_app)
-            servidor.sendmail(email_remetente, email_destino, msg.as_string())
-        return {"ok": True, "erro": ""}
-    except smtplib.SMTPAuthenticationError:
-        return {"ok": False, "erro": "Autenticação falhou. Verifique o e-mail e a senha de app."}
-    except Exception as exc:
-        return {"ok": False, "erro": str(exc)}
-
-
 def iniciar_thread_backup_automatico(
     backup_dir,
-    google_drive_backup_dir,
     conectar,
-    email_remetente="",
-    email_senha_app="",
-    email_destino="",
     intervalo_verificacao_segundos=3600,
 ):
     """
     Inicia thread daemon que verifica a cada hora se o backup do dia já existe.
-    Se não existir, cria e opcionalmente envia por e-mail.
+    Se não existir, cria no diretório local.
     """
 
     def _loop():
@@ -210,22 +130,9 @@ def iniciar_thread_backup_automatico(
         time.sleep(30)
         while True:
             try:
-                info = executar_backup_diario_automatico(
-                    backup_dir, google_drive_backup_dir, conectar
-                )
+                info = executar_backup_diario_automatico(backup_dir, conectar)
                 if info:
                     logger.info("backup_automatico_criado", extra={"arquivo": info["nome"]})
-                    if email_remetente and email_senha_app and email_destino:
-                        resultado = enviar_backup_email(
-                            info["destino_local"],
-                            email_remetente,
-                            email_senha_app,
-                            email_destino,
-                        )
-                        if resultado["ok"]:
-                            logger.info("backup_email_enviado", extra={"destino": email_destino})
-                        else:
-                            logger.warning("backup_email_falhou", extra={"erro": resultado["erro"]})
             except Exception as exc:
                 logger.error("backup_thread_erro_inesperado", extra={"erro": str(exc)}, exc_info=True)
 

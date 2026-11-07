@@ -41,11 +41,7 @@ from fluxoly_caixa_controller import create_caixa_blueprint
 from fluxoly_clientes_controller import create_clientes_blueprint
 from fluxoly_config import (
     BACKUP_DIR,
-    BACKUP_EMAIL_DESTINO,
-    BACKUP_EMAIL_REMETENTE,
-    BACKUP_EMAIL_SENHA_APP,
     DB_PATH,
-    GOOGLE_DRIVE_BACKUP_DIR,
     INTEGRATIONS_CONFIG_PATH,
     PUBLIC_BASE_URL,
 )
@@ -122,7 +118,6 @@ from fluxoly_reports import (
 from fluxoly_storage import (
     carregar_configuracoes_integracoes,
     criar_backup,
-    enviar_backup_email,
     salvar_configuracoes_integracoes,
 )
 from fluxoly_tipos_garantia_controller import create_tipos_garantia_blueprint
@@ -317,12 +312,7 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
             {
                 "conectar": conectar,
                 "backup_dir": BACKUP_DIR,
-                "google_drive_backup_dir": GOOGLE_DRIVE_BACKUP_DIR,
                 "criar_backup": criar_backup,
-                "enviar_backup_email": enviar_backup_email,
-                "backup_email_remetente": BACKUP_EMAIL_REMETENTE,
-                "backup_email_senha_app": BACKUP_EMAIL_SENHA_APP,
-                "backup_email_destino": BACKUP_EMAIL_DESTINO,
                 "db_path": DB_PATH,
                 "forcar_migracao_schema": runtime.forcar_migracao_schema,
             }

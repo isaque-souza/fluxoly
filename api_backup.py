@@ -19,12 +19,7 @@ def create_api_backup_blueprint(deps):
     api_backup = Blueprint("api_backup", __name__, url_prefix="/api")
     conectar = deps["conectar"]
     backup_dir = deps["backup_dir"]
-    google_drive_backup_dir = deps["google_drive_backup_dir"]
     criar_backup = deps["criar_backup"]
-    enviar_backup_email = deps["enviar_backup_email"]
-    backup_email_remetente = deps["backup_email_remetente"]
-    backup_email_senha_app = deps["backup_email_senha_app"]
-    backup_email_destino = deps["backup_email_destino"]
     db_path = deps["db_path"]
     forcar_migracao_schema = deps["forcar_migracao_schema"]
 
@@ -43,24 +38,8 @@ def create_api_backup_blueprint(deps):
                 stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
                 nome_arquivo = f"backup-v{versao}-{stamp}.db"
 
-            info = criar_backup(
-                backup_dir,
-                google_drive_backup_dir,
-                conectar,
-                nome_arquivo=nome_arquivo,
-            )
-            if backup_email_senha_app:
-                enviar_backup_email(
-                    info["destino_local"],
-                    backup_email_remetente,
-                    backup_email_senha_app,
-                    backup_email_destino,
-                )
-            return ok(
-                arquivo=info["nome"],
-                destino_drive=bool(info.get("destino_drive")),
-                erro_drive=info.get("erro_drive", ""),
-            )
+            info = criar_backup(backup_dir, conectar, nome_arquivo=nome_arquivo)
+            return ok(arquivo=info["nome"])
         except Exception as exc:
             return err(str(exc))
 

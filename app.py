@@ -68,14 +68,7 @@ from fluxoly_config import (  # noqa: E402
     AUDIT_LOG_PII_MASK_APOS_DIAS,
     BACKGROUND_JOBS_ENABLED,
     BACKUP_DIR,
-    BACKUP_EMAIL_DESTINO,
-    BACKUP_EMAIL_REMETENTE,
-    BACKUP_EMAIL_SENHA_APP,
-    BACKUP_EMAIL_SENHA_APP_CONFIGURADA,
     DB_PATH,
-    EXTERNAL_BACKUP_DESTINATIONS_ENABLED,
-    GOOGLE_DRIVE_BACKUP_DIR,
-    GOOGLE_DRIVE_BACKUP_DIR_CONFIGURADO,
     INTEGRATIONS_CONFIG_PATH,
     IS_DEMO_ENVIRONMENT,
     IS_PULL_REQUEST,
@@ -522,23 +515,8 @@ def forcar_migracao_schema():
 
 
 run_migrations()
-if not EXTERNAL_BACKUP_DESTINATIONS_ENABLED and (GOOGLE_DRIVE_BACKUP_DIR_CONFIGURADO or BACKUP_EMAIL_SENHA_APP_CONFIGURADA):
-    logger.warning(
-        "backup_destinos_externos_contidos",
-        extra={
-            "google_drive_configurado": bool(GOOGLE_DRIVE_BACKUP_DIR_CONFIGURADO),
-            "email_configurado": bool(BACKUP_EMAIL_SENHA_APP_CONFIGURADA),
-        },
-    )
 if BACKGROUND_JOBS_ENABLED:
-    iniciar_thread_backup_automatico(
-        BACKUP_DIR,
-        GOOGLE_DRIVE_BACKUP_DIR,
-        conectar,
-        email_remetente=BACKUP_EMAIL_REMETENTE,
-        email_senha_app=BACKUP_EMAIL_SENHA_APP,
-        email_destino=BACKUP_EMAIL_DESTINO,
-    )
+    iniciar_thread_backup_automatico(BACKUP_DIR, conectar)
     # Decisão 6 (PLAN-LGPD-Compliance.md): só inicia se pelo menos um prazo estiver configurado --
     # sem AUDIT_LOG_PII_MASK_APOS_DIAS/AUDIT_LOG_EXPURGO_APOS_DIAS, a rotina nunca é chamada (fail-safe
     # por ausência de invocação, não por uma checagem interna que poderia ser esquecida).
