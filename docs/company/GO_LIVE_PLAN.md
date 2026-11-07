@@ -170,6 +170,8 @@ rollback" acima) continua valendo integralmente para qualquer rollback real futu
 **Decisões que este Dry-Run não tomou:** destino da PR #24 (descartável) e da PR #22 (evidência
 preservada do INC-003); correção de código do KI-037 (risco residual aceito só para este exercício,
 mitigado operacionalmente, não corrigido). Todas seguem pendentes, decisão separada do CTO.
+**Atualização (2026-11-06):** PR #22 fechada sem merge pelo CTO (branch apagada) — backend Render
+retirado do ar; a evidência do INC-003 segue registrada neste documento. PR #24 já estava fechada.
 
 ---
 
