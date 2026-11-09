@@ -54,7 +54,7 @@ Autenticação e perfis de acesso.
 | Coluna | Tipo | Observação |
 |--------|------|------------|
 | `id` | INTEGER | PK AUTOINCREMENT |
-| `tipo` | TEXT | `Assistencia` \| `Garantia` (`Upgrade` removido das opções em 2026-11-06, ADR-014) |
+| `tipo` | TEXT | `Assistencia` \| `Garantia` \| `Interna` (conserto de aparelho comprado, BR-090, desde 2026-11-08 — fora de faturamento, relatórios, dashboard e Garantias) (`Upgrade` removido das opções em 2026-11-06, ADR-014) |
 | `cliente` | TEXT | |
 | `aparelho` | TEXT | |
 | `tecnico` | TEXT | |
@@ -73,7 +73,7 @@ Autenticação e perfis de acesso.
 | `origem_integracao` | TEXT | *(ALTER)* — origem quando criada via MercadoPhone |
 | `id_externo_integracao` | TEXT | *(ALTER)* — id no sistema externo |
 | `cliente_id` | INTEGER | *(ALTER, Sprint P0.1)* — FK lógica para `clientes.id`, nullable, **sem backfill**: OS existentes continuam só com `cliente` (texto); novas OS podem ser vinculadas a um cliente, mas nada força isso ainda |
-| `unidade_serializada_id` | INTEGER | *(migration `m0003`, 2026-11-08)* — FK lógica para `unidades_serializadas.id`, nullable. Reservada para a OS interna de conserto de aparelho comprado (BR-090); sem uso até o PR 3 da feature. Índice `idx_os_unidade_serializada_id` |
+| `unidade_serializada_id` | INTEGER | *(migration `m0003`, 2026-11-08)* — FK lógica para `unidades_serializadas.id`, nullable. Reservada para a OS interna de conserto de aparelho comprado (BR-090): preenchida só quando `tipo='Interna'`, que também grava `cliente='Estoque próprio'`, `vendedor=''`, valores 0 e o IMEI do aparelho. Índice `idx_os_unidade_serializada_id` |
 
 Sem índice declarado explicitamente (candidato a `idx_os_status_data_tecnico` — ver KI-005/Sprint 5).
 

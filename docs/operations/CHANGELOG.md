@@ -9,6 +9,16 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-08 — Compra de Aparelhos, PR 3/5: OS interna)
+- **feat: OS interna para consertar aparelho comprado (BR-090, BR-091)** — `POST/PUT /api/ordens` aceitam
+  `tipo='Interna'` com `unidade_serializada_id` de um aparelho com compra ativa; o backend força cliente
+  "Estoque próprio", sem vendedor e valores 0, e grava o IMEI do aparelho. Abrir move o aparelho
+  `disponivel → em_reparo`; finalizar (status ou formulário completo) devolve para `disponivel` sem exigir
+  Garantia de Reparo, se não houver outra OS interna aberta; reabrir volta para `em_reparo`. Uma OS não
+  troca entre interna e de cliente. OS interna sai do dashboard, dos relatórios, de Garantias e do alerta de
+  garantia vencendo. `GET /api/ordens/<id>` passa a devolver `unidade_serializada_id`.
+  `tests/test_os_interna.py` (18 casos).
+
 ### Adicionado (2026-11-08 — Compra de Aparelhos, PR 2/5: banco + backend)
 - **feat: registrar compra de aparelho (BR-083 a BR-089)** — migration `m0003_compras_aparelhos` (tabela
   `compras_aparelhos`, índice único parcial `idx_movimentacoes_caixa_compra_ativa`, coluna

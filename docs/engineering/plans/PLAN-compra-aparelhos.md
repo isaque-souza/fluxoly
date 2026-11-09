@@ -3,7 +3,7 @@
 **Data:** 2026-11-08
 **Feature:** compra de aparelhos (geralmente quebrados) para consertar e revender — `docs/product/BUSINESS_RULES.md`
 BR-083 a BR-093
-**Status:** Implementação — PR 2 (banco + backend da compra) concluído
+**Status:** Implementação — PRs 2 (compra) e 3 (OS interna) concluídos
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -16,7 +16,8 @@ BR-083 a BR-093
 - [x] Plano Técnico — este documento (PR 1, só documentação)
 - [ ] Implementação — [x] PR 2 (banco + backend da compra: migration `m0003`, domínio
   `fluxoly_compras_aparelhos_*`, hooks de Caixa e Unidades, `tests/test_compras_aparelhos.py` com 30 casos);
-  [ ] PR 3 (OS interna); [ ] PR 4 (custo/lucro + relatório); [ ] PR 5 (frontend)
+  [x] PR 3 (OS interna: `api_os.py`, exclusões em dashboard/relatórios/Garantias/alerta do `app.py`,
+  `tests/test_os_interna.py` com 18 casos); [ ] PR 4 (custo/lucro + relatório); [ ] PR 5 (frontend)
 - [ ] Testes
 - [ ] QA Manual
 - [ ] Revisão Arquitetural
@@ -96,7 +97,9 @@ Compra ──► Unidade serializada ──► OS interna (conserto) ──► V
   Produto, Regra de Ouro ADR-007); IMEI obrigatório nesta origem.
 
 ### PR 3 — OS interna
-- `OS_TIPOS_OPCOES` ganha `"Interna"`.
+- `TIPO_OS_INTERNA = "Interna"` em `fluxoly_core.py`. **Ajuste na implementação:** fica fora de
+  `OS_TIPOS_OPCOES` até o PR 5, para o tipo não aparecer na Nova OS antes de a tela saber escolher o
+  aparelho; a API já aceita.
 - `api_os.py` (criar/atualizar): `tipo='Interna'` exige `unidade_serializada_id` de uma unidade com compra
   ativa e status `em_reparo` ou `disponivel` (abrir OS interna em unidade `disponivel` move para
   `em_reparo`). Cliente gravado como texto fixo de exibição `"Estoque próprio"` com `cliente_id NULL`;
