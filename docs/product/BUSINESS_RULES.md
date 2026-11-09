@@ -543,6 +543,82 @@ Princípio da Imutabilidade da Venda (BR-034) e o padrão de estorno já usado e
 
 ---
 
+## Compra de Aparelhos (conserto e revenda)
+
+Decisões tomadas em Discovery (ADR-010) com o CTO em 2026-11-08: a loja compra aparelhos, em geral
+quebrados, para consertar e revender. Plano técnico em `docs/engineering/plans/PLAN-compra-aparelhos.md`.
+Todas as regras abaixo estão **🟡 Aprovadas, não implementadas**.
+
+**BR-083 — 🟡 Aprovada (2026-11-08)**
+Uma compra de aparelho registra: modelo do catálogo (`produtos`), IMEI (obrigatório), origem
+(`marketplace` | `troca` | `outro`), valor pago (`> 0`), forma de pagamento (`pix` | `dinheiro` |
+`transferencia` | `cartao` | `abatido_na_venda`), estado (texto curto obrigatório) e defeito (texto,
+vazio = sem defeito). O usuário que registra é sempre o da sessão.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-084 — 🟡 Aprovada (2026-11-08)**
+Registrar a compra cria, na mesma operação, a unidade serializada do aparelho (origem Produto, ADR-007):
+com defeito preenchido ela nasce `em_reparo`; sem defeito, `disponivel`. IMEI já cadastrado em outra
+unidade é rejeitado. Compra e unidade nascem juntas ou não nascem (uma transação).
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-085 — 🟡 Aprovada (2026-11-08)**
+Compra com origem `troca` exige o cliente que entregou o aparelho e pode ser ligada à venda em que ele
+entrou como parte do pagamento. A forma de pagamento `abatido_na_venda` só é aceita com origem `troca`.
+A venda continua registrada pelo valor cheio — a troca não altera `vendas.valor_total` (BR-034).
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-086 — 🟡 Aprovada (2026-11-08)**
+Toda compra ativa gera automaticamente uma saída em `movimentacoes_caixa` no valor pago
+(`origem='compra_aparelho'`, `origem_id=compras_aparelhos.id`), inclusive quando a forma é
+`abatido_na_venda`: a venda entra cheia (BR-069) e a compra sai cheia, então o saldo líquido é o que o
+cliente realmente pagou. Uma compra nunca tem duas saídas ativas (índice único parcial, mesmo padrão de
+BR-069) e o hook é idempotente.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-087 — 🟡 Aprovada (2026-11-08)**
+Uma compra pode ser cancelada com motivo obrigatório, desde que o aparelho não tenha sido vendido. O
+cancelamento estorna a saída de caixa (nunca apaga — BR-069) e a unidade vai para `devolvido`. A compra
+cancelada permanece no histórico.
+*Fonte: Decisão de engenharia dentro do escopo aprovado pelo CTO, 2026-11-08 — revisável no QA.*
+
+**BR-088 — 🟡 Aprovada (2026-11-08)**
+Na compra é possível guardar nome e telefone de quem vendeu o aparelho (opcionais), para comprovar a
+procedência caso o aparelho apareça como roubado. São dados pessoais (LGPD): visíveis só para os perfis
+que registram compras (BR-089), fora de exportações e PDFs.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-089 — 🟡 Aprovada (2026-11-08)**
+Registrar, listar e cancelar compras de aparelhos: perfis `admin`, `financeiro` e `vendedor`.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-090 — 🟡 Aprovada (2026-11-08)**
+O conserto de um aparelho comprado é feito numa **OS interna** (`tipo='Interna'`), ligada à unidade
+serializada. Ela não tem cliente nem vendedor e não tem valor cobrado; as peças saem do estoque como em
+qualquer OS. OS interna não entra no faturamento nem no lucro de assistência e não aparece em Garantias.
+Abrir OS interna para um aparelho `disponivel` o move para `em_reparo`. Quem abre e altera OS segue
+BR-030 (`admin`, `tecnico`). A regra é por tipo e por unidade — nunca por nome de cliente (o atalho
+"IR Phones" removido na ADR-014 não volta).
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-091 — 🟡 Aprovada (2026-11-08)**
+Quando uma OS interna é finalizada, o aparelho passa sozinho de `em_reparo` para `disponivel`.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+**BR-092 — 🟡 Aprovada (2026-11-08)**
+Custo do aparelho = valor pago na compra ativa + custo de peças de todas as OS internas dele (mão de obra
+não entra). Lucro do aparelho = valor unitário na venda concluída − custo. Ambos são calculados, nunca
+gravados, e visíveis só para `admin` e `financeiro` (mesmo critério de BR-047).
+*Fonte: Decisão do CTO, 2026-11-08 (lucro por aparelho); visibilidade por decisão de engenharia,
+consistente com BR-047 — revisável no QA.*
+
+**BR-093 — 🟡 Aprovada (2026-11-08)**
+Relatório mensal de compra e revenda (`admin`/`financeiro`): aparelhos comprados, vendidos e parados no
+mês, total investido (compras + peças), total vendido e lucro.
+*Fonte: Decisão do CTO, 2026-11-08.*
+
+---
+
 ## Segurança e Permissões
 
 **BR-030 — ✅ Implementado (2026-07-25)**
@@ -648,6 +724,7 @@ custo/PII/IMEI na Geral); `docs/engineering/plans/PLAN-lista-aparelhos-disponive
 
 - `docs/product/features/VENDAS.md` — fonte das regras de Vendas (BR-017 a BR-022, BR-031 a BR-066)
 - `docs/product/features/CLIENTES.md` — fonte das regras de Clientes (BR-023, BR-024)
+- `docs/engineering/plans/PLAN-compra-aparelhos.md` — plano técnico de Compra de Aparelhos (BR-083 a BR-093)
 - `docs/engineering/DOMAIN_MODEL.md` — domínios e arquivos onde cada regra implementada vive
 - `docs/engineering/DATABASE.md` — schema citado nas regras de Estoque/Compras
 - `docs/operations/KNOWN_ISSUES.md` — bugs já corrigidos que originaram alguma regra (ex.: BR-007 ↔ B-11)
