@@ -17,6 +17,7 @@ Depende de: `fluxoly_compras_aparelhos_repository.py` (SQL),
 `fluxoly_audit.py`.
 """
 
+import re
 import sqlite3
 
 import fluxoly_caixa_service as caixa_service
@@ -228,6 +229,105 @@ def listar_compras(
         "page": page,
         "per_page": per_page,
     }
+
+
+def _custo_para_dict(valor_pago, custo_pecas):
+    valor_pago = round(valor_pago or 0.0, 2)
+    custo_pecas = round(custo_pecas or 0.0, 2)
+    return {"valor_compra": valor_pago, "custo_pecas": custo_pecas, "custo_total": round(valor_pago + custo_pecas, 2)}
+
+
+def obter_custo_aparelho(conectar, unidade_id):
+    """BR-092 -- custo = valor pago na compra ativa + peças das OS internas (não canceladas).
+    Calculado na hora, nunca gravado. `None` se o aparelho não veio de uma compra.
+    A visibilidade (só admin/financeiro) é decidida no controller, não aqui."""
+    conn = conectar()
+    try:
+        row = repo.buscar_custo_da_unidade(conn.cursor(), unidade_id)
+    finally:
+        conn.close()
+    if not row:
+        return None
+    return _custo_para_dict(row[0], row[1])
+
+
+def calcular_lucro(valor_venda, custo):
+    """BR-092 -- lucro = valor da venda − custo do aparelho. `None` se não há custo (não veio de compra)."""
+    if not custo or valor_venda is None:
+        return None
+    return round(valor_venda - custo["custo_total"], 2)
+
+
+_MES_RE = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
+
+
+def obter_relatorio_mensal(conectar, mes):
+    """BR-093 -- relatório de compra e revenda do mês (`AAAA-MM`). Retorna (relatorio, erro).
+
+    - compras: aparelhos comprados no mês (compras ativas) e quanto foi pago;
+    - pecas_os_internas: peças das OS internas do mês;
+    - vendas: aparelhos comprados que foram vendidos no mês, com custo total e lucro de cada um
+      (o custo inclui compra e peças de qualquer mês -- é o custo do aparelho, não do período);
+    - estoque_atual: retrato de hoje dos aparelhos comprados ainda não vendidos.
+    """
+    m = _MES_RE.match(mes or "")
+    if not m:
+        return None, "Informe o mês no formato AAAA-MM."
+    ano, mes_num = int(m.group(1)), int(m.group(2))
+    inicio = f"{ano:04d}-{mes_num:02d}-01 00:00:00"
+    prox_ano, prox_mes = (ano + 1, 1) if mes_num == 12 else (ano, mes_num + 1)
+    fim = f"{prox_ano:04d}-{prox_mes:02d}-01 00:00:00"
+
+    conn = conectar()
+    try:
+        cursor = conn.cursor()
+        qtd_compras, total_pago = repo.resumir_compras_do_periodo(cursor, inicio, fim)
+        pecas_mes = repo.somar_pecas_os_internas_do_periodo(cursor, inicio, fim)
+        vendas_rows = repo.buscar_vendas_de_aparelhos_comprados(cursor, inicio, fim)
+        estoque_rows = repo.buscar_aparelhos_comprados_em_estoque(cursor)
+    finally:
+        conn.close()
+
+    itens_vendidos = []
+    for venda_id, vendido_em, unidade_id, produto_nome, imei, valor_venda, valor_pago, custo_pecas in vendas_rows:
+        custo = _custo_para_dict(valor_pago, custo_pecas)
+        itens_vendidos.append(
+            {
+                "venda_id": venda_id,
+                "vendido_em": vendido_em,
+                "unidade_serializada_id": unidade_id,
+                "produto_nome": produto_nome or "",
+                "imei": imei,
+                "valor_venda": round(valor_venda or 0.0, 2),
+                **custo,
+                "lucro": calcular_lucro(valor_venda or 0.0, custo),
+            }
+        )
+
+    total_vendido = round(sum(i["valor_venda"] for i in itens_vendidos), 2)
+    custo_vendidos = round(sum(i["custo_total"] for i in itens_vendidos), 2)
+    em_reparo = sum(1 for r in estoque_rows if r[0] == "em_reparo")
+    capital_parado = round(sum((r[1] or 0.0) + (r[2] or 0.0) for r in estoque_rows), 2)
+
+    return {
+        "mes": f"{ano:04d}-{mes_num:02d}",
+        "compras": {"quantidade": qtd_compras, "total_pago": round(total_pago or 0.0, 2)},
+        "pecas_os_internas": round(pecas_mes, 2),
+        "total_investido": round((total_pago or 0.0) + pecas_mes, 2),
+        "vendas": {
+            "quantidade": len(itens_vendidos),
+            "total_vendido": total_vendido,
+            "custo_total": custo_vendidos,
+            "lucro": round(total_vendido - custo_vendidos, 2),
+            "itens": itens_vendidos,
+        },
+        "estoque_atual": {
+            "quantidade": len(estoque_rows),
+            "em_reparo": em_reparo,
+            "disponiveis": len(estoque_rows) - em_reparo,
+            "capital_parado": capital_parado,
+        },
+    }, None
 
 
 def abrir_reparo_interno(cursor, unidade_id, usuario_id):

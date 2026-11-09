@@ -15,6 +15,7 @@ MVP).
 
 from flask import Blueprint, jsonify, request, session
 
+import fluxoly_compras_aparelhos_service as compras_aparelhos_service
 import fluxoly_vendas_service as service
 from fluxoly_validation import parse_float, parse_int, safe_json
 
@@ -144,6 +145,14 @@ def create_vendas_blueprint(deps: dict):
         if not venda:
             return err("Venda não encontrada.", 404)
         _ocultar_comissao_se_necessario(itens)
+        # BR-092 -- custo e lucro do aparelho comprado, só para admin/financeiro. Composto aqui
+        # (controller) e não no service de Vendas: Compra de Aparelhos já depende de Vendas
+        # (validação da troca), o contrário criaria import circular entre os services.
+        if usuario_pode_financeiro():
+            for item in itens:
+                custo = compras_aparelhos_service.obter_custo_aparelho(conectar, item["unidade_serializada_id"])
+                item["custo_aparelho"] = custo
+                item["lucro"] = compras_aparelhos_service.calcular_lucro(item["valor_unitario"], custo)
         return ok(venda=venda, itens=itens)
 
     @vendas_api.route("/<int:venda_id>/cancelar", methods=["POST"])

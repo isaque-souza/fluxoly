@@ -102,6 +102,19 @@ def create_compras_aparelhos_blueprint(deps: dict):
             return err(erro, code)
         return ok(id=compra_id), 201
 
+    @compras_api.route("/relatorio")
+    def relatorio_mensal():
+        """BR-093 -- só `admin`/`financeiro` (custo e lucro, mesmo critério de BR-047/BR-092)."""
+        if not session.get("usuario_id"):
+            return err("Não autenticado.", 401)
+        if session.get("usuario_perfil") not in ("admin", "financeiro"):
+            return err("Permissão negada.", 403)
+
+        relatorio, erro = service.obter_relatorio_mensal(conectar, (request.args.get("mes") or "").strip())
+        if erro:
+            return err(erro)
+        return ok(relatorio=relatorio)
+
     @compras_api.route("/<int:compra_id>")
     def obter_compra(compra_id):
         negado = _negar_se_sem_permissao()

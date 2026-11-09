@@ -130,6 +130,78 @@ def existe_compra_ativa_da_unidade(cursor, unidade_id):
     return cursor.fetchone() is not None
 
 
+# ---------------------------------------------------------------------------
+# Custo, lucro e relatório (BR-092/BR-093). Leem `os`, `vendas`, `vendas_itens` e
+# `unidades_serializadas` só para agregação -- nenhuma escrita fora de compras_aparelhos.
+# ---------------------------------------------------------------------------
+
+_SOMA_PECAS_OS_INTERNAS = (
+    "COALESCE((SELECT SUM(COALESCE(o.custo_pecas, 0)) FROM os o "
+    "WHERE o.tipo = 'Interna' AND o.unidade_serializada_id = c.unidade_serializada_id "
+    "AND COALESCE(o.status, '') != 'Cancelado'), 0)"
+)
+
+
+def buscar_custo_da_unidade(cursor, unidade_id):
+    """(valor_pago, custo_pecas) da compra ativa da unidade, ou None se ela não veio de compra.
+    OS interna cancelada não entra -- as peças dela voltaram para o estoque."""
+    cursor.execute(
+        f"SELECT c.valor_pago, {_SOMA_PECAS_OS_INTERNAS} FROM compras_aparelhos c "
+        "WHERE c.unidade_serializada_id = ? AND c.status = 'ativa'",
+        (unidade_id,),
+    )
+    return cursor.fetchone()
+
+
+def resumir_compras_do_periodo(cursor, inicio, fim):
+    cursor.execute(
+        "SELECT COUNT(*), COALESCE(SUM(valor_pago), 0) FROM compras_aparelhos "
+        "WHERE status = 'ativa' AND criado_em >= ? AND criado_em < ?",
+        (inicio, fim),
+    )
+    return cursor.fetchone()
+
+
+def somar_pecas_os_internas_do_periodo(cursor, inicio, fim):
+    cursor.execute(
+        "SELECT COALESCE(SUM(COALESCE(custo_pecas, 0)), 0) FROM os "
+        "WHERE tipo = 'Interna' AND COALESCE(status, '') != 'Cancelado' AND data >= ? AND data < ?",
+        (inicio[:10], fim[:10]),
+    )
+    return cursor.fetchone()[0] or 0.0
+
+
+def buscar_vendas_de_aparelhos_comprados(cursor, inicio, fim):
+    """Itens vigentes de vendas concluídas no período cuja unidade veio de uma compra ativa."""
+    cursor.execute(
+        f"""
+        SELECT v.id, v.criado_em, vi.unidade_serializada_id, vi.produto_nome, COALESCE(u.imei, ''),
+               vi.valor_unitario, c.valor_pago, {_SOMA_PECAS_OS_INTERNAS}
+        FROM vendas_itens vi
+        JOIN vendas v ON v.id = vi.venda_id
+        JOIN compras_aparelhos c ON c.unidade_serializada_id = vi.unidade_serializada_id AND c.status = 'ativa'
+        LEFT JOIN unidades_serializadas u ON u.id = vi.unidade_serializada_id
+        WHERE vi.ativo = 1 AND v.status = 'concluida' AND v.criado_em >= ? AND v.criado_em < ?
+        ORDER BY v.criado_em, v.id
+        """,
+        (inicio, fim),
+    )
+    return cursor.fetchall()
+
+
+def buscar_aparelhos_comprados_em_estoque(cursor):
+    """Retrato atual (não do período): aparelhos de compra ativa ainda não vendidos."""
+    cursor.execute(
+        f"""
+        SELECT u.status, c.valor_pago, {_SOMA_PECAS_OS_INTERNAS}
+        FROM compras_aparelhos c
+        JOIN unidades_serializadas u ON u.id = c.unidade_serializada_id
+        WHERE c.status = 'ativa' AND u.status IN ('disponivel', 'em_reparo')
+        """
+    )
+    return cursor.fetchall()
+
+
 def cancelar(cursor, compra_id, motivo, usuario_id):
     """CAS: só cancela compra ainda `ativa`. Retorna linhas afetadas (0 = estado mudou)."""
     cursor.execute(
