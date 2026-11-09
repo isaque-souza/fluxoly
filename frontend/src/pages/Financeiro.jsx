@@ -42,6 +42,7 @@ const ORIGEM_LABEL = {
   venda: "Venda",
   conta_pagar: "Conta a Pagar",
   conta_receber: "Conta a Receber",
+  compra_aparelho: "Compra de aparelho",
 };
 
 const STATUS_CONTA_LABEL = {

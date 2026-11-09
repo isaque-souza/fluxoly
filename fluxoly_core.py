@@ -24,10 +24,9 @@ STATUS_OS_OPCOES = [
 # Tipo de OS não é validado contra lista fechada no backend hoje (aceita
 # qualquer texto, só usa "Assistencia" como default) — esta lista é a fonte
 # única de exibição (GET /api/constantes), não uma whitelist de gravação.
-OS_TIPOS_OPCOES = ["Assistencia", "Garantia"]
-# BR-090 -- OS interna: conserto de aparelho comprado pela loja (Compra de Aparelhos). Fica fora de
-# OS_TIPOS_OPCOES até a tela existir (PR 5), mas a API já aceita o tipo.
+# BR-090 -- OS interna: conserto de aparelho comprado pela loja (Compra de Aparelhos).
 TIPO_OS_INTERNA = "Interna"
+OS_TIPOS_OPCOES = ["Assistencia", "Garantia", TIPO_OS_INTERNA]
 CLIENTE_OS_INTERNA = "Estoque próprio"
 
 # Prazo padrão de garantia de reparo (dias) — distinto da futura garantia de

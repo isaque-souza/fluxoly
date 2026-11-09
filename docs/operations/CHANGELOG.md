@@ -9,6 +9,18 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-08 — Compra de Aparelhos, PR 5/5: telas)
+- **feat: telas da compra de aparelhos (BR-083 a BR-093)** — página **Compras de Aparelhos** (menu
+  Operação, perfis `admin`/`financeiro`/`vendedor`): registrar compra (modelo, IMEI, origem, estado,
+  defeito, cliente e venda na troca ou nome/telefone de quem vendeu, valor e forma de pagamento) e histórico
+  com filtros e cancelamento com motivo. **Nova OS** ganha o tipo **Interna**: escolhe o aparelho comprado
+  (busca por IMEI/modelo) no lugar de cliente, vendedor e valores; **Editar OS** de uma OS interna não pede
+  Garantia de Reparo nem deixa trocar o tipo. Custo e lucro aparecem no detalhe da venda e do aparelho
+  (`admin`/`financeiro`), e **Relatórios** ganha a aba **Compra e revenda** (mês). No Financeiro a saída
+  aparece como "Compra de aparelho". Backend: `GET /api/unidades-serializadas?origem=compra` (unidades com
+  compra ativa) e `Interna` em `os_tipos`. Corrigido também o destaque do menu lateral, que acendia
+  "Compras" ao abrir "Compras de Aparelhos".
+
 ### Adicionado (2026-11-08 — Compra de Aparelhos, PR 4/5: custo, lucro e relatório)
 - **feat: custo e lucro por aparelho comprado e relatório mensal (BR-092, BR-093)** — custo = valor pago +
   peças das OS internas não canceladas, sempre calculado. `GET /api/unidades-serializadas/<id>` ganha

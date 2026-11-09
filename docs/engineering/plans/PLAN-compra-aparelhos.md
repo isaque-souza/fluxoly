@@ -3,7 +3,7 @@
 **Data:** 2026-11-08
 **Feature:** compra de aparelhos (geralmente quebrados) para consertar e revender — `docs/product/BUSINESS_RULES.md`
 BR-083 a BR-093
-**Status:** Implementação — backend concluído (PRs 2 a 4); falta o frontend (PR 5)
+**Status:** Implementação concluída (PRs 2 a 5); falta QA manual
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -14,12 +14,13 @@ BR-083 a BR-093
 - [x] Discovery — aprovada pelo CTO em 2026-11-08 (respostas na conversa de Discovery, registradas em
   BR-083 a BR-093)
 - [x] Plano Técnico — este documento (PR 1, só documentação)
-- [ ] Implementação — [x] PR 2 (banco + backend da compra: migration `m0003`, domínio
+- [x] Implementação — [x] PR 2 (banco + backend da compra: migration `m0003`, domínio
   `fluxoly_compras_aparelhos_*`, hooks de Caixa e Unidades, `tests/test_compras_aparelhos.py` com 30 casos);
   [x] PR 3 (OS interna: `api_os.py`, exclusões em dashboard/relatórios/Garantias/alerta do `app.py`,
   `tests/test_os_interna.py` com 18 casos); [x] PR 4 (custo/lucro + relatório, `tests/test_compras_custo_lucro.py` com 14
-  casos); [ ] PR 5 (frontend)
-- [ ] Testes
+  casos); [x] PR 5 (frontend: página Compras de Aparelhos, tipo Interna na Nova/Editar OS, custo/lucro
+  na venda e na unidade, aba Compra e revenda em Relatórios)
+- [x] Testes — backend e frontend em cada PR
 - [ ] QA Manual
 - [ ] Revisão Arquitetural
 - [ ] Encerramento
@@ -128,6 +129,11 @@ Compra ──► Unidade serializada ──► OS interna (conserto) ──► V
   `admin`/`financeiro`/`vendedor`.
 - Nova OS: tipo "Interna" com busca de aparelho por IMEI no lugar de cliente/vendedor/valores.
 - Lucro no detalhe da venda e da unidade (só `admin`/`financeiro`); aba "Compra e revenda" em Relatórios.
+- **Ajustes na implementação:** `TIPO_OS_INTERNA` entrou em `OS_TIPOS_OPCOES`. O seletor de aparelho da OS
+  interna busca em `GET /api/unidades-serializadas?origem=compra` (novo filtro: unidade com compra ativa), e
+  não em `/api/compras-aparelhos`, porque o técnico abre OS mas não vê compras (dados de quem vendeu,
+  BR-088/BR-089). A aba de Relatórios segue a página, que é só `admin`; `financeiro` tem a API, sem tela
+  ainda.
 
 ## Fora de Escopo
 - Consulta automática de IMEI em base de roubo/bloqueio (Anatel/celular seguro).

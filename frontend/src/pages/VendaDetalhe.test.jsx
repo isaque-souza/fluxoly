@@ -99,3 +99,28 @@ describe("VendaDetalhe — tipos de garantia (KI-048)", () => {
     expect(screen.getAllByText("Venda #42").length).toBeGreaterThan(0);
   });
 });
+
+describe("VendaDetalhe — custo e lucro do aparelho comprado (BR-092)", () => {
+  beforeEach(() => {
+    mockVendasGet.mockReset();
+    mockTiposGarantiaList.mockReset();
+    mockTiposGarantiaList.mockResolvedValue({ ok: true, items: [] });
+  });
+
+  it("mostra custo total e lucro quando o item veio de compra", async () => {
+    const itens = [{ ...itensConcluida[0], custo_aparelho: { valor_compra: 1000, custo_pecas: 300, custo_total: 1300 }, lucro: 200 }];
+    mockVendasGet.mockResolvedValue({ ok: true, venda: vendaConcluida, itens });
+    renderVendaDetalhe();
+
+    await waitFor(() => expect(screen.getByText("Custo e lucro do aparelho")).toBeInTheDocument());
+    expect(screen.getByTestId("venda-lucro")).toHaveTextContent("200,00");
+  });
+
+  it("não mostra o painel quando o backend não manda custo (aparelho sem compra ou perfil sem acesso)", async () => {
+    mockVendasGet.mockResolvedValue({ ok: true, venda: vendaConcluida, itens: itensConcluida });
+    renderVendaDetalhe();
+
+    await waitFor(() => expect(screen.getAllByText("Venda #42").length).toBeGreaterThan(0));
+    expect(screen.queryByText("Custo e lucro do aparelho")).not.toBeInTheDocument();
+  });
+});

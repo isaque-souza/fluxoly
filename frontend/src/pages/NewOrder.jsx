@@ -12,7 +12,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Reveal } from "@/components/ui/reveal";
 import { Panel, PanelHeader, PanelTitle, PanelContent } from "@/components/ui/panel";
 import { LooseMetric } from "@/components/ui/loose-metric";
-import { formatCurrency, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK } from "@/lib/constants";
+import { formatCurrency, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK, TIPO_OS_INTERNA } from "@/lib/constants";
+import AparelhoCompradoPicker from "@/components/orders/AparelhoCompradoPicker";
 
 const EMPTY_FORM = {
   tipo: "Assistencia",
@@ -41,6 +42,9 @@ export default function NewOrder() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [suggestedPrice, setSuggestedPrice] = useState(null);
+  // BR-090 -- OS interna: conserto de aparelho comprado (sem cliente, vendedor nem valores).
+  const [aparelhoInterno, setAparelhoInterno] = useState(null);
+  const interna = form.tipo === TIPO_OS_INTERNA;
 
   useEffect(() => {
     Promise.all([constApi.get(), reparosApi.list(), estoqueApi.list()]).then(([c, r, e]) => {
@@ -58,7 +62,7 @@ export default function NewOrder() {
 
   // Auto-preenche valor_cobrado a partir da tabela de preços
   useEffect(() => {
-    if (!form.modelo || selectedReparos.length === 0) {
+    if (interna || !form.modelo || selectedReparos.length === 0) {
       setSuggestedPrice(null);
       return;
     }
@@ -78,7 +82,25 @@ export default function NewOrder() {
         setSuggestedPrice(null);
       }
     });
-  }, [form.modelo, form.valor_cobrado, selectedReparos]);
+  }, [form.modelo, form.valor_cobrado, selectedReparos, interna]);
+
+  const selecionarAparelhoInterno = (unidade) => {
+    setAparelhoInterno(unidade);
+    const modeloConhecido = (constants?.iphone_models || []).includes(unidade.origem_label);
+    setForm((p) => ({
+      ...p,
+      imei: unidade.imei || "",
+      ...(modeloConhecido ? { modelo: unidade.origem_label, cor: "" } : {}),
+    }));
+  };
+
+  const mudarTipo = (tipo) => {
+    setField("tipo", tipo);
+    if (tipo !== TIPO_OS_INTERNA && aparelhoInterno) {
+      setAparelhoInterno(null);
+      setField("imei", "");
+    }
+  };
 
   const toggleReparo = (id) => {
     setSelectedReparos((prev) =>
@@ -100,14 +122,19 @@ export default function NewOrder() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (interna && !aparelhoInterno) {
+      toast.error("Selecione o aparelho comprado que vai para o conserto.");
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
         ...form,
-        valor_cobrado: parseFloat(form.valor_cobrado) || 0,
-        valor_descontado: parseFloat(form.valor_descontado) || 0,
+        valor_cobrado: interna ? 0 : parseFloat(form.valor_cobrado) || 0,
+        valor_descontado: interna ? 0 : parseFloat(form.valor_descontado) || 0,
         reparo_ids: selectedReparos,
         pecas_ids: Object.entries(pecas).flatMap(([k, v]) => Array.from({ length: v }, () => parseInt(k, 10))),
+        ...(interna ? { unidade_serializada_id: aparelhoInterno.id, cliente: "", vendedor: "" } : {}),
       };
       const res = await ordensApi.create(payload);
       if (res?.ok) {
@@ -167,17 +194,31 @@ export default function NewOrder() {
         {/* Cliente / Tipo */}
         <Panel>
           <PanelHeader>
-            <PanelTitle>Cliente</PanelTitle>
+            <PanelTitle>{interna ? "Aparelho comprado (OS interna)" : "Cliente"}</PanelTitle>
           </PanelHeader>
           <PanelContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                 <Label htmlFor="order-cliente">Nome do Cliente *</Label>
-                 <Input id="order-cliente" value={form.cliente} onChange={(e) => setField("cliente", e.target.value)} placeholder="Nome completo" required />
-              </div>
+              {interna ? (
+                <div className="col-span-2 space-y-1.5">
+                  <Label>Aparelho comprado *</Label>
+                  <AparelhoCompradoPicker
+                    selecionado={aparelhoInterno}
+                    onSelecionar={selecionarAparelhoInterno}
+                    onTrocar={() => { setAparelhoInterno(null); setField("imei", ""); }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Conserto de aparelho da loja: sem cliente, vendedor nem valor cobrado. As peças entram no custo do aparelho.
+                  </p>
+                </div>
+              ) : (
+                <div className="col-span-2 space-y-1.5">
+                   <Label htmlFor="order-cliente">Nome do Cliente *</Label>
+                   <Input id="order-cliente" value={form.cliente} onChange={(e) => setField("cliente", e.target.value)} placeholder="Nome completo" required />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Tipo de OS</Label>
-                <Select value={form.tipo} onValueChange={(v) => setField("tipo", v)}>
+                <Select value={form.tipo} onValueChange={mudarTipo}>
                   <SelectTrigger aria-label="Tipo de OS"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(constants?.os_tipos || OS_TYPES_FALLBACK).map((t) => (
@@ -225,7 +266,7 @@ export default function NewOrder() {
               </div>
               <div className="col-span-2 space-y-1.5">
                  <Label htmlFor="order-imei">IMEI</Label>
-                 <Input id="order-imei" value={form.imei} onChange={(e) => setField("imei", e.target.value)} placeholder="000000000000000" maxLength={16} />
+                 <Input id="order-imei" value={form.imei} onChange={(e) => setField("imei", e.target.value)} placeholder="000000000000000" maxLength={16} readOnly={interna} />
               </div>
             </div>
           </PanelContent>
@@ -249,17 +290,19 @@ export default function NewOrder() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Vendedor</Label>
-                <Select value={form.vendedor} onValueChange={(v) => setField("vendedor", v)}>
-                  <SelectTrigger aria-label="Vendedor"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {(constants?.vendedores || []).map((v) => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!interna && (
+                <div className="space-y-1.5">
+                  <Label>Vendedor</Label>
+                  <Select value={form.vendedor} onValueChange={(v) => setField("vendedor", v)}>
+                    <SelectTrigger aria-label="Vendedor"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {(constants?.vendedores || []).map((v) => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setField("status", v)}>
@@ -308,7 +351,8 @@ export default function NewOrder() {
           </PanelContent>
         </Panel>
 
-        {/* Financeiro */}
+        {/* Financeiro -- OS interna não tem valor cobrado (BR-090) */}
+        {!interna && (
         <Panel>
           <PanelHeader>
             <PanelTitle>Financeiro</PanelTitle>
@@ -340,6 +384,7 @@ export default function NewOrder() {
             </div>
           </PanelContent>
         </Panel>
+        )}
 
         {/* Peças do Estoque */}
         <Panel>

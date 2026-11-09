@@ -373,6 +373,18 @@ export const vendas = {
     get(`/vendas/${vendaId}/itens/${itemId}/historico-garantia`),
 };
 
+// ── Compra de Aparelhos (BR-083 a BR-093) ───────────────────────────────────
+export const comprasAparelhos = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return get(`/compras-aparelhos${qs ? "?" + qs : ""}`);
+  },
+  get:       (id)        => get(`/compras-aparelhos/${id}`),
+  create:    (data)      => post("/compras-aparelhos", data),
+  cancelar:  (id, data)  => post(`/compras-aparelhos/${id}/cancelar`, data),
+  relatorio: (mes)       => get(`/compras-aparelhos/relatorio?mes=${encodeURIComponent(mes)}`),
+};
+
 // ── Relatórios ───────────────────────────────────────────────────────────────
 export const relatorios = {
   tecnicos:  (params = {}) => {

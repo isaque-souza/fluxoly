@@ -118,6 +118,13 @@ def _montar_filtros_avancados(termo, origem, status, saude_min, saude_max, saude
         condicoes.append("u.estoque_id IS NOT NULL")
     elif origem == "produto":
         condicoes.append("u.produto_id IS NOT NULL")
+    elif origem == "compra":
+        # OS interna (BR-090): só aparelhos com compra ativa. Leitura de compras_aparelhos
+        # só para filtrar -- mesma justificativa do JOIN de exibição acima.
+        condicoes.append(
+            "EXISTS (SELECT 1 FROM compras_aparelhos ca "
+            "WHERE ca.unidade_serializada_id = u.id AND ca.status = 'ativa')"
+        )
     if status:
         condicoes.append("u.status = ?")
         params.append(status)

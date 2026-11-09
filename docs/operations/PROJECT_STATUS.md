@@ -31,7 +31,10 @@ unidade → OS interna → venda, com saída de caixa e lucro por aparelho; impl
 backend); suíte backend 838 passed / 5 failed (KI-030, só local), ruff ok. **PR 3
 (`feat/os-interna-aparelho-comprado`)**: OS interna (BR-090/BR-091); suíte 856 passed / 5 failed (KI-030).
 **PR 4 (`feat/custo-lucro-aparelho`)**: custo/lucro por aparelho e relatório mensal (BR-092/BR-093); suíte
-870 passed / 5 failed (KI-030). Backend da feature completo; falta o frontend (PR 5).
+870 passed / 5 failed (KI-030). **PR 5 (`feat/compra-aparelhos-telas`)**: telas — página Compras de
+Aparelhos, tipo Interna na Nova/Editar OS, custo/lucro na venda e na unidade, aba Compra e revenda em
+Relatórios; suíte backend 871 passed / 5 failed (KI-030), frontend verde, build ok. Feature completa;
+falta QA manual no servidor.
 Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —

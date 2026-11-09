@@ -14,7 +14,7 @@ import { ListSkeleton } from "@/components/ui/loading-state";
 import { Reveal } from "@/components/ui/reveal";
 import { FilterBar, FilterSelect, FilterInput } from "@/components/ui/filter-bar";
 import { interactiveRowClassName } from "@/lib/interaction";
-import { origemUnidadeLabel } from "@/lib/constants";
+import { formatCurrency, origemUnidadeLabel } from "@/lib/constants";
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -279,6 +279,29 @@ function DetalheUnidade({ unidadeId, onClose, canEdit }) {
                 <p className="text-card-foreground text-sm">{formatDate(unidade.criado_em)}</p>
               </div>
             </div>
+
+            {/* BR-092 -- custo do aparelho comprado; o backend só manda para admin/financeiro */}
+            {unidade.custo_aparelho && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Custo do aparelho</p>
+                <dl className="grid grid-cols-3 gap-3 bg-secondary/40 rounded-xl p-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Compra</dt>
+                    <dd className="text-card-foreground">{formatCurrency(unidade.custo_aparelho.valor_compra)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Peças do conserto</dt>
+                    <dd className="text-card-foreground">{formatCurrency(unidade.custo_aparelho.custo_pecas)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Custo total</dt>
+                    <dd data-testid="unidade-custo-total" className="font-medium text-card-foreground">
+                      {formatCurrency(unidade.custo_aparelho.custo_total)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            )}
 
             {/* Campos que dependem do módulo de Vendas — ainda não existe */}
             <div className="grid grid-cols-2 gap-3">

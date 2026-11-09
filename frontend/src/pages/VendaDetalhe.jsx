@@ -459,6 +459,40 @@ export default function VendaDetalhe() {
         </PanelContent>
       </Panel>
 
+      {/* BR-092 -- só vem do backend para admin/financeiro e só para aparelho que veio de compra */}
+      {itemPrincipal?.custo_aparelho && (
+        <Panel>
+          <PanelHeader>
+            <PanelTitle>Custo e lucro do aparelho</PanelTitle>
+          </PanelHeader>
+          <PanelContent>
+            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Valor da compra</dt>
+                <dd className="font-medium text-card-foreground">{formatCurrency(itemPrincipal.custo_aparelho.valor_compra)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Peças do conserto</dt>
+                <dd className="font-medium text-card-foreground">{formatCurrency(itemPrincipal.custo_aparelho.custo_pecas)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Custo total</dt>
+                <dd className="font-medium text-card-foreground">{formatCurrency(itemPrincipal.custo_aparelho.custo_total)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Lucro</dt>
+                <dd
+                  data-testid="venda-lucro"
+                  className={cn("font-semibold", itemPrincipal.lucro < 0 ? "text-destructive" : "text-success")}
+                >
+                  {formatCurrency(itemPrincipal.lucro)}
+                </dd>
+              </div>
+            </dl>
+          </PanelContent>
+        </Panel>
+      )}
+
       {podeAjustar && (
         <Panel>
           <PanelHeader>
