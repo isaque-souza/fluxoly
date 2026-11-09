@@ -547,28 +547,28 @@ Princípio da Imutabilidade da Venda (BR-034) e o padrão de estorno já usado e
 
 Decisões tomadas em Discovery (ADR-010) com o CTO em 2026-11-08: a loja compra aparelhos, em geral
 quebrados, para consertar e revender. Plano técnico em `docs/engineering/plans/PLAN-compra-aparelhos.md`.
-Todas as regras abaixo estão **🟡 Aprovadas, não implementadas**.
+BR-083 a BR-089 implementadas no backend (PR 2, 2026-11-08); BR-090 a BR-093 aprovadas, ainda não implementadas.
 
-**BR-083 — 🟡 Aprovada (2026-11-08)**
+**BR-083 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Uma compra de aparelho registra: modelo do catálogo (`produtos`), IMEI (obrigatório), origem
 (`marketplace` | `troca` | `outro`), valor pago (`> 0`), forma de pagamento (`pix` | `dinheiro` |
 `transferencia` | `cartao` | `abatido_na_venda`), estado (texto curto obrigatório) e defeito (texto,
 vazio = sem defeito). O usuário que registra é sempre o da sessão.
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-084 — 🟡 Aprovada (2026-11-08)**
+**BR-084 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Registrar a compra cria, na mesma operação, a unidade serializada do aparelho (origem Produto, ADR-007):
 com defeito preenchido ela nasce `em_reparo`; sem defeito, `disponivel`. IMEI já cadastrado em outra
 unidade é rejeitado. Compra e unidade nascem juntas ou não nascem (uma transação).
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-085 — 🟡 Aprovada (2026-11-08)**
+**BR-085 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Compra com origem `troca` exige o cliente que entregou o aparelho e pode ser ligada à venda em que ele
 entrou como parte do pagamento. A forma de pagamento `abatido_na_venda` só é aceita com origem `troca`.
 A venda continua registrada pelo valor cheio — a troca não altera `vendas.valor_total` (BR-034).
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-086 — 🟡 Aprovada (2026-11-08)**
+**BR-086 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Toda compra ativa gera automaticamente uma saída em `movimentacoes_caixa` no valor pago
 (`origem='compra_aparelho'`, `origem_id=compras_aparelhos.id`), inclusive quando a forma é
 `abatido_na_venda`: a venda entra cheia (BR-069) e a compra sai cheia, então o saldo líquido é o que o
@@ -576,19 +576,19 @@ cliente realmente pagou. Uma compra nunca tem duas saídas ativas (índice únic
 BR-069) e o hook é idempotente.
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-087 — 🟡 Aprovada (2026-11-08)**
+**BR-087 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Uma compra pode ser cancelada com motivo obrigatório, desde que o aparelho não tenha sido vendido. O
 cancelamento estorna a saída de caixa (nunca apaga — BR-069) e a unidade vai para `devolvido`. A compra
 cancelada permanece no histórico.
 *Fonte: Decisão de engenharia dentro do escopo aprovado pelo CTO, 2026-11-08 — revisável no QA.*
 
-**BR-088 — 🟡 Aprovada (2026-11-08)**
+**BR-088 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Na compra é possível guardar nome e telefone de quem vendeu o aparelho (opcionais), para comprovar a
 procedência caso o aparelho apareça como roubado. São dados pessoais (LGPD): visíveis só para os perfis
 que registram compras (BR-089), fora de exportações e PDFs.
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-089 — 🟡 Aprovada (2026-11-08)**
+**BR-089 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Registrar, listar e cancelar compras de aparelhos: perfis `admin`, `financeiro` e `vendedor`.
 *Fonte: Decisão do CTO, 2026-11-08.*
 

@@ -3,7 +3,7 @@
 **Data:** 2026-11-08
 **Feature:** compra de aparelhos (geralmente quebrados) para consertar e revender — `docs/product/BUSINESS_RULES.md`
 BR-083 a BR-093
-**Status:** Plano Técnico — aguardando implementação (PR 2 em diante)
+**Status:** Implementação — PR 2 (banco + backend da compra) concluído
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -14,8 +14,9 @@ BR-083 a BR-093
 - [x] Discovery — aprovada pelo CTO em 2026-11-08 (respostas na conversa de Discovery, registradas em
   BR-083 a BR-093)
 - [x] Plano Técnico — este documento (PR 1, só documentação)
-- [ ] Implementação — PR 2 (banco + backend da compra), PR 3 (OS interna), PR 4 (custo/lucro + relatório),
-  PR 5 (frontend)
+- [ ] Implementação — [x] PR 2 (banco + backend da compra: migration `m0003`, domínio
+  `fluxoly_compras_aparelhos_*`, hooks de Caixa e Unidades, `tests/test_compras_aparelhos.py` com 30 casos);
+  [ ] PR 3 (OS interna); [ ] PR 4 (custo/lucro + relatório); [ ] PR 5 (frontend)
 - [ ] Testes
 - [ ] QA Manual
 - [ ] Revisão Arquitetural

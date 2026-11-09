@@ -26,7 +26,9 @@ retirado do ar pelo CTO**; o banco será recriado do zero, sem dados herdados. P
 no ar em servidor Linux próprio do CTO (Docker + Tailscale Funnel, banco novo), frontend na Vercel apontando
 para ele, login validado (desktop e 4G) e IP real chegando ao rate limit. 2026-11-08 — **Discovery de Compra
 de Aparelhos aprovada** (BR-083 a BR-093, `docs/engineering/plans/PLAN-compra-aparelhos.md`): compra →
-unidade → OS interna → venda, com saída de caixa e lucro por aparelho; implementação em 4 PRs. Antes disso:
+unidade → OS interna → venda, com saída de caixa e lucro por aparelho; implementação em 4 PRs. **PR 2
+(`feat/compra-aparelhos-backend`)**: migration `m0003` + `/api/compras-aparelhos` (BR-083 a BR-089 no
+backend); suíte backend 838 passed / 5 failed (KI-030, só local), ruff ok. Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —
 `81244de` feat, `c2a4314` chore/script de import, `924aeb3` docs —, branch `feat/estoque-locais-estela`
