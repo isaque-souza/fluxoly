@@ -23,6 +23,8 @@ Depende de: `fluxoly_unidades_serializadas_repository.py` (SQL),
 `fluxoly_audit.py` (auditoria — create/status_change).
 """
 
+import sqlite3
+
 import fluxoly_unidades_serializadas_repository as repo
 from fluxoly_audit import registrar_log_auditoria
 
@@ -306,6 +308,73 @@ def liberar_unidade_para_venda(cursor, unidade_id, usuario_id):
         "status_change",
         antes="vendido",
         depois="disponivel",
+    )
+    return True, None
+
+
+def criar_unidade_de_compra(cursor, usuario_id, produto_id, imei, com_defeito):
+    """Compra de aparelho (BR-084, fluxoly_compras_aparelhos_service.py): cria a unidade
+    (origem Produto, ADR-007) já no status certo -- `em_reparo` se veio com defeito,
+    `disponivel` se não. Recebe `cursor` (não `conectar`) pelo mesmo motivo de
+    `marcar_como_vendida`: precisa viver na MESMA transação da compra e da saída de caixa
+    (nunca uma unidade sem compra, nem o contrário). Não faz rollback -- em caso de erro,
+    devolve a mensagem e quem abriu a transação decide. Retorna (unidade_id, erro)."""
+    imei = (imei or "").strip()
+    if not imei:
+        return None, "IMEI é obrigatório."
+
+    requer_rastreio = repo.obter_produto_requer_rastreio_unidade(cursor, produto_id)
+    if requer_rastreio is None:
+        return None, "Produto não encontrado."
+    if not requer_rastreio:
+        return None, "Este produto não está marcado para rastreamento por unidade."
+
+    try:
+        unidade_id = repo.inserir(cursor, produto_id=produto_id, imei=imei)
+    except sqlite3.IntegrityError:
+        return None, "IMEI já cadastrado."
+
+    registrar_log_auditoria(
+        cursor,
+        "unidade_serializada",
+        unidade_id,
+        usuario_id,
+        "create",
+        depois={"estoque_id": None, "produto_id": produto_id, "imei": imei, "origem": "compra_aparelho"},
+    )
+    if com_defeito:
+        repo.atualizar_status(cursor, unidade_id, "em_reparo")
+        registrar_log_auditoria(
+            cursor,
+            "unidade_serializada",
+            unidade_id,
+            usuario_id,
+            "status_change",
+            antes="disponivel",
+            depois="em_reparo",
+        )
+    return unidade_id, None
+
+
+def devolver_unidade_de_compra(cursor, unidade_id, usuario_id):
+    """Cancelamento de compra de aparelho (BR-087): `disponivel`/`em_reparo` -> `devolvido`.
+    Fora de `TRANSICOES_VALIDAS` de propósito (mesmo motivo de `marcar_como_vendida`): o
+    endpoint genérico de status não ganha uma porta lateral. Recebe `cursor` -- mesma
+    transação do cancelamento e do estorno de caixa. Retorna (sucesso, erro)."""
+    antes = repo.buscar_por_id(cursor, unidade_id)
+    if not antes:
+        return False, "Unidade não encontrada."
+    if repo.devolver_de_compra(cursor, unidade_id) == 0:
+        return False, "Aparelho já vendido ou fora do estoque — a compra não pode ser cancelada."
+
+    registrar_log_auditoria(
+        cursor,
+        "unidade_serializada",
+        unidade_id,
+        usuario_id,
+        "status_change",
+        antes=antes[5],
+        depois="devolvido",
     )
     return True, None
 

@@ -9,6 +9,16 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-08 — Compra de Aparelhos, PR 2/5: banco + backend)
+- **feat: registrar compra de aparelho (BR-083 a BR-089)** — migration `m0003_compras_aparelhos` (tabela
+  `compras_aparelhos`, índice único parcial `idx_movimentacoes_caixa_compra_ativa`, coluna
+  `os.unidade_serializada_id` reservada para a OS interna). Domínio novo `fluxoly_compras_aparelhos_*` com
+  `/api/compras-aparelhos` (listar, registrar, detalhar, cancelar) para `admin`/`financeiro`/`vendedor`.
+  Registrar cria, numa transação, a compra, a unidade serializada (`em_reparo` com defeito, `disponivel`
+  sem) e a saída de caixa (`origem='compra_aparelho'`, inclusive na troca "abatido na venda"); cancelar
+  estorna a saída e devolve a unidade (`devolvido`), só se o aparelho não foi vendido.
+  `tests/test_compras_aparelhos.py` (30 casos).
+
 ### Documentação (2026-11-08 — Discovery de Compra de Aparelhos)
 - **docs: regras e plano da compra de aparelhos para conserto e revenda** — BR-083 a BR-093 em
   `docs/product/BUSINESS_RULES.md` (aprovadas, não implementadas) e

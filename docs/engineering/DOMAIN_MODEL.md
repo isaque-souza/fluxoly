@@ -212,6 +212,19 @@ separado hoje está registrado como está — ver seção 3.
 | Dependido por | Nenhum domínio ainda (Garantias/Financeiro, quando existirem, provavelmente consumirão `vendas.id`) |
 | Observação | `marcar_como_vendida` (`irflow_unidades_serializadas_service.py`) é deliberadamente separada de `transicionar_status`/`TRANSICOES_VALIDAS` — evita que o endpoint genérico `PATCH /api/unidades-serializadas/<id>/status` aceite `{"status": "vendido"}` sem uma `venda` real por trás. `UNIQUE` em `vendas_itens.unidade_serializada_id` é a proteção de banco contra a mesma unidade em duas vendas — mantida por ora; `ADR-009` propõe um índice único parcial (`WHERE ativo=1` ou equivalente) como candidato para quando cancelamento (V1.2) for implementado, decisão ainda em aberto. Roadmap das próximas fases (histórico → cancelamento → desconto → comissão → garantia/troca → reserva → financeiro mínimo → documentos) e o modelo de estado-alvo (Estado Operacional do Ativo × Situação Comercial da unidade, venda com máquina de estados própria) definidos em `ADR-009` — reserva manual precede desconto/aprovação (mesmo mecanismo: unidade `reservada`) |
 
+### 1.16 Compra de Aparelhos
+
+| Aspecto | Hoje |
+|---|---|
+| Responsabilidade | Compra de aparelhos (geralmente quebrados) para conserto e revenda — origem marketplace, troca ou outro (BR-083 a BR-093, `docs/engineering/plans/PLAN-compra-aparelhos.md`) |
+| Tabela(s) | `compras_aparelhos` (migration `m0003`) |
+| Lógica | `fluxoly_compras_aparelhos_service.py` — registrar (compra + unidade + saída de caixa numa transação), listar, obter, cancelar (estorno + unidade `devolvido`) |
+| HTTP | `fluxoly_compras_aparelhos_controller.py` (`compras_aparelhos_api`, prefixo `/api/compras-aparelhos`) — perfis `admin`/`financeiro`/`vendedor` (BR-089) |
+| Frontend | Ainda não (PR 5 da feature) |
+| Testes | `tests/test_compras_aparelhos.py` |
+| Depende de | Unidades Serializadas (`criar_unidade_de_compra`/`devolver_unidade_de_compra`, cursor-based, exclusivas deste domínio), Caixa (`registrar_saida_de_compra_aparelho`/`estornar_saida_de_compra_aparelho`), Clientes e Vendas (só leitura, para validar a troca), `fluxoly_audit.py` |
+| Dependido por | OS interna (BR-090, PR 3) e custo/lucro por aparelho (BR-092, PR 4), quando implementados |
+
 ---
 
 ## 2. O que ainda não é um domínio isolado

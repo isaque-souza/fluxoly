@@ -73,6 +73,7 @@ Autenticação e perfis de acesso.
 | `origem_integracao` | TEXT | *(ALTER)* — origem quando criada via MercadoPhone |
 | `id_externo_integracao` | TEXT | *(ALTER)* — id no sistema externo |
 | `cliente_id` | INTEGER | *(ALTER, Sprint P0.1)* — FK lógica para `clientes.id`, nullable, **sem backfill**: OS existentes continuam só com `cliente` (texto); novas OS podem ser vinculadas a um cliente, mas nada força isso ainda |
+| `unidade_serializada_id` | INTEGER | *(migration `m0003`, 2026-11-08)* — FK lógica para `unidades_serializadas.id`, nullable. Reservada para a OS interna de conserto de aparelho comprado (BR-090); sem uso até o PR 3 da feature. Índice `idx_os_unidade_serializada_id` |
 
 Sem índice declarado explicitamente (candidato a `idx_os_status_data_tecnico` — ver KI-005/Sprint 5).
 
@@ -336,7 +337,7 @@ m0002_financeiro_minimo.py`, TD-03). `fluxoly_caixa_controller.py`/`_service.py`
 | `tipo` | TEXT NOT NULL | `'entrada'` \| `'saida'` |
 | `valor` | REAL NOT NULL | sempre positivo — o sinal vem de `tipo`, nunca do valor |
 | `descricao` | TEXT | |
-| `origem` | TEXT NOT NULL | `DEFAULT 'manual'` — `'manual'` \| `'venda'` \| `'conta_pagar'` \| `'conta_receber'` |
+| `origem` | TEXT NOT NULL | `DEFAULT 'manual'` — `'manual'` \| `'venda'` \| `'conta_pagar'` \| `'conta_receber'` \| `'compra_aparelho'` (saída, BR-086, desde `m0003`) |
 | `origem_id` | INTEGER | FK lógica **polimórfica** — aponta para `vendas.id`/`contas_pagar.id`/`contas_receber.id` conforme `origem` |
 | `estornada` | INTEGER NOT NULL | `DEFAULT 0` — estorno nunca apaga a linha (preserva auditoria), só remove do cálculo de saldo |
 | `usuario_id` | INTEGER | FK lógica: `usuarios.id` |
@@ -349,6 +350,37 @@ ativas simultâneas, mesmo padrão de `idx_vendas_itens_unidade_ativa`.
 
 Saldo de caixa é sempre `SOMA(entradas não estornadas) − SOMA(saídas não estornadas)`
 (`fluxoly_caixa_repository.py::calcular_saldo`).
+
+Desde `m0003` (2026-11-08): **`idx_movimentacoes_caixa_compra_ativa`** (`UNIQUE` parcial, `WHERE origem =
+'compra_aparelho' AND estornada = 0`, BR-086) — uma compra de aparelho nunca tem duas saídas ativas.
+
+### `compras_aparelhos`
+
+Compra de aparelhos para conserto e revenda (2026-11-08, migration
+`migrations/versions/m0003_compras_aparelhos.py`, BR-083 a BR-089,
+`docs/engineering/plans/PLAN-compra-aparelhos.md`). `fluxoly_compras_aparelhos_controller.py`/`_service.py`/
+`_repository.py`. A compra, a unidade serializada que ela cria e a saída de caixa nascem na mesma transação.
+
+| Coluna | Tipo | Observação |
+|--------|------|------------|
+| `id` | INTEGER PK AUTOINCREMENT | |
+| `unidade_serializada_id` | INTEGER NOT NULL | FK lógica — unidade criada pela própria compra (origem Produto) |
+| `produto_id` | INTEGER NOT NULL | FK lógica — modelo do catálogo (`requer_rastreio_unidade = 1`) |
+| `origem` | TEXT NOT NULL | `marketplace` \| `troca` \| `outro` (validado no service) |
+| `cliente_id` | INTEGER | FK lógica — obrigatório quando `origem='troca'`, `NULL` nas demais |
+| `venda_id` | INTEGER | FK lógica — opcional, só na troca: venda concluída do mesmo cliente |
+| `vendedor_nome` / `vendedor_telefone` | TEXT | Opcionais — quem vendeu o aparelho (dado pessoal, BR-088) |
+| `valor_pago` | REAL NOT NULL | `> 0`, arredondado em 2 casas |
+| `forma_pagamento` | TEXT NOT NULL | `pix` \| `dinheiro` \| `transferencia` \| `cartao` \| `abatido_na_venda` (só troca) |
+| `estado` | TEXT NOT NULL | Texto livre curto |
+| `defeito` | TEXT NOT NULL | `DEFAULT ''` — vazio = sem defeito (unidade nasce `disponivel`; com defeito, `em_reparo`) |
+| `status` | TEXT NOT NULL | `DEFAULT 'ativa'` — `ativa` \| `cancelada` |
+| `motivo_cancelamento` / `cancelado_por` / `cancelado_em` | TEXT / INTEGER / TEXT | `NULL` até cancelar |
+| `usuario_id` | INTEGER NOT NULL | Sempre o usuário da sessão |
+| `criado_em` | TEXT NOT NULL | `datetime('now')` |
+
+**Índices:** `idx_compras_aparelhos_unidade_ativa` (**`UNIQUE` parcial** `WHERE status = 'ativa'` — uma
+unidade tem no máximo uma compra ativa), `idx_compras_aparelhos_criado_em`, `idx_compras_aparelhos_cliente_id`.
 
 ### `contas_pagar`
 

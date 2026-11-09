@@ -225,6 +225,19 @@ def liberar_venda(cursor, unidade_id):
     return cursor.rowcount
 
 
+def devolver_de_compra(cursor, unidade_id):
+    """Transição disponivel|em_reparo -> devolvido, exclusiva do cancelamento de uma
+    compra de aparelho (BR-087, fluxoly_compras_aparelhos_service.py). CAS no SQL: nunca
+    devolve uma unidade já vendida. Retorna o número de linhas afetadas -- 0 significa que
+    a unidade não estava mais em estoque."""
+    cursor.execute(
+        "UPDATE unidades_serializadas SET status = 'devolvido', atualizado_em = datetime('now') "
+        "WHERE id = ? AND status IN ('disponivel', 'em_reparo')",
+        (unidade_id,),
+    )
+    return cursor.rowcount
+
+
 def atualizar_campos(cursor, unidade_id, localizacao, saude_bateria):
     """C1.3.4 — únicos campos editáveis fora da transição de status:
     localizacao e saude_bateria. `None` limpa o valor (mesma semântica de
