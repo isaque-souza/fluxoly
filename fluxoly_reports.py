@@ -232,6 +232,7 @@ def buscar_dados_relatorios(conectar):
             COALESCE(os.data_finalizado, ''),
             COALESCE(os.modelo, '')
         FROM os
+        WHERE COALESCE(os.tipo, '') != 'Interna'  -- BR-090: OS interna fora dos relatórios de assistência
         ORDER BY COALESCE(os.data_finalizado, os.data, '') ASC, os.id ASC
         """
     )

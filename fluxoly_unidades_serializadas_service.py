@@ -379,6 +379,48 @@ def devolver_unidade_de_compra(cursor, unidade_id, usuario_id):
     return True, None
 
 
+def iniciar_reparo_interno(cursor, unidade_id, usuario_id):
+    """OS interna (BR-090): aparelho `disponivel` vai para `em_reparo`; `em_reparo` continua
+    como está. Qualquer outro status (vendido, devolvido) é recusado. Recebe `cursor` -- vive
+    na transação da OS. Retorna (imei, erro)."""
+    antes = repo.buscar_por_id(cursor, unidade_id)
+    if not antes:
+        return None, "Aparelho não encontrado."
+    status_atual = antes[5]
+    if status_atual == "disponivel":
+        repo.atualizar_status(cursor, unidade_id, "em_reparo")
+        registrar_log_auditoria(
+            cursor,
+            "unidade_serializada",
+            unidade_id,
+            usuario_id,
+            "status_change",
+            antes="disponivel",
+            depois="em_reparo",
+        )
+    elif status_atual != "em_reparo":
+        return None, "Este aparelho não está no estoque (vendido ou devolvido)."
+    return antes[4] or "", None
+
+
+def concluir_reparo_interno(cursor, unidade_id, usuario_id):
+    """BR-091: OS interna finalizada -> aparelho `em_reparo` vira `disponivel`. Se o aparelho
+    não está mais `em_reparo` (alguém já mudou à mão), não faz nada. Recebe `cursor`."""
+    antes = repo.buscar_por_id(cursor, unidade_id)
+    if not antes or antes[5] != "em_reparo":
+        return
+    repo.atualizar_status(cursor, unidade_id, "disponivel")
+    registrar_log_auditoria(
+        cursor,
+        "unidade_serializada",
+        unidade_id,
+        usuario_id,
+        "status_change",
+        antes="em_reparo",
+        depois="disponivel",
+    )
+
+
 # C1.3.4 — únicos campos editáveis fora da máquina de estados de status:
 # localizacao e saude_bateria. IMEI é tratado como imutável após o cadastro
 # (decisão do usuário/CTO, 2026-07-22 — identificador primário usado em

@@ -230,6 +230,16 @@ def listar_compras(
     }
 
 
+def abrir_reparo_interno(cursor, unidade_id, usuario_id):
+    """BR-090 -- chamada de dentro da criação/reabertura de uma OS interna (api_os.py), na
+    mesma transação. Só aparelho com compra ativa pode ter OS interna. Retorna (imei, erro)."""
+    if not unidade_id:
+        return None, "Selecione o aparelho comprado que vai para o conserto."
+    if not repo.existe_compra_ativa_da_unidade(cursor, unidade_id):
+        return None, "Este aparelho não tem compra ativa registrada."
+    return unidades_service.iniciar_reparo_interno(cursor, unidade_id, usuario_id)
+
+
 def cancelar_compra(conectar, compra_id, usuario_id, motivo):
     """BR-087 -- retorna (sucesso, erro). Só cancela compra ativa cujo aparelho ainda não
     foi vendido; estorna a saída de caixa e devolve a unidade (`devolvido`)."""
