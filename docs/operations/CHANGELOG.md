@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-09 — hotfix)
+- **fix: corrida entre workers na migration 0003 derrubava o boot (KI-058)** — no primeiro boot com a m0003
+  pendente, os 2 workers do Gunicorn tentavam criar `os.unidade_serializada_id` ao mesmo tempo e o segundo
+  caía com `duplicate column name`. Esse erro específico agora é ignorado no `ALTER`.
+
 ### Adicionado (2026-11-08 — Compra de Aparelhos, PR 5/5: telas)
 - **feat: telas da compra de aparelhos (BR-083 a BR-093)** — página **Compras de Aparelhos** (menu
   Operação, perfis `admin`/`financeiro`/`vendedor`): registrar compra (modelo, IMEI, origem, estado,

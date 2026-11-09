@@ -2123,3 +2123,30 @@ Sprint prevista:
 
 Responsável:
 —
+
+## ~~KI-058~~ — RESOLVIDO
+
+Descrição:
+No primeiro boot com a `m0003_compras_aparelhos` pendente (servidor próprio, 2026-11-09, deploy do PR #79),
+os 2 workers do Gunicorn rodaram `run_migrations()` juntos. Os dois viram `os.unidade_serializada_id`
+ausente na checagem `_coluna_existe`; um criou a coluna e o outro caiu no `ALTER TABLE` com
+`sqlite3.OperationalError: duplicate column name: unidade_serializada_id` → `Worker failed to boot`. Mesma
+família de KI-035 (corrida entre workers no bootstrap), mas na checagem de coluna dentro do `apply()`, não no
+`INSERT` de `schema_migrations` — o DDL do `sqlite3` faz autocommit, então a checagem e o `ALTER` não são
+atômicos entre processos.
+
+Impacto:
+Alto e intermitente — derrubou o boot do deploy. Sem dado incorreto: a coluna é criada uma vez só e a
+migration, que é idempotente, é reaplicada no boot seguinte.
+
+Status:
+Resolvido em 2026-11-09 (branch `hotfix/migration-0003-corrida-workers`): na m0003, `duplicate column name`
+no `ALTER` vira no-op (qualquer outro erro propaga). Testes em `tests/test_migrations.py`
+(`TestM0003CorridaEntreWorkers`). Para migrations futuras com `ALTER TABLE ADD COLUMN`, seguir o mesmo
+padrão; serializar o runner entre processos (lock) fica como melhoria, não feita neste hotfix mínimo.
+
+Sprint prevista:
+—
+
+Responsável:
+—

@@ -321,3 +321,37 @@ class TestBootstrapDeAppUsaRunMigrations:
             assert cursor.fetchall() == [("0001",), ("0002",), ("0003",)]
         finally:
             conn.close()
+
+
+class TestM0003CorridaEntreWorkers:
+    """KI-058: no boot os 2 workers do Gunicorn aplicam a m0003 juntos; o outro
+    worker pode criar `os.unidade_serializada_id` entre a checagem e o ALTER
+    (produção, 2026-11-09, `duplicate column name` derrubou o boot)."""
+
+    def _banco_ate_0002(self, conn, monkeypatch):
+        monkeypatch.setattr("migrations.runner.MIGRATIONS", [m for m in MIGRATIONS if m.ID != "0003"])
+        run_migrations(conn)
+        monkeypatch.undo()
+
+    def test_coluna_criada_pelo_outro_worker_no_meio_nao_derruba(self, conn, monkeypatch):
+        from migrations.versions import m0003_compras_aparelhos as m0003
+
+        self._banco_ate_0002(conn, monkeypatch)
+        conn.execute("ALTER TABLE os ADD COLUMN unidade_serializada_id INTEGER")  # o "outro worker"
+        monkeypatch.setattr(m0003, "_coluna_existe", lambda *_: False)  # checagem feita antes dele
+
+        m0003.apply(conn.cursor(), conn)
+
+        colunas = [r[1] for r in conn.execute("PRAGMA table_info(os)")]
+        assert colunas.count("unidade_serializada_id") == 1
+
+    def test_outro_operational_error_no_alter_propaga(self, conn, monkeypatch):
+        from migrations.versions import m0003_compras_aparelhos as m0003
+
+        self._banco_ate_0002(conn, monkeypatch)
+        conn.execute("DROP TABLE os")
+        conn.execute("CREATE VIEW os AS SELECT 1 AS id")  # ALTER em view falha com outro erro
+        monkeypatch.setattr(m0003, "_coluna_existe", lambda *_: False)
+
+        with pytest.raises(sqlite3.OperationalError):
+            m0003.apply(conn.cursor(), conn)

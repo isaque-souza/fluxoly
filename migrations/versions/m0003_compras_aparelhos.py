@@ -63,5 +63,13 @@ def apply(cursor: sqlite3.Cursor, conn: sqlite3.Connection) -> None:
 
     # BR-090 (OS interna, PR 3) -- coluna preparada aqui, ainda sem uso.
     if not _coluna_existe(cursor, "os", "unidade_serializada_id"):
-        cursor.execute("ALTER TABLE os ADD COLUMN unidade_serializada_id INTEGER")
+        try:
+            cursor.execute("ALTER TABLE os ADD COLUMN unidade_serializada_id INTEGER")
+        except sqlite3.OperationalError as exc:
+            # Os 2 workers do Gunicorn migram ao mesmo tempo no boot: o outro pode
+            # ter criado a coluna entre a checagem acima e este ALTER (o DDL do
+            # sqlite3 faz autocommit). A coluna existir é o resultado desejado --
+            # só esse erro vira no-op; qualquer outro propaga (KI-058).
+            if "duplicate column name" not in str(exc).lower():
+                raise
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_unidade_serializada_id ON os (unidade_serializada_id)")
