@@ -711,7 +711,7 @@ def obter_alertas_sistema(limit=8):
         """
         SELECT id, cliente, modelo, data_finalizado, data, status
         FROM os
-        WHERE status='Finalizado'
+        WHERE status='Finalizado' AND COALESCE(tipo, '') != 'Interna'
         ORDER BY id DESC
         """
     )

@@ -9,6 +9,7 @@ domínio extraído).
 from flask import Blueprint, request
 
 from fluxoly_api_helpers import err, ok, usuario_logado
+from fluxoly_core import TIPO_OS_INTERNA
 
 
 def create_api_system_blueprint(deps):
@@ -126,6 +127,11 @@ def create_api_system_blueprint(deps):
             valor_descontado = os_item[8]
             data = os_item[10]
             vendedor = os_item[13]
+
+            # BR-090 -- OS interna (conserto de aparelho comprado) não é serviço para cliente:
+            # fora do faturamento, do lucro e dos totais de assistência.
+            if tipo == TIPO_OS_INTERNA:
+                continue
 
             custo = custos.get(os_id, 0)
             lucro = calcular_lucro_os(tipo, valor_cobrado, valor_descontado, custo)

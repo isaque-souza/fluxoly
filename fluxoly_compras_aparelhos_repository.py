@@ -122,6 +122,14 @@ def contar(cursor, origem, status, data_inicio, data_fim, termo):
     return cursor.fetchone()[0] or 0
 
 
+def existe_compra_ativa_da_unidade(cursor, unidade_id):
+    cursor.execute(
+        "SELECT 1 FROM compras_aparelhos WHERE unidade_serializada_id = ? AND status = 'ativa' LIMIT 1",
+        (unidade_id,),
+    )
+    return cursor.fetchone() is not None
+
+
 def cancelar(cursor, compra_id, motivo, usuario_id):
     """CAS: só cancela compra ainda `ativa`. Retorna linhas afetadas (0 = estado mudou)."""
     cursor.execute(

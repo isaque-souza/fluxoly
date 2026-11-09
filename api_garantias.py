@@ -59,6 +59,7 @@ def create_api_garantias_blueprint(deps):
             JOIN os_reparos ON os_reparos.os_id = os.id
             JOIN reparos ON reparos.id = os_reparos.reparo_id
             WHERE os.status='Finalizado'
+              AND COALESCE(os.tipo, '') != 'Interna'  -- BR-090: OS interna não tem garantia
             ORDER BY os.id DESC, reparos.nome ASC
             """
         )

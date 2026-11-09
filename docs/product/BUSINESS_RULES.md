@@ -547,7 +547,8 @@ Princípio da Imutabilidade da Venda (BR-034) e o padrão de estorno já usado e
 
 Decisões tomadas em Discovery (ADR-010) com o CTO em 2026-11-08: a loja compra aparelhos, em geral
 quebrados, para consertar e revender. Plano técnico em `docs/engineering/plans/PLAN-compra-aparelhos.md`.
-BR-083 a BR-089 implementadas no backend (PR 2, 2026-11-08); BR-090 a BR-093 aprovadas, ainda não implementadas.
+BR-083 a BR-091 implementadas no backend (PRs 2 e 3, 2026-11-08); BR-092 e BR-093 aprovadas, ainda não
+implementadas.
 
 **BR-083 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Uma compra de aparelho registra: modelo do catálogo (`produtos`), IMEI (obrigatório), origem
@@ -592,7 +593,7 @@ que registram compras (BR-089), fora de exportações e PDFs.
 Registrar, listar e cancelar compras de aparelhos: perfis `admin`, `financeiro` e `vendedor`.
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-090 — 🟡 Aprovada (2026-11-08)**
+**BR-090 — ✅ Implementado no backend (2026-11-08, PR 3; tela no PR 5)**
 O conserto de um aparelho comprado é feito numa **OS interna** (`tipo='Interna'`), ligada à unidade
 serializada. Ela não tem cliente nem vendedor e não tem valor cobrado; as peças saem do estoque como em
 qualquer OS. OS interna não entra no faturamento nem no lucro de assistência e não aparece em Garantias.
@@ -601,9 +602,13 @@ BR-030 (`admin`, `tecnico`). A regra é por tipo e por unidade — nunca por nom
 "IR Phones" removido na ADR-014 não volta).
 *Fonte: Decisão do CTO, 2026-11-08.*
 
-**BR-091 — 🟡 Aprovada (2026-11-08)**
-Quando uma OS interna é finalizada, o aparelho passa sozinho de `em_reparo` para `disponivel`.
-*Fonte: Decisão do CTO, 2026-11-08.*
+**BR-091 — ✅ Implementado no backend (2026-11-08, PR 3)**
+Quando uma OS interna é finalizada, o aparelho passa sozinho de `em_reparo` para `disponivel` — se não
+houver outra OS interna aberta para o mesmo aparelho. Reabrir uma OS interna finalizada ou cancelada
+devolve o aparelho para `em_reparo` (recusado se ele já foi vendido). Uma OS não troca entre interna e de
+cliente depois de criada.
+*Fonte: Decisão do CTO, 2026-11-08 (finalização); reabertura e tipo fixo por decisão de engenharia —
+revisável no QA.*
 
 **BR-092 — 🟡 Aprovada (2026-11-08)**
 Custo do aparelho = valor pago na compra ativa + custo de peças de todas as OS internas dele (mão de obra

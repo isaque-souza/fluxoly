@@ -12,7 +12,10 @@ from datetime import date, datetime
 
 from flask import Blueprint, request, session
 
+import fluxoly_compras_aparelhos_service as compras_aparelhos_service
+import fluxoly_unidades_serializadas_service as unidades_service
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
+from fluxoly_core import CLIENTE_OS_INTERNA, TIPO_OS_INTERNA
 from fluxoly_mercadophone import atualizar_runtime_mercadophone, carregar_config_mercadophone
 from fluxoly_validation import parse_float, parse_int, safe_json
 
@@ -167,6 +170,29 @@ def create_api_os_blueprint(deps):
 
     # ── SERVICE ORDERS ─────────────────────────────────────────────────────
 
+    def _outra_os_interna_aberta(cursor, unidade_id, os_id):
+        cursor.execute(
+            "SELECT status FROM os WHERE tipo=? AND unidade_serializada_id=? AND id != ?",
+            (TIPO_OS_INTERNA, unidade_id, os_id),
+        )
+        return any(status_aberto(normalizar_status_os(r[0])) for r in cursor.fetchall())
+
+    def _sincronizar_aparelho_da_os_interna(cursor, os_id, unidade_id, status_novo, status_antigo):
+        """BR-091 / BR-090 -- mantém o status do aparelho comprado alinhado com a OS interna.
+        Finalizou -> aparelho `disponivel` (se não há outra OS interna aberta para ele).
+        Reaberta depois de finalizada/cancelada -> aparelho volta a `em_reparo`.
+        Retorna mensagem de erro ou None."""
+        usuario_id = session.get("usuario_id")
+        if status_finalizado(status_novo) and not status_finalizado(status_antigo):
+            if not _outra_os_interna_aberta(cursor, unidade_id, os_id):
+                unidades_service.concluir_reparo_interno(cursor, unidade_id, usuario_id)
+            return None
+        reaberta = status_finalizado(status_antigo) or status_cancelado(status_antigo)
+        if reaberta and not status_finalizado(status_novo) and not status_cancelado(status_novo):
+            _imei, erro = compras_aparelhos_service.abrir_reparo_interno(cursor, unidade_id, usuario_id)
+            return erro
+        return None
+
     def _os_row_to_dict(row, reparos_por_os, custos):
         os_id = row[0]
         tipo = row[1]
@@ -300,7 +326,8 @@ def create_api_os_blueprint(deps):
                 COALESCE(vendedor, ''), COALESCE(cor, ''),
                 COALESCE(imei, ''), COALESCE(origem_integracao, ''),
                 COALESCE(id_externo_integracao, ''),
-                COALESCE(data_finalizado, '')
+                COALESCE(data_finalizado, ''),
+                unidade_serializada_id
             FROM os
             WHERE id=?
             """,
@@ -361,6 +388,7 @@ def create_api_os_blueprint(deps):
                 "origem_integracao": row[16] or "",
                 "id_externo_integracao": row[17] or "",
                 "data_finalizado": row[18] or "",
+                "unidade_serializada_id": row[19],
                 "pecas_usadas": pecas_usadas,
             }
         )
@@ -590,12 +618,24 @@ def create_api_os_blueprint(deps):
 
         status = normalizar_status_os(status_raw)
 
+        # BR-090 -- OS interna: sem cliente, vendedor nem valor cobrado; ligada a um aparelho comprado.
+        interna = tipo == TIPO_OS_INTERNA
+        unidade_serializada_id = None
+        if interna:
+            unidade_serializada_id = parse_int(body.get("unidade_serializada_id"), default=None)
+            cliente = CLIENTE_OS_INTERNA
+            vendedor = ""
+            valor_cobrado = 0.0
+            valor_descontado = 0.0
+
         if not tipo or not cliente or not modelo or not tecnico or valor_cobrado is None or valor_descontado is None:
             return err("Preencha tipo, cliente, modelo, técnico e valores válidos.")
         if not reparo_ids:
             return err("Selecione ao menos um reparo.")
         if not vendedor_valido(vendedor, vendedores):
             return err("Vendedor inválido.")
+        if interna and status_cancelado(status):
+            return err("Não é possível abrir uma OS interna já cancelada.")
 
         conn = conectar()
         cursor = conn.cursor()
@@ -603,11 +643,21 @@ def create_api_os_blueprint(deps):
             if not validar_reparo_ids(cursor, reparo_ids):
                 return err("Um ou mais reparos não existem.")
 
+            if interna:
+                imei_aparelho, erro_aparelho = compras_aparelhos_service.abrir_reparo_interno(
+                    cursor, unidade_serializada_id, session.get("usuario_id")
+                )
+                if erro_aparelho:
+                    conn.rollback()
+                    return err(erro_aparelho)
+                imei = normalizar_imei(imei_aparelho) or imei
+
             cursor.execute(
                 """
                 INSERT INTO os (tipo, cliente, aparelho, tecnico, reparo_id, status,
-                    valor_cobrado, valor_descontado, custo_pecas, data, observacoes, modelo, vendedor, cor, imei)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    valor_cobrado, valor_descontado, custo_pecas, data, observacoes, modelo, vendedor, cor, imei,
+                    unidade_serializada_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     tipo,
@@ -625,6 +675,7 @@ def create_api_os_blueprint(deps):
                     vendedor,
                     cor,
                     imei,
+                    unidade_serializada_id,
                 ),
             )
             novo_id = cursor.lastrowid
@@ -646,6 +697,8 @@ def create_api_os_blueprint(deps):
                 custo_total += valor_peca
 
             cursor.execute("UPDATE os SET custo_pecas=? WHERE id=?", (round(custo_total, 2), novo_id))
+            if interna and status_finalizado(status):
+                _sincronizar_aparelho_da_os_interna(cursor, novo_id, unidade_serializada_id, status, "")
             conn.commit()
         except Exception as exc:
             conn.rollback()
@@ -681,6 +734,14 @@ def create_api_os_blueprint(deps):
         status = normalizar_status_os(body.get("status") or "", status_padrao="")
         aparelho = modelo
 
+        # BR-090 -- OS interna: mesmos campos forçados da criação (ver criar_ordem).
+        interna = tipo == TIPO_OS_INTERNA
+        if interna:
+            cliente = CLIENTE_OS_INTERNA
+            vendedor = ""
+            valor_cobrado = 0.0
+            valor_descontado = 0.0
+
         if (
             not tipo
             or not cliente
@@ -702,13 +763,22 @@ def create_api_os_blueprint(deps):
             if not validar_reparo_ids(cursor, reparo_ids):
                 return err("Um ou mais reparos não existem.")
 
-            cursor.execute("SELECT status, COALESCE(data_finalizado,'') FROM os WHERE id=?", (os_id,))
+            cursor.execute(
+                "SELECT status, COALESCE(data_finalizado,''), COALESCE(tipo,''), unidade_serializada_id, "
+                "COALESCE(imei,'') FROM os WHERE id=?",
+                (os_id,),
+            )
             row_atual = cursor.fetchone()
             if not row_atual:
                 return err("OS não encontrada.", 404)
 
             status_atual = normalizar_status_os(row_atual[0])
             data_finalizado_atual = row_atual[1]
+            if (row_atual[2] == TIPO_OS_INTERNA) != interna:
+                return err("Uma OS não pode virar interna, nem deixar de ser, depois de criada.")
+            unidade_serializada_id = row_atual[3] if interna else None
+            if interna:
+                imei = row_atual[4]  # IMEI vem do aparelho comprado, não do formulário
 
             data_finalizado_valor = None
             if status_finalizado(status):
@@ -720,7 +790,8 @@ def create_api_os_blueprint(deps):
             # Valida contra os `reparo_ids` NOVOS (pós-edição), já que
             # `salvar_reparos_os` abaixo pode ter mudado a lista.
             resolvidos = []
-            if status_finalizado(status) and not status_finalizado(status_atual):
+            # BR-090 -- OS interna não concede Garantia de Reparo (não há cliente).
+            if status_finalizado(status) and not status_finalizado(status_atual) and not interna:
                 garantias_payload = body.get("garantias") or {}
                 resolvidos, erro_garantia = resolver_garantias_reparo(
                     garantias_payload, reparo_ids, lambda tid: obter_tipo_garantia(conectar, tid)
@@ -829,6 +900,13 @@ def create_api_os_blueprint(deps):
                 custo_total += valor_peca
 
             cursor.execute("UPDATE os SET custo_pecas=? WHERE id=?", (round(custo_total, 2), os_id))
+            if interna and unidade_serializada_id:
+                erro_aparelho = _sincronizar_aparelho_da_os_interna(
+                    cursor, os_id, unidade_serializada_id, status, status_atual
+                )
+                if erro_aparelho:
+                    conn.rollback()
+                    return err(erro_aparelho)
             conn.commit()
         except Exception as exc:
             conn.rollback()
@@ -904,12 +982,18 @@ def create_api_os_blueprint(deps):
         conn = conectar()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT status, COALESCE(data_finalizado,'') FROM os WHERE id=?", (os_id,))
+            cursor.execute(
+                "SELECT status, COALESCE(data_finalizado,''), COALESCE(tipo,''), unidade_serializada_id "
+                "FROM os WHERE id=?",
+                (os_id,),
+            )
             row = cursor.fetchone()
             if not row:
                 return err("OS não encontrada.", 404)
             status_atual = normalizar_status_os(row[0])
             data_finalizado_atual = row[1]
+            interna = row[2] == TIPO_OS_INTERNA
+            unidade_serializada_id = row[3]
 
             data_finalizado_valor = None
             if status_finalizado(status):
@@ -919,7 +1003,8 @@ def create_api_os_blueprint(deps):
             # linha de reparo só na transição PARA Finalizado, nunca em toda
             # atualização subsequente que mantiver o status já finalizado.
             resolvidos = []
-            if status_finalizado(status) and not status_finalizado(status_atual):
+            # BR-090 -- OS interna não concede Garantia de Reparo (não há cliente).
+            if status_finalizado(status) and not status_finalizado(status_atual) and not interna:
                 reparo_ids = buscar_reparo_ids_da_os(cursor, os_id)
                 garantias_payload = body.get("garantias") or {}
                 resolvidos, erro_garantia = resolver_garantias_reparo(
@@ -983,6 +1068,14 @@ def create_api_os_blueprint(deps):
                         },
                         depois=None,
                     )
+
+            if interna and unidade_serializada_id:
+                erro_aparelho = _sincronizar_aparelho_da_os_interna(
+                    cursor, os_id, unidade_serializada_id, status, status_atual
+                )
+                if erro_aparelho:
+                    conn.rollback()
+                    return err(erro_aparelho)
 
             conn.commit()
         except Exception as exc:
