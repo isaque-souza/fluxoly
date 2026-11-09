@@ -219,11 +219,11 @@ separado hoje está registrado como está — ver seção 3.
 | Responsabilidade | Compra de aparelhos (geralmente quebrados) para conserto e revenda — origem marketplace, troca ou outro (BR-083 a BR-093, `docs/engineering/plans/PLAN-compra-aparelhos.md`) |
 | Tabela(s) | `compras_aparelhos` (migration `m0003`) |
 | Lógica | `fluxoly_compras_aparelhos_service.py` — registrar (compra + unidade + saída de caixa numa transação), listar, obter, cancelar (estorno + unidade `devolvido`) |
-| HTTP | `fluxoly_compras_aparelhos_controller.py` (`compras_aparelhos_api`, prefixo `/api/compras-aparelhos`) — perfis `admin`/`financeiro`/`vendedor` (BR-089) |
+| HTTP | `fluxoly_compras_aparelhos_controller.py` (`compras_aparelhos_api`, prefixo `/api/compras-aparelhos`) — perfis `admin`/`financeiro`/`vendedor` (BR-089); `GET /relatorio?mes=AAAA-MM` só `admin`/`financeiro` (BR-093). Custo/lucro (BR-092) também aparecem em `GET /api/unidades-serializadas/<id>` e `GET /api/vendas/<id>` para `admin`/`financeiro` |
 | Frontend | Ainda não (PR 5 da feature) |
 | Testes | `tests/test_compras_aparelhos.py` |
 | Depende de | Unidades Serializadas (`criar_unidade_de_compra`/`devolver_unidade_de_compra`, cursor-based, exclusivas deste domínio), Caixa (`registrar_saida_de_compra_aparelho`/`estornar_saida_de_compra_aparelho`), Clientes e Vendas (só leitura, para validar a troca), `fluxoly_audit.py` |
-| Dependido por | OS interna (BR-090, PR 3) e custo/lucro por aparelho (BR-092, PR 4), quando implementados |
+| Dependido por | OS interna (`api_os.py`, `abrir_reparo_interno`), controllers de Vendas e Unidades (custo/lucro, BR-092) |
 
 ---
 

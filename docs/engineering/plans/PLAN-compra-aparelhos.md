@@ -3,7 +3,7 @@
 **Data:** 2026-11-08
 **Feature:** compra de aparelhos (geralmente quebrados) para consertar e revender — `docs/product/BUSINESS_RULES.md`
 BR-083 a BR-093
-**Status:** Implementação — PRs 2 (compra) e 3 (OS interna) concluídos
+**Status:** Implementação — backend concluído (PRs 2 a 4); falta o frontend (PR 5)
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -17,7 +17,8 @@ BR-083 a BR-093
 - [ ] Implementação — [x] PR 2 (banco + backend da compra: migration `m0003`, domínio
   `fluxoly_compras_aparelhos_*`, hooks de Caixa e Unidades, `tests/test_compras_aparelhos.py` com 30 casos);
   [x] PR 3 (OS interna: `api_os.py`, exclusões em dashboard/relatórios/Garantias/alerta do `app.py`,
-  `tests/test_os_interna.py` com 18 casos); [ ] PR 4 (custo/lucro + relatório); [ ] PR 5 (frontend)
+  `tests/test_os_interna.py` com 18 casos); [x] PR 4 (custo/lucro + relatório, `tests/test_compras_custo_lucro.py` com 14
+  casos); [ ] PR 5 (frontend)
 - [ ] Testes
 - [ ] QA Manual
 - [ ] Revisão Arquitetural
@@ -117,7 +118,10 @@ Compra ──► Unidade serializada ──► OS interna (conserto) ──► V
 - `lucro = vendas_itens.valor_unitario (venda concluída) − custo_aparelho`.
 - Expor em `GET /api/vendas/<id>` e `GET /api/unidades-serializadas/<id>` só para `admin`/`financeiro`
   (mesmo critério de ocultação de BR-047).
-- `GET /api/relatorios/compra-revenda?mes=AAAA-MM` (BR-093).
+- `GET /api/relatorios/compra-revenda?mes=AAAA-MM` (BR-093). **Ajuste na implementação:** a rota ficou
+  no próprio domínio, `GET /api/compras-aparelhos/relatorio?mes=AAAA-MM`. O custo/lucro na venda é
+  composto no `fluxoly_vendas_controller.py`, não no service de Vendas: Compra de Aparelhos já importa
+  Vendas (validação da troca) e o contrário criaria import circular.
 
 ### PR 5 — Frontend
 - Página nova "Compras de Aparelhos" (lista + formulário + cancelamento), item de navegação para

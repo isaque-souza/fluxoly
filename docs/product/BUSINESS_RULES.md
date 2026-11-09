@@ -547,8 +547,7 @@ Princípio da Imutabilidade da Venda (BR-034) e o padrão de estorno já usado e
 
 Decisões tomadas em Discovery (ADR-010) com o CTO em 2026-11-08: a loja compra aparelhos, em geral
 quebrados, para consertar e revender. Plano técnico em `docs/engineering/plans/PLAN-compra-aparelhos.md`.
-BR-083 a BR-091 implementadas no backend (PRs 2 e 3, 2026-11-08); BR-092 e BR-093 aprovadas, ainda não
-implementadas.
+BR-083 a BR-093 implementadas no backend (PRs 2 a 4, 2026-11-08); as telas vêm no PR 5.
 
 **BR-083 — ✅ Implementado no backend (2026-11-08; tela no PR 5)**
 Uma compra de aparelho registra: modelo do catálogo (`produtos`), IMEI (obrigatório), origem
@@ -610,17 +609,19 @@ cliente depois de criada.
 *Fonte: Decisão do CTO, 2026-11-08 (finalização); reabertura e tipo fixo por decisão de engenharia —
 revisável no QA.*
 
-**BR-092 — 🟡 Aprovada (2026-11-08)**
-Custo do aparelho = valor pago na compra ativa + custo de peças de todas as OS internas dele (mão de obra
-não entra). Lucro do aparelho = valor unitário na venda concluída − custo. Ambos são calculados, nunca
+**BR-092 — ✅ Implementado no backend (2026-11-08, PR 4; tela no PR 5)**
+Custo do aparelho = valor pago na compra ativa + custo de peças de todas as OS internas dele, exceto as
+canceladas (as peças delas voltaram ao estoque); mão de obra não entra. Lucro do aparelho = valor unitário na venda concluída − custo. Ambos são calculados, nunca
 gravados, e visíveis só para `admin` e `financeiro` (mesmo critério de BR-047).
 *Fonte: Decisão do CTO, 2026-11-08 (lucro por aparelho); visibilidade por decisão de engenharia,
 consistente com BR-047 — revisável no QA.*
 
-**BR-093 — 🟡 Aprovada (2026-11-08)**
+**BR-093 — ✅ Implementado no backend (2026-11-08, PR 4; tela no PR 5)**
 Relatório mensal de compra e revenda (`admin`/`financeiro`): aparelhos comprados, vendidos e parados no
-mês, total investido (compras + peças), total vendido e lucro.
-*Fonte: Decisão do CTO, 2026-11-08.*
+mês, total investido (compras + peças), total vendido e lucro. "Parados" é o retrato de hoje (aparelhos
+comprados ainda não vendidos, com o capital parado neles), não do mês consultado; o custo de cada
+aparelho vendido é o custo inteiro dele, mesmo que a compra ou as peças tenham sido de outro mês.
+*Fonte: Decisão do CTO, 2026-11-08; recorte de "parados" e custo por decisão de engenharia — revisável no QA.*
 
 ---
 

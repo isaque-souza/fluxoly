@@ -13,6 +13,7 @@ Mesmo contrato de resposta do resto da API (`{"ok": ...}` /
 
 from flask import Blueprint, jsonify, request, session
 
+import fluxoly_compras_aparelhos_service as compras_aparelhos_service
 import fluxoly_unidades_serializadas_service as service
 from fluxoly_validation import parse_int, safe_json
 
@@ -74,6 +75,9 @@ def create_unidades_serializadas_blueprint(deps: dict):
         unidade = service.obter_unidade(conectar, unidade_id)
         if not unidade:
             return err("Unidade não encontrada.", 404)
+        # BR-092 -- custo do aparelho comprado, só para admin/financeiro (mesmo critério de BR-047).
+        if session.get("usuario_perfil") in ("admin", "financeiro"):
+            unidade["custo_aparelho"] = compras_aparelhos_service.obter_custo_aparelho(conectar, unidade_id)
         return ok(unidade=unidade)
 
     @unidades_serializadas_api.route("", methods=["POST"])
