@@ -9,6 +9,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-08 — Compra de Aparelhos, PR 4/5: custo, lucro e relatório)
+- **feat: custo e lucro por aparelho comprado e relatório mensal (BR-092, BR-093)** — custo = valor pago +
+  peças das OS internas não canceladas, sempre calculado. `GET /api/unidades-serializadas/<id>` ganha
+  `custo_aparelho` e `GET /api/vendas/<id>` ganha `custo_aparelho`/`lucro` por item, só para
+  `admin`/`financeiro`. Novo `GET /api/compras-aparelhos/relatorio?mes=AAAA-MM` (compras e peças do mês,
+  aparelhos vendidos com lucro de cada um, aparelhos parados e capital parado). `tests/test_compras_custo_lucro.py`
+  (14 casos).
+
 ### Adicionado (2026-11-08 — Compra de Aparelhos, PR 3/5: OS interna)
 - **feat: OS interna para consertar aparelho comprado (BR-090, BR-091)** — `POST/PUT /api/ordens` aceitam
   `tipo='Interna'` com `unidade_serializada_id` de um aparelho com compra ativa; o backend força cliente

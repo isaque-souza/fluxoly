@@ -30,6 +30,8 @@ unidade → OS interna → venda, com saída de caixa e lucro por aparelho; impl
 (`feat/compra-aparelhos-backend`)**: migration `m0003` + `/api/compras-aparelhos` (BR-083 a BR-089 no
 backend); suíte backend 838 passed / 5 failed (KI-030, só local), ruff ok. **PR 3
 (`feat/os-interna-aparelho-comprado`)**: OS interna (BR-090/BR-091); suíte 856 passed / 5 failed (KI-030).
+**PR 4 (`feat/custo-lucro-aparelho`)**: custo/lucro por aparelho e relatório mensal (BR-092/BR-093); suíte
+870 passed / 5 failed (KI-030). Backend da feature completo; falta o frontend (PR 5).
 Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —
