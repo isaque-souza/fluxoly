@@ -2099,3 +2099,27 @@ Não definida — decisão do CTO: remover agora (branch `chore/remove-kpicard-o
 
 Responsável:
 —
+
+---
+
+## ~~KI-057~~ — RESOLVIDO
+
+Descrição:
+Teste intermitente no frontend: `Dashboard.test.jsx` › "clique em Filtrar dispara uma nova busca" falhou
+no CI do PR #76 (`Unable to find an accessible element with the role "button" and name "Filtrar"`) e
+passou na segunda execução sem mudança de código. O teste esperava só a primeira chamada à API
+(`mockGet` chamado 1 vez) e já procurava o botão com `getByRole` — mas a chamada acontece antes de o
+Dashboard sair do estado de carregamento e renderizar o botão, então às vezes o botão ainda não existia.
+
+Impacto:
+Baixo — só CI (falso vermelho em PR que nem toca o frontend). Nenhum efeito em produção.
+
+Status:
+Resolvido em 2026-11-08 (branch `fix/teste-dashboard-filtrar-intermitente`): o teste passa a esperar o
+botão com `findByRole` antes de clicar.
+
+Sprint prevista:
+—
+
+Responsável:
+—

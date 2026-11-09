@@ -112,8 +112,11 @@ describe("Dashboard — estados loading/success/empty/error", () => {
     render(<Dashboard />);
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
 
+    // KI-057: a chamada à API acontece antes de o botão existir na tela -- esperar o botão,
+    // não só a chamada, senão o clique às vezes procura um elemento que ainda não renderizou.
+    const filtrar = await screen.findByRole("button", { name: "Filtrar" });
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Filtrar" }));
+    await user.click(filtrar);
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
   });
