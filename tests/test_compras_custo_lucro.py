@@ -218,3 +218,27 @@ class TestRelatorioMensal:
 
         login_como(client, usuario_financeiro)
         assert client.get(f"/api/compras-aparelhos/relatorio?mes={MES_ATUAL}").status_code == 200
+
+
+class TestFiltroOrigemCompra:
+    """Picker da OS interna (PR 5): técnico não lista compras (BR-088), então usa
+    /api/unidades-serializadas?origem=compra, que só traz aparelhos de compra ativa."""
+
+    def test_lista_so_unidades_de_compra_ativa(self, client, login_como, usuario_tecnico, cenario):
+        comprar_e_consertar, _vender = cenario
+        unidade_compra, _os_id = comprar_e_consertar()
+        produto_id = _executar(
+            "INSERT INTO produtos (categoria, marca, modelo, preco_venda, quantidade, requer_rastreio_unidade) "
+            "VALUES ('iPhone', 'Apple', 'iPhone 14', 5000.0, 0, 1)"
+        )
+        unidade_avulsa = _executar(
+            "INSERT INTO unidades_serializadas (produto_id, imei) VALUES (?, ?)", (produto_id, _imei())
+        )
+        login_como(client, usuario_tecnico)
+
+        resp = client.get("/api/unidades-serializadas?origem=compra&per_page=100")
+
+        assert resp.status_code == 200
+        ids = {u["id"] for u in resp.get_json()["items"]}
+        assert unidade_compra in ids
+        assert unidade_avulsa not in ids

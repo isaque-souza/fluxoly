@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatCurrency, getOrderDisplayNumber, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK } from "@/lib/constants";
+import { formatCurrency, getOrderDisplayNumber, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK, TIPO_OS_INTERNA } from "@/lib/constants";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -175,15 +175,19 @@ export default function EditOrder() {
 
   // Transição real para Finalizado (não reafirmar um status já finalizado) --
   // só nesse caso a Garantia de Reparo é exigida (BR-061).
-  const precisaSelecionarGarantia = form?.status === "Finalizado" && statusOriginal !== "Finalizado";
+  // BR-090 -- OS interna (aparelho comprado): não tem garantia de reparo, cliente, vendedor nem valores,
+  // e não pode virar OS de cliente (nem o contrário) depois de criada.
+  const interna = form?.tipo === TIPO_OS_INTERNA;
+  const precisaSelecionarGarantia = !interna && form?.status === "Finalizado" && statusOriginal !== "Finalizado";
+  const tiposDisponiveis = (constants?.os_tipos || OS_TYPES_FALLBACK).filter((t) => (t === TIPO_OS_INTERNA) === interna);
 
   const executarSubmit = async (garantias) => {
     setSubmitting(true);
     try {
       const payload = {
         ...form,
-        valor_cobrado: parseFloat(form.valor_cobrado) || 0,
-        valor_descontado: parseFloat(form.valor_descontado) || 0,
+        valor_cobrado: interna ? 0 : parseFloat(form.valor_cobrado) || 0,
+        valor_descontado: interna ? 0 : parseFloat(form.valor_descontado) || 0,
         reparo_ids: selectedReparos,
         pecas_ids: Object.entries(pecas).flatMap(([k, v]) => Array.from({ length: v }, () => parseInt(k, 10))),
         ...(garantias ? { garantias } : {}),
@@ -243,7 +247,7 @@ export default function EditOrder() {
   };
 
   const handleFinalize = async () => {
-    if (statusOriginal !== "Finalizado") {
+    if (!interna && statusOriginal !== "Finalizado") {
       setGarantiaAcaoPendente("finalize");
       setGarantiaDialogOpen(true);
       return;
@@ -382,20 +386,27 @@ export default function EditOrder() {
         {/* Cliente / Tipo */}
         <Panel>
           <PanelHeader>
-            <PanelTitle>Cliente</PanelTitle>
+            <PanelTitle>{interna ? "Aparelho comprado (OS interna)" : "Cliente"}</PanelTitle>
           </PanelHeader>
           <PanelContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="edit-order-cliente">Nome do Cliente *</Label>
-                <Input id="edit-order-cliente" value={form.cliente} onChange={(e) => setField("cliente", e.target.value)} required />
-              </div>
+              {interna ? (
+                <p className="col-span-2 text-sm text-muted-foreground">
+                  Conserto de aparelho da loja: sem cliente, vendedor nem valor cobrado. As peças entram no custo do aparelho,
+                  e ele fica disponível para venda quando a OS for finalizada.
+                </p>
+              ) : (
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="edit-order-cliente">Nome do Cliente *</Label>
+                  <Input id="edit-order-cliente" value={form.cliente} onChange={(e) => setField("cliente", e.target.value)} required />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Tipo de OS</Label>
-                <Select value={form.tipo} onValueChange={(v) => setField("tipo", v)}>
+                <Select value={form.tipo} onValueChange={(v) => setField("tipo", v)} disabled={interna}>
                   <SelectTrigger aria-label="Tipo de OS"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(constants?.os_tipos || OS_TYPES_FALLBACK).map((t) => (
+                    {tiposDisponiveis.map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
@@ -448,7 +459,7 @@ export default function EditOrder() {
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="edit-order-imei">IMEI</Label>
-                <Input id="edit-order-imei" value={form.imei} onChange={(e) => setField("imei", e.target.value)} maxLength={16} />
+                <Input id="edit-order-imei" value={form.imei} onChange={(e) => setField("imei", e.target.value)} maxLength={16} readOnly={interna} />
               </div>
             </div>
           </PanelContent>
@@ -472,17 +483,19 @@ export default function EditOrder() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Vendedor</Label>
-                <Select value={form.vendedor} onValueChange={(v) => setField("vendedor", v)}>
-                  <SelectTrigger aria-label="Vendedor"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {(constants?.vendedores || []).map((v) => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!interna && (
+                <div className="space-y-1.5">
+                  <Label>Vendedor</Label>
+                  <Select value={form.vendedor} onValueChange={(v) => setField("vendedor", v)}>
+                    <SelectTrigger aria-label="Vendedor"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {(constants?.vendedores || []).map((v) => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setField("status", v)}>
@@ -531,7 +544,8 @@ export default function EditOrder() {
           </PanelContent>
         </Panel>
 
-        {/* Financeiro */}
+        {/* Financeiro -- OS interna não tem valor cobrado (BR-090) */}
+        {!interna && (
         <Panel>
           <PanelHeader>
             <PanelTitle>Financeiro</PanelTitle>
@@ -563,6 +577,7 @@ export default function EditOrder() {
             </div>
           </PanelContent>
         </Panel>
+        )}
 
         {/* Peças */}
         <Panel>

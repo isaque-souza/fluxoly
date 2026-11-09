@@ -220,8 +220,8 @@ separado hoje está registrado como está — ver seção 3.
 | Tabela(s) | `compras_aparelhos` (migration `m0003`) |
 | Lógica | `fluxoly_compras_aparelhos_service.py` — registrar (compra + unidade + saída de caixa numa transação), listar, obter, cancelar (estorno + unidade `devolvido`) |
 | HTTP | `fluxoly_compras_aparelhos_controller.py` (`compras_aparelhos_api`, prefixo `/api/compras-aparelhos`) — perfis `admin`/`financeiro`/`vendedor` (BR-089); `GET /relatorio?mes=AAAA-MM` só `admin`/`financeiro` (BR-093). Custo/lucro (BR-092) também aparecem em `GET /api/unidades-serializadas/<id>` e `GET /api/vendas/<id>` para `admin`/`financeiro` |
-| Frontend | Ainda não (PR 5 da feature) |
-| Testes | `tests/test_compras_aparelhos.py` |
+| Frontend | `pages/ComprasAparelhos.jsx` (nova compra + histórico/cancelamento), `components/orders/AparelhoCompradoPicker.jsx` (OS interna na Nova OS), `components/reports/CompraRevendaReport.jsx` (aba em Relatórios); custo/lucro em `VendaDetalhe.jsx` e no detalhe de `UnidadesSerializadas.jsx` |
+| Testes | `tests/test_compras_aparelhos.py`, `tests/test_os_interna.py`, `tests/test_compras_custo_lucro.py`; frontend `ComprasAparelhos.test.jsx`, `AparelhoCompradoPicker.test.jsx`, `CompraRevendaReport.test.jsx` |
 | Depende de | Unidades Serializadas (`criar_unidade_de_compra`/`devolver_unidade_de_compra`, cursor-based, exclusivas deste domínio), Caixa (`registrar_saida_de_compra_aparelho`/`estornar_saida_de_compra_aparelho`), Clientes e Vendas (só leitura, para validar a troca), `fluxoly_audit.py` |
 | Dependido por | OS interna (`api_os.py`, `abrir_reparo_interno`), controllers de Vendas e Unidades (custo/lucro, BR-092) |
 

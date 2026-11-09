@@ -7,10 +7,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/constants";
+import CompraRevendaReport from "@/components/reports/CompraRevendaReport";
 
 const TABS = [
   { key: "tecnicos", label: "Técnicos" },
   { key: "custos", label: "Custos Operacionais" },
+  { key: "compras", label: "Compra e revenda" },
 ];
 
 function formatMonthLabel(key) {
@@ -118,7 +120,11 @@ export default function Reports() {
         ))}
       </div>
 
+      {/* BR-093 -- relatório por mês, com filtro próprio */}
+      {activeTab === "compras" && <CompraRevendaReport />}
+
       {/* Filters */}
+      {activeTab !== "compras" && (
       <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Data Inicial</label>
@@ -143,6 +149,7 @@ export default function Reports() {
           </Button>
         )}
       </div>
+      )}
 
       {/* Results */}
       {loading && (

@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   SquaresFour, ClipboardText, Package, ShoppingBag, Wrench, CurrencyDollar,
   ChartBar, Kanban, Shield, Tag, Users, SignOut, User, UserCircle, HardDrives,
-  Barcode, ShoppingCart,
+  Barcode, ShoppingCart, DeviceMobile,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import GlobalAlerts from "./GlobalAlerts";
@@ -37,6 +37,7 @@ const navSections = [
       { path: "/estoque", label: "Estoque", icon: Package },
       { path: "/produtos", label: "Produtos", icon: ShoppingBag },
       { path: "/unidades-serializadas", label: "Unidades Serializadas", icon: Barcode },
+      { path: "/compras-aparelhos", label: "Compras de Aparelhos", icon: DeviceMobile, perfis: ["admin", "financeiro", "vendedor"] },
       { path: "/compras", label: "Lista de Compras", icon: ClipboardText },
     ],
   },
@@ -94,7 +95,8 @@ function SidebarNav({ currentPath, user }) {
               </p>
             )}
             {visibleItems.map(({ path, label, icon }) => {
-              const isActive = path === "/" ? currentPath === "/" : currentPath.startsWith(path);
+              // Prefixo só por segmento inteiro: "/compras-aparelhos" não pode acender "/compras".
+              const isActive = path === "/" ? currentPath === "/" : currentPath === path || currentPath.startsWith(`${path}/`);
               return (
                 <Link
                   key={path}
