@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-08 — Discovery de Compra de Aparelhos)
+- **docs: regras e plano da compra de aparelhos para conserto e revenda** — BR-083 a BR-093 em
+  `docs/product/BUSINESS_RULES.md` (aprovadas, não implementadas) e
+  `docs/engineering/plans/PLAN-compra-aparelhos.md` (compra → unidade → OS interna → venda, saída de caixa
+  automática, custo e lucro por aparelho, relatório mensal). Implementação em 4 PRs seguintes.
+
 ### Alterado (2026-11-08 — sidebar sem barra de rolagem visível)
 - **fix: esconder a barra de rolagem da sidebar** — `SidebarContent` (`frontend/src/components/ui/sidebar.jsx`)
   continua rolável (`overflow-y-auto`, roda do mouse/toque) em telas baixas, mas a barra não aparece

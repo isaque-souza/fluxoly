@@ -22,7 +22,11 @@ frontend 153/153, lint 0 erros, build ok. PR #22 (teste do Render Preview, INC-0
 PR 3 mergeado (#71) — desvínculo IR Phones concluído no código. **Em seguida (`feat/remover-backup-externo`):**
 backup para Google Drive e por e-mail removidos (KI-043 atualizado; criptografia do backup local segue
 pendente). Backend a ser hospedado em servidor próprio do CTO (não mais Render). **Backend de produção no Render
-retirado do ar pelo CTO**; o banco será recriado do zero, sem dados herdados. Antes disso:
+retirado do ar pelo CTO**; o banco será recriado do zero, sem dados herdados. PR #72 mergeado; backend
+no ar em servidor Linux próprio do CTO (Docker + Tailscale Funnel, banco novo), frontend na Vercel apontando
+para ele, login validado (desktop e 4G) e IP real chegando ao rate limit. 2026-11-08 — **Discovery de Compra
+de Aparelhos aprovada** (BR-083 a BR-093, `docs/engineering/plans/PLAN-compra-aparelhos.md`): compra →
+unidade → OS interna → venda, com saída de caixa e lucro por aparelho; implementação em 4 PRs. Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —
 `81244de` feat, `c2a4314` chore/script de import, `924aeb3` docs —, branch `feat/estoque-locais-estela`
