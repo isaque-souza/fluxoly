@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-08 — sidebar sem barra de rolagem visível)
+- **fix: esconder a barra de rolagem da sidebar** — `SidebarContent` (`frontend/src/components/ui/sidebar.jsx`)
+  continua rolável (`overflow-y-auto`, roda do mouse/toque) em telas baixas, mas a barra não aparece
+  mais (`scrollbar-width: none` + `::-webkit-scrollbar { display: none }`).
+
 ### Removido (2026-11-06 — destinos externos de backup, KI-043)
 - **feat: remover backup para Google Drive e por e-mail** — decisão do CTO. Saem `enviar_backup_email`
   e as funções de Google Drive (`fluxoly_storage.py`), as variáveis `IR_FLOW_GOOGLE_DRIVE_BACKUP_DIR`,
