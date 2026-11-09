@@ -39,6 +39,7 @@ from fluxoly_blueprints_auth import create_auth_blueprint
 from fluxoly_blueprints_main import create_main_blueprint
 from fluxoly_caixa_controller import create_caixa_blueprint
 from fluxoly_clientes_controller import create_clientes_blueprint
+from fluxoly_compras_aparelhos_controller import create_compras_aparelhos_blueprint
 from fluxoly_config import (
     BACKUP_DIR,
     DB_PATH,
@@ -449,3 +450,9 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
     app.register_blueprint(create_caixa_blueprint({"conectar": conectar}))
     app.register_blueprint(create_contas_pagar_blueprint({"conectar": conectar}))
     app.register_blueprint(create_contas_receber_blueprint({"conectar": conectar}))
+
+    # ========================================================================
+    # REGISTRO DO BLUEPRINT DE COMPRA DE APARELHOS (BR-083 a BR-093, ver
+    # docs/engineering/plans/PLAN-compra-aparelhos.md)
+    # ========================================================================
+    app.register_blueprint(create_compras_aparelhos_blueprint({"conectar": conectar}))

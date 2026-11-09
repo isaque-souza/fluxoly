@@ -100,6 +100,53 @@ def estornar_entrada_de_venda(cursor, venda_id, usuario_id):
     )
 
 
+def registrar_saida_de_compra_aparelho(cursor, compra_id, valor, usuario_id):
+    """BR-086 -- chamada de dentro de `registrar_compra()` (domínio Compra de Aparelhos),
+    antes do `conn.commit()`. Mesmo desenho de `registrar_entrada_de_venda`: idempotente,
+    com o índice único `idx_movimentacoes_caixa_compra_ativa` como guardião real."""
+    existente = repo.buscar_ativa_por_origem(cursor, "compra_aparelho", compra_id)
+    if existente:
+        return existente[0]
+
+    try:
+        movimentacao_id = repo.inserir(
+            cursor, "saida", valor, f"Compra de aparelho #{compra_id}", "compra_aparelho", compra_id, usuario_id
+        )
+    except sqlite3.IntegrityError:
+        existente = repo.buscar_ativa_por_origem(cursor, "compra_aparelho", compra_id)
+        return existente[0] if existente else None
+
+    registrar_log_auditoria(
+        cursor,
+        "movimentacao_caixa",
+        movimentacao_id,
+        usuario_id,
+        "create",
+        depois={"tipo": "saida", "valor": valor, "origem": "compra_aparelho", "origem_id": compra_id},
+    )
+    return movimentacao_id
+
+
+def estornar_saida_de_compra_aparelho(cursor, compra_id, usuario_id):
+    """BR-086/BR-087 -- chamada de dentro de `cancelar_compra()`, antes do
+    `conn.commit()`. Idempotente; nunca apaga a linha."""
+    existente = repo.buscar_ativa_por_origem(cursor, "compra_aparelho", compra_id)
+    if not existente:
+        return
+
+    movimentacao_id = existente[0]
+    repo.estornar(cursor, movimentacao_id)
+    registrar_log_auditoria(
+        cursor,
+        "movimentacao_caixa",
+        movimentacao_id,
+        usuario_id,
+        "estorno",
+        antes={"estornada": False},
+        depois={"estornada": True},
+    )
+
+
 def registrar_saida_de_conta_pagar(cursor, conta_pagar_id, valor, descricao, usuario_id):
     """Chamada de dentro da baixa de Contas a Pagar (mesma transação),
     nunca abre conexão própria. Retorna o id da movimentação criada."""
