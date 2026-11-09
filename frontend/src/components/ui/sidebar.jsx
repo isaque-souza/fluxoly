@@ -104,7 +104,7 @@ export function SidebarHeader({ className, ...props }) {
 }
 
 export function SidebarContent({ className, ...props }) {
-  return <nav className={cn("flex-1 overflow-y-auto px-2 py-3 space-y-0.5", className)} {...props} />;
+  return <nav className={cn("flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-2 py-3 space-y-0.5", className)} {...props} />;
 }
 
 export function SidebarFooter({ className, ...props }) {
