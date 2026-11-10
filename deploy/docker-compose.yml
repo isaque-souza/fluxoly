@@ -1,0 +1,55 @@
+# Backend de produção no servidor próprio, com deploy automático (ADR-015).
+#
+# Fluxo: merge na main -> CI verde -> imagem publicada no GHCR (job publish_image)
+#        -> Watchtower vê a :latest nova -> backup do banco (hook pre-update)
+#        -> recria o container fluxoly com o mesmo volume e o mesmo .env.
+#
+# Uso no servidor (nesta pasta, com o .env ao lado):
+#   docker compose up -d
+#
+# Antes de trocar o compose antigo por este, veja a seção "Servidor próprio" do DEPLOY.md:
+# o volume de /data precisa ser O MESMO que o compose atual usa, senão o app sobe com banco vazio.
+
+services:
+  fluxoly:
+    image: ghcr.io/isaque-souza/fluxoly:latest
+    container_name: fluxoly
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      IR_FLOW_DATA_DIR: /data
+    volumes:
+      # Troque pelo volume/pasta que o compose atual já usa para /data.
+      - fluxoly-data:/data
+    ports:
+      # Só localhost: o Tailscale Funnel no host encaminha para cá.
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      # Backup do banco antes de cada atualização. Sai com 75 se falhar,
+      # e então o Watchtower não atualiza nessa rodada (scripts/backup_pre_update.py).
+      com.centurylinklabs.watchtower.lifecycle.pre-update: "python /app/scripts/backup_pre_update.py"
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "5"
+
+  watchtower:
+    # Fork mantido: o containrrr/watchtower foi arquivado e não funciona no Docker 29+.
+    image: nickfedor/watchtower:1.24.0
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_LIFECYCLE_HOOKS: "true"
+      WATCHTOWER_POLL_INTERVAL: "300"
+      WATCHTOWER_CLEANUP: "true"
+      TZ: America/Sao_Paulo
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  fluxoly-data:

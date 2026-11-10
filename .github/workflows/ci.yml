@@ -189,3 +189,40 @@ jobs:
 
       - name: Build image (G-19) — BLOQUEANTE
         run: docker build .
+
+  # ── 7. Publicação da imagem (deploy automático, ADR-015) ────────────────────
+  # Só em push na main e só depois de todos os gates bloqueantes. Publica a
+  # imagem do backend no GHCR; o Watchtower do servidor (deploy/docker-compose.yml)
+  # puxa a :latest e recria o container. :<sha> fica para rollback fixando a tag.
+  publish_image:
+    name: Publish Backend Image
+    runs-on: ubuntu-latest
+    needs: [backend, coverage, build, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}

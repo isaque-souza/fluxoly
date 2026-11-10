@@ -3,7 +3,7 @@
 **Projeto:** Fluxoly Platform
 **Responsável:** Principal Software Engineer
 **Branch principal:** `main`
-**Ambiente de produção:** Render (backend) — `https://irflow-backend.onrender.com` · Vercel (frontend) — `https://assistencia-system.vercel.app`
+**Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
 **Última revisão:** 2026-11-10 — **Documentos da OS para o cliente implementados** (BR-094 a BR-098,
 `docs/engineering/plans/PLAN-documentos-os-cliente.md`): PDF de entrada e de entrega na tela da OS, gerado
@@ -40,7 +40,10 @@ backend); suíte backend 838 passed / 5 failed (KI-030, só local), ruff ok. **P
 870 passed / 5 failed (KI-030). **PR 5 (`feat/compra-aparelhos-telas`)**: telas — página Compras de
 Aparelhos, tipo Interna na Nova/Editar OS, custo/lucro na venda e na unidade, aba Compra e revenda em
 Relatórios; suíte backend 871 passed / 5 failed (KI-030), frontend verde, build ok. Feature completa;
-falta QA manual no servidor.
+falta QA manual no servidor. 2026-11-10 — **Deploy automático do backend (ADR-015)**, branch
+`chore/deploy-automatico-watchtower`: CI publica a imagem no GHCR e o Watchtower no servidor atualiza o
+container, com backup do banco antes de cada troca. Pendente do CTO: tornar o pacote GHCR público e
+trocar o compose do servidor pelo `deploy/docker-compose.yml` (ver `DEPLOY.md`). Novo risco: KI-060.
 Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —
