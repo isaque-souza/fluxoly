@@ -48,6 +48,7 @@ from fluxoly_config import (
 )
 from fluxoly_contas_pagar_controller import create_contas_pagar_blueprint
 from fluxoly_contas_receber_controller import create_contas_receber_blueprint
+from fluxoly_dados_loja_controller import create_dados_loja_blueprint
 from fluxoly_core import (
     GARANTIA_REPARO_DIAS_PADRAO,
     OS_TIPOS_OPCOES,
@@ -456,3 +457,9 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
     # docs/engineering/plans/PLAN-compra-aparelhos.md)
     # ========================================================================
     app.register_blueprint(create_compras_aparelhos_blueprint({"conectar": conectar}))
+
+    # ========================================================================
+    # REGISTRO DO BLUEPRINT DE DADOS DA LOJA (BR-094, cabeçalho dos documentos
+    # da OS para o cliente -- ver docs/engineering/plans/PLAN-documentos-os-cliente.md)
+    # ========================================================================
+    app.register_blueprint(create_dados_loja_blueprint({"conectar": conectar}))

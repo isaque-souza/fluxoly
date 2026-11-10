@@ -5,7 +5,13 @@
 **Branch principal:** `main`
 **Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
-**Última revisão:** 2026-11-06 — **Desvínculo do Fluxoly com a IR Phones iniciado (ADR-014).** Decisão
+**Última revisão:** 2026-11-10 — **Documentos da OS para o cliente implementados** (BR-094 a BR-098,
+`docs/engineering/plans/PLAN-documentos-os-cliente.md`): PDF de entrada e de entrega na tela da OS, gerado
+no navegador com `jspdf`, e cadastro **Dados da Loja** (migration `m0004`, tabela `dados_loja`). Suíte backend
+907 passed (`tests/test_dados_loja.py` 12 casos, `tests/test_os_documento.py` 17), frontend 176/176, lint 0
+erros, build ok. Falta QA manual no servidor. **KI-059 corrigido** na mesma branch, em commit separado: o Valor com
+Desconto passa a valer no valor da OS quando preenchido (suíte backend 914 passed). Antes disso:
+2026-11-06 — **Desvínculo do Fluxoly com a IR Phones iniciado (ADR-014).** Decisão
 do CTO: remover tudo que liga o sistema à IR Phones e desligar a integração MercadoPhone, em 3 PRs.
 **PR 1 (`chore/remover-app-estoque`):** app `apps/lista-aparelhos-disponiveis/` removido do repositório
 (com job CI `estoque_app` e workflow `estoque-sync.yml`); ADR-013 substituída, BR-070..082 revogadas —
@@ -37,7 +43,7 @@ Relatórios; suíte backend 871 passed / 5 failed (KI-030), frontend verde, buil
 falta QA manual no servidor. 2026-11-10 — **Deploy automático do backend (ADR-015)**, branch
 `chore/deploy-automatico-watchtower`: CI publica a imagem no GHCR e o Watchtower no servidor atualiza o
 container, com backup do banco antes de cada troca. Pendente do CTO: tornar o pacote GHCR público e
-trocar o compose do servidor pelo `deploy/docker-compose.yml` (ver `DEPLOY.md`). Novo risco: KI-059.
+trocar o compose do servidor pelo `deploy/docker-compose.yml` (ver `DEPLOY.md`). Novo risco: KI-060.
 Antes disso:
 2026-09-11 — **Estoque 1/Estoque 2 + reserva automática Estela
 (`apps/lista-aparelhos-disponiveis/`) implementados, validados e mergeados em `main`** (3 commits —

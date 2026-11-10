@@ -2153,7 +2153,38 @@ Responsável:
 
 ---
 
-## KI-059
+## ~~KI-059~~ — RESOLVIDO
+
+Descrição:
+Na OS, o campo "Valor com Desconto" (`os.valor_descontado`, rótulo em `NewOrder.jsx`/`EditOrder.jsx`) é o
+preço final já com desconto, não o valor do desconto. Mas `fluxoly_core.py::calcular_faturamento_os`
+devolve o Valor Cobrado sempre que ele é maior que zero, e só usa o Valor com Desconto quando o cobrado é
+zero. Quando a OS tem os dois preenchidos, o desconto é ignorado no faturamento, no lucro, na coluna Valor
+da listagem e, desde 2026-11-10, no valor impresso nos comprovantes de OS para o cliente (BR-095/BR-096).
+Achado ao implementar os documentos da OS (`docs/engineering/plans/PLAN-documentos-os-cliente.md`).
+
+Impacto:
+Médio. Se a loja usa os dois campos (cobrado + com desconto), o cliente recebe um comprovante com o valor
+sem desconto, e o faturamento/lucro aparecem maiores do que o valor de fato recebido. Não muta dado, mas
+afeta número financeiro e documento entregue ao cliente.
+
+Status:
+Resolvido em 2026-11-10 (commit `969a5a2`). Decisão do CTO: quando o Valor com Desconto está preenchido, é
+ele que vale; sem ele, vale o Valor Cobrado. Corrigido só em `calcular_faturamento_os` (fonte única), o
+que acerta junto listagem, relatórios, lucro e os comprovantes para o cliente; a coluna Valor da
+listagem (`OrderTable.jsx`) passou a usar o `faturamento` do backend em vez de repetir a regra.
+Coberto por `tests/test_faturamento_os.py`. Números de faturamento/lucro de OS antigas com os dois campos
+preenchidos mudam (para menor) em relatórios recalculados.
+
+Sprint prevista:
+Documentos da OS para o cliente (2026-11-10).
+
+Responsável:
+—
+
+---
+
+## KI-060
 
 Descrição:
 Com o deploy automático (ADR-015), toda migration nova que chega na `main` é aplicada no boot do container

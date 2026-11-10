@@ -27,6 +27,7 @@ const Compras = lazy(() => import("@/pages/Compras"));
 const ComprasAparelhos = lazy(() => import("@/pages/ComprasAparelhos"));
 const RepairTypes = lazy(() => import("@/pages/RepairTypes"));
 const TiposGarantia = lazy(() => import("@/pages/TiposGarantia"));
+const DadosLoja = lazy(() => import("@/pages/DadosLoja"));
 const PriceTables = lazy(() => import("@/pages/PriceTables"));
 const OperationalCosts = lazy(() => import("@/pages/OperationalCosts"));
 const Reports = lazy(() => import("@/pages/Reports"));
@@ -93,6 +94,7 @@ function AppRoutes() {
           <Route path="/custos" element={<OperationalCosts />} />
           <Route path="/relatorios" element={<Reports />} />
           <Route path="/backup" element={<Backup />} />
+          <Route path="/dados-loja" element={<DadosLoja />} />
           <Route path="/usuarios" element={<Users />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
