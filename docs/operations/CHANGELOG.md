@@ -9,6 +9,20 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-10 — Documentos da OS para o cliente)
+- **feat: PDF de entrada e de entrega da OS (BR-095 a BR-098)** — na tela **Editar OS**, botões
+  **PDF de entrada** (qualquer status, menos Cancelada) e **PDF de entrega** (só OS Finalizada, com a
+  garantia de cada serviço e a data de término). Nenhum dos dois para OS interna. O PDF traz dados da
+  loja, cliente, aparelho, técnico, serviços, valor, observações, termos e assinaturas — nunca custo,
+  lucro, peças, fornecedor ou vendedor; CPF/CNPJ só quando quem gera é `admin`/`financeiro` (KI-045).
+  Backend: `GET /api/ordens/<id>/documento?tipo=entrada|entrega` (conteúdo por allowlist). O PDF é gerado
+  no navegador com `jspdf` (já dependência, carregado sob demanda).
+- **feat: Dados da Loja (BR-094)** — página **Dados da Loja** (menu Administração, só `admin` edita):
+  nome fantasia, razão social, CNPJ, telefone, e-mail, endereço e termos de entrada/garantia.
+  Migration `m0004` (tabela `dados_loja`, linha única) e `GET/PUT /api/dados-loja`.
+- Achado registrado: **KI-059** (o "Valor com Desconto" da OS é ignorado quando o Valor Cobrado está
+  preenchido — afeta faturamento e o valor impresso no comprovante).
+
 ### Corrigido (2026-11-09 — hotfix)
 - **fix: corrida entre workers na migration 0003 derrubava o boot (KI-058)** — no primeiro boot com a m0003
   pendente, os 2 workers do Gunicorn tentavam criar `os.unidade_serializada_id` ao mesmo tempo e o segundo

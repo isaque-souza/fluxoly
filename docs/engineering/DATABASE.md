@@ -423,6 +423,23 @@ compromissos financeiros gerais, não parcelamento/inadimplência de venda).
 Baixa (`status: pendente -> recebido`) é compare-and-swap e lança a entrada de caixa correspondente na
 mesma transação (`fluxoly_caixa_service.registrar_entrada_de_conta_receber`).
 
+### `dados_loja`
+
+Dados da Loja para o cabeçalho dos documentos da OS para o cliente (2026-11-10, migration
+`migrations/versions/m0004_dados_loja.py`, BR-094, `docs/engineering/plans/PLAN-documentos-os-cliente.md`).
+`fluxoly_dados_loja_controller.py`/`_service.py`/`_repository.py`. **Linha única:** `id = 1` (garantido por
+`CHECK`), criada no primeiro `PUT /api/dados-loja` (upsert). Escrita só `admin`, auditada em `audit_log`
+(`entidade = 'dados_loja'`).
+
+| Coluna | Tipo | Observação |
+|--------|------|------------|
+| `id` | INTEGER PK | `CHECK (id = 1)` |
+| `nome_fantasia` | TEXT NOT NULL | `DEFAULT ''` — obrigatório no service (até 120); vazio bloqueia os documentos (BR-098) |
+| `razao_social` / `cnpj` / `telefone` / `email` / `endereco` | TEXT NOT NULL | `DEFAULT ''` — opcionais (limites 160/30/40/120/300) |
+| `termos_entrada` / `termos_garantia` | TEXT NOT NULL | `DEFAULT ''` — até 4000; impressos no comprovante de entrada/entrega |
+| `atualizado_por` | INTEGER | FK lógica — `usuarios.id` do último salvamento |
+| `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
+
 ### `compras` — lista de compras (versão legada/simplificada)
 
 | Coluna | Tipo | Default |

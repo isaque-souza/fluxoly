@@ -627,37 +627,39 @@ aparelho vendido é o custo inteiro dele, mesmo que a compra ou as peças tenham
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja
 
-**BR-094 — 📋 Especificado (2026-11-10)**
+**BR-094 — ✅ Implementado (2026-11-10)**
 A loja tem um cadastro único de Dados da Loja: nome fantasia (obrigatório), razão social, CNPJ,
 telefone, e-mail, endereço, texto de termos de entrada e texto de termos de garantia. Só `admin` edita;
 qualquer usuário autenticado lê (os documentos da OS dependem dele).
 *Fonte: Decisão do CTO, 2026-11-10 (cadastro dos dados da loja em tela); permissão por decisão de
 engenharia, mesmo critério das telas administrativas — revisável no QA.*
 
-**BR-095 — 📋 Especificado (2026-11-10)**
+**BR-095 — ✅ Implementado (2026-11-10)**
 Comprovante de entrada (PDF), entregue quando o cliente deixa o aparelho: cabeçalho com os Dados da Loja,
 número e data da OS, cliente (nome; telefone e CPF/CNPJ quando a OS tem cliente vinculado), aparelho
-(aparelho, modelo, cor, IMEI), técnico responsável, serviços solicitados, valor previsto (valor cobrado −
-desconto), observações, termos de entrada e campos de assinatura do cliente e da loja. Pode ser gerado em
+(aparelho, modelo, cor, IMEI), técnico responsável, serviços solicitados, valor previsto, observações, termos de entrada e campos de assinatura do cliente e da loja. Pode ser gerado em
 qualquer status, exceto Cancelada. O CPF/CNPJ só entra quando quem gera o documento pode lê-lo (`admin` ou
 `financeiro`, KI-045); para os demais perfis, o documento sai sem ele.
 *Fonte: Decisão do CTO, 2026-11-10 (conteúdo, valor previsto e técnico); CPF/CNPJ por perfil por decisão
 de engenharia, consistente com KI-045 — revisável no QA.*
 
-**BR-096 — 📋 Especificado (2026-11-10)**
+**BR-096 — ✅ Implementado (2026-11-10)**
 Comprovante de entrega (PDF), entregue na retirada: tudo do cabeçalho e da identificação de BR-095, mais
 a data de conclusão, os serviços realizados com a garantia de cada um (nome, duração e data de término,
-lidos do snapshot de BR-062 — nunca recalculados), o valor total (valor cobrado − desconto), os termos de
-garantia e o campo de assinatura de retirada. Só existe para OS Finalizada.
-*Fonte: Decisão do CTO, 2026-11-10.*
+lidos do snapshot de BR-062 — nunca recalculados), o valor total, os termos de garantia e o campo de
+assinatura de retirada. Só existe para OS Finalizada. O valor (previsto na entrada, total na entrega) é o
+mesmo da coluna Valor da listagem de OS: o Valor Cobrado, ou o Valor com Desconto quando o cobrado é zero
+(`calcular_faturamento_os`) — ver KI-059.
+*Fonte: Decisão do CTO, 2026-11-10; regra do valor reaproveitada de `calcular_faturamento_os` por decisão
+de engenharia (sem duplicar a conta), pendente de KI-059.*
 
-**BR-097 — 📋 Especificado (2026-11-10)**
+**BR-097 — ✅ Implementado (2026-11-10)**
 Os documentos para o cliente nunca mostram custo de peças, lucro, peças usadas, fornecedor, vendedor nem
 dados de integração. O técnico aparece. A lista do que entra é fechada no backend (allowlist), não
 filtrada na tela. OS interna (BR-090) não gera documento para cliente, porque não tem cliente.
 *Fonte: Decisão do CTO, 2026-11-10 (custo/lucro fora, técnico dentro, OS interna e vendedor fora).*
 
-**BR-098 — 📋 Especificado (2026-11-10)**
+**BR-098 — ✅ Implementado (2026-11-10)**
 Sem nome fantasia cadastrado em Dados da Loja, os documentos não são gerados: a tela avisa que é preciso
 cadastrar os Dados da Loja (e só o `admin` vê o atalho para isso). Gerar o documento não grava nada: não há
 registro de emissão nem cópia guardada.

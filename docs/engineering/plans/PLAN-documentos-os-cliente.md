@@ -2,7 +2,7 @@
 
 **Data:** 2026-11-10
 **Feature:** documentos da OS para o cliente — `docs/product/BUSINESS_RULES.md` BR-094 a BR-098
-**Status:** Aprovado pelo CTO (2026-11-10)
+**Status:** Implementado (PRs 2 e 3) — falta QA manual
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -13,8 +13,10 @@
 - [x] Discovery — respostas do CTO em 2026-11-10 (dados da loja em tela; dois documentos, entrada e
   entrega; garantia e termos no PDF), registradas em BR-094 a BR-098
 - [x] Plano Técnico — aprovado pelo CTO em 2026-11-10
-- [ ] Implementação — [ ] PR 2 (banco + backend); [ ] PR 3 (frontend)
-- [ ] Testes
+- [x] Implementação — [x] PR 2 (banco + backend: `m0004`, `fluxoly_dados_loja_*`, rota do documento,
+  `tests/test_dados_loja.py` com 12 casos e `tests/test_os_documento.py` com 17); [x] PR 3 (frontend:
+  `lib/osPdf.js`, botões na Editar OS, página Dados da Loja)
+- [x] Testes — backend e frontend
 - [ ] QA Manual
 - [ ] Revisão Arquitetural — obrigatória (toca mais de 3 arquivos)
 - [ ] Encerramento
@@ -42,10 +44,10 @@ nenhum documento de OS para o cliente, nem cadastro dos dados da loja.
   peças, técnico ou vendedor por essa rota:
   - `loja` (Dados da Loja), `ordem` (id, data, data_finalizado, status, aparelho, modelo, cor, imei,
     técnico, serviços, observações, `valor_total` via `calcular_faturamento_os` — mesma função da
-    listagem), `cliente` (nome; telefone e CPF/CNPJ via `os.cliente_id`, quando houver — CPF/CNPJ só para
+    listagem; ver KI-059), `cliente` (nome; telefone e CPF/CNPJ via `os.cliente_id`, quando houver — CPF/CNPJ só para
     `admin`/`financeiro`, KI-045).
   - `entrega` acrescenta `garantias` (snapshot de `os_reparos`: nome, duração, data de término — BR-062).
-  - Erros: 401 sem login; 404 OS inexistente; 422 OS interna (BR-097), OS Cancelada (BR-095), entrega com
+  - Erros: 401 sem login; 404 OS inexistente; 400 tipo inválido; 409 OS interna (BR-097), OS Cancelada (BR-095), entrega com
     OS não Finalizada (BR-096), Dados da Loja sem nome fantasia (BR-098).
   - A consulta e a montagem ficam em funções de `fluxoly_os.py` (sem I/O de Flask), a rota só orquestra.
 - Registro do blueprint novo em `fluxoly_blueprint_registry.py`.
@@ -120,12 +122,12 @@ backup do banco de produção (rotina de backup existente). Sem janela de manute
 
 ## Testes
 
-- `tests/test_dados_loja.py`: GET autenticado/401; PUT admin ok, não-admin 403, nome fantasia vazio 422,
-  campo acima do limite 422, upsert (segundo PUT atualiza a mesma linha), auditoria registrada.
+- `tests/test_dados_loja.py`: GET autenticado/401; PUT admin ok, não-admin 403, nome fantasia vazio 400,
+  campo acima do limite 400, upsert (segundo PUT atualiza a mesma linha), auditoria registrada.
 - `tests/test_os_documento.py`: entrada e entrega no caso feliz; allowlist — a resposta **não** contém
   `custo_pecas`, `lucro`, `pecas_usadas`, `vendedor` (BR-097) e contém o técnico; cliente vinculado traz
   telefone (e CPF só para admin/financeiro), sem vínculo só o nome; garantia vem do snapshot mesmo após editar o tipo de garantia
-  (BR-062); valor total = cobrado − desconto; 422 para interna, cancelada, entrega não finalizada e loja
+  (BR-062); valor total pela mesma regra da listagem; 409 para interna, cancelada, entrega não finalizada e loja
   sem nome; 404; 401.
 - `migrations`: teste do runner aplicando `m0004` em banco novo e em banco já na `m0003`.
 - Frontend: `osPdf.test.js` (gera PDF de entrada e de entrega sem erro; texto contém os campos esperados e
