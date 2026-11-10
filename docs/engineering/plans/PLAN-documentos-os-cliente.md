@@ -2,7 +2,7 @@
 
 **Data:** 2026-11-10
 **Feature:** documentos da OS para o cliente — `docs/product/BUSINESS_RULES.md` BR-094 a BR-098
-**Status:** Rascunho — aguardando aprovação do CTO
+**Status:** Aprovado pelo CTO (2026-11-10)
 
 > Este documento é efêmero (ver `docs/engineering/adr/ADR-010.md`). Depois que a sprint encerra, ele
 > permanece só como histórico da decisão de implementação. O que continuar relevante é promovido para
@@ -12,7 +12,7 @@
 
 - [x] Discovery — respostas do CTO em 2026-11-10 (dados da loja em tela; dois documentos, entrada e
   entrega; garantia e termos no PDF), registradas em BR-094 a BR-098
-- [ ] Plano Técnico — este documento (PR 1, só documentação)
+- [x] Plano Técnico — aprovado pelo CTO em 2026-11-10
 - [ ] Implementação — [ ] PR 2 (banco + backend); [ ] PR 3 (frontend)
 - [ ] Testes
 - [ ] QA Manual
@@ -41,9 +41,10 @@ nenhum documento de OS para o cliente, nem cadastro dos dados da loja.
   conteúdo do documento, montado por **allowlist** (BR-097) — o frontend nunca recebe custo, lucro,
   peças, técnico ou vendedor por essa rota:
   - `loja` (Dados da Loja), `ordem` (id, data, data_finalizado, status, aparelho, modelo, cor, imei,
-    serviços, observações), `cliente` (nome; telefone e CPF/CNPJ via `os.cliente_id`, quando houver).
-  - `entrega` acrescenta `garantias` (snapshot de `os_reparos`: nome, duração, data de término — BR-062)
-    e `valor_total` (`calcular_faturamento_os`, mesma função da listagem — sem duplicar a conta).
+    técnico, serviços, observações, `valor_total` via `calcular_faturamento_os` — mesma função da
+    listagem), `cliente` (nome; telefone e CPF/CNPJ via `os.cliente_id`, quando houver — CPF/CNPJ só para
+    `admin`/`financeiro`, KI-045).
+  - `entrega` acrescenta `garantias` (snapshot de `os_reparos`: nome, duração, data de término — BR-062).
   - Erros: 401 sem login; 404 OS inexistente; 422 OS interna (BR-097), OS Cancelada (BR-095), entrega com
     OS não Finalizada (BR-096), Dados da Loja sem nome fantasia (BR-098).
   - A consulta e a montagem ficam em funções de `fluxoly_os.py` (sem I/O de Flask), a rota só orquestra.
@@ -122,8 +123,8 @@ backup do banco de produção (rotina de backup existente). Sem janela de manute
 - `tests/test_dados_loja.py`: GET autenticado/401; PUT admin ok, não-admin 403, nome fantasia vazio 422,
   campo acima do limite 422, upsert (segundo PUT atualiza a mesma linha), auditoria registrada.
 - `tests/test_os_documento.py`: entrada e entrega no caso feliz; allowlist — a resposta **não** contém
-  `custo_pecas`, `lucro`, `pecas_usadas`, `tecnico`, `vendedor` (BR-097); cliente vinculado traz
-  telefone/CPF, sem vínculo só o nome; garantia vem do snapshot mesmo após editar o tipo de garantia
+  `custo_pecas`, `lucro`, `pecas_usadas`, `vendedor` (BR-097) e contém o técnico; cliente vinculado traz
+  telefone (e CPF só para admin/financeiro), sem vínculo só o nome; garantia vem do snapshot mesmo após editar o tipo de garantia
   (BR-062); valor total = cobrado − desconto; 422 para interna, cancelada, entrega não finalizada e loja
   sem nome; 404; 401.
 - `migrations`: teste do runner aplicando `m0004` em banco novo e em banco já na `m0003`.
@@ -137,8 +138,9 @@ backup do banco de produção (rotina de backup existente). Sem janela de manute
 
 - Admin cadastra os Dados da Loja e eles aparecem no cabeçalho dos dois PDFs.
 - PDF de entrada sai em qualquer status exceto Cancelada; PDF de entrega só em OS Finalizada.
-- PDF de entrega lista cada serviço com sua garantia e data de término, e o valor total.
-- Nenhum PDF contém custo, lucro, peças, fornecedor, técnico ou vendedor.
+- PDF de entrada mostra o valor previsto; o de entrega lista cada serviço com sua garantia e data de
+  término, e o valor total. Os dois mostram o técnico.
+- Nenhum PDF contém custo, lucro, peças, fornecedor ou vendedor.
 - Acentos corretos no PDF.
 - Suíte backend e frontend verdes (exceto KI-030, só no Windows local); lint e build ok.
 
@@ -162,8 +164,6 @@ não altera dados existentes.
 
 ## Questões em Aberto
 
-Decididas por engenharia, revisáveis no QA (marcadas nas BRs): técnico e vendedor fora do PDF; OS interna
-sem documento; sem Dados da Loja o PDF não sai. Uma pergunta de negócio ainda aberta:
-
-- **O PDF de entrada mostra valor?** (o valor cobrado previsto, como orçamento) — por padrão do plano,
-  **não mostra**; só o de entrega tem valor.
+Nenhuma. Respondidas pelo CTO em 2026-11-10: o PDF de entrada mostra o valor previsto; o técnico aparece
+nos dois documentos; vendedor fora; OS interna sem documento; sem Dados da Loja o PDF não sai. CPF/CNPJ
+segue a restrição de leitura de KI-045 (decisão de engenharia, revisável no QA).
