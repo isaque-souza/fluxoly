@@ -637,9 +637,12 @@ engenharia, mesmo critério das telas administrativas — revisável no QA.*
 **BR-095 — 📋 Especificado (2026-11-10)**
 Comprovante de entrada (PDF), entregue quando o cliente deixa o aparelho: cabeçalho com os Dados da Loja,
 número e data da OS, cliente (nome; telefone e CPF/CNPJ quando a OS tem cliente vinculado), aparelho
-(aparelho, modelo, cor, IMEI), serviços solicitados, observações, termos de entrada e campos de assinatura
-do cliente e da loja. Pode ser gerado em qualquer status, exceto Cancelada.
-*Fonte: Decisão do CTO, 2026-11-10.*
+(aparelho, modelo, cor, IMEI), técnico responsável, serviços solicitados, valor previsto (valor cobrado −
+desconto), observações, termos de entrada e campos de assinatura do cliente e da loja. Pode ser gerado em
+qualquer status, exceto Cancelada. O CPF/CNPJ só entra quando quem gera o documento pode lê-lo (`admin` ou
+`financeiro`, KI-045); para os demais perfis, o documento sai sem ele.
+*Fonte: Decisão do CTO, 2026-11-10 (conteúdo, valor previsto e técnico); CPF/CNPJ por perfil por decisão
+de engenharia, consistente com KI-045 — revisável no QA.*
 
 **BR-096 — 📋 Especificado (2026-11-10)**
 Comprovante de entrega (PDF), entregue na retirada: tudo do cabeçalho e da identificação de BR-095, mais
@@ -649,17 +652,16 @@ garantia e o campo de assinatura de retirada. Só existe para OS Finalizada.
 *Fonte: Decisão do CTO, 2026-11-10.*
 
 **BR-097 — 📋 Especificado (2026-11-10)**
-Os documentos para o cliente nunca mostram custo de peças, lucro, peças usadas, fornecedor, técnico,
-vendedor nem dados de integração. A lista do que entra é fechada no backend (allowlist), não filtrada na
-tela. OS interna (BR-090) não gera documento para cliente, porque não tem cliente.
-*Fonte: Decisão do CTO, 2026-11-10 (custo/lucro fora); técnico, vendedor e OS interna por decisão de
-engenharia — revisável no QA.*
+Os documentos para o cliente nunca mostram custo de peças, lucro, peças usadas, fornecedor, vendedor nem
+dados de integração. O técnico aparece. A lista do que entra é fechada no backend (allowlist), não
+filtrada na tela. OS interna (BR-090) não gera documento para cliente, porque não tem cliente.
+*Fonte: Decisão do CTO, 2026-11-10 (custo/lucro fora, técnico dentro, OS interna e vendedor fora).*
 
 **BR-098 — 📋 Especificado (2026-11-10)**
 Sem nome fantasia cadastrado em Dados da Loja, os documentos não são gerados: a tela avisa que é preciso
 cadastrar os Dados da Loja (e só o `admin` vê o atalho para isso). Gerar o documento não grava nada: não há
 registro de emissão nem cópia guardada.
-*Fonte: decisão de engenharia — revisável no QA.*
+*Fonte: Decisão do CTO, 2026-11-10 (aprovada na revisão das regras de engenharia).*
 
 ---
 
