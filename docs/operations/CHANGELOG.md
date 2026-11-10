@@ -20,8 +20,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **feat: Dados da Loja (BR-094)** — página **Dados da Loja** (menu Administração, só `admin` edita):
   nome fantasia, razão social, CNPJ, telefone, e-mail, endereço e termos de entrada/garantia.
   Migration `m0004` (tabela `dados_loja`, linha única) e `GET/PUT /api/dados-loja`.
-- Achado registrado: **KI-059** (o "Valor com Desconto" da OS é ignorado quando o Valor Cobrado está
-  preenchido — afeta faturamento e o valor impresso no comprovante).
+
+### Corrigido (2026-11-10)
+- **fix: Valor com Desconto passa a valer no valor da OS quando preenchido (KI-059)** — antes, com Valor
+  Cobrado e Valor com Desconto preenchidos, o desconto era ignorado. Afeta listagem, relatórios, lucro e os
+  comprovantes para o cliente; relatórios de períodos passados com OS nessa situação mostram valores
+  menores ao serem gerados de novo.
 
 ### Corrigido (2026-11-09 — hotfix)
 - **fix: corrida entre workers na migration 0003 derrubava o boot (KI-058)** — no primeiro boot com a m0003
