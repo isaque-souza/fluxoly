@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CircleNotch, Plus, Minus, MagnifyingGlass, QrCode, Copy, ArrowSquareOut } from "@phosphor-icons/react";
+import { CircleNotch, Plus, Minus, MagnifyingGlass, QrCode, Copy, ArrowSquareOut, FilePdf } from "@phosphor-icons/react";
 import ShoppingModal from "@/components/shopping/ShoppingModal";
 import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, ordens as ordensApi, checklist as checklistApi, precos as precosApi, tiposGarantia as tiposGarantiaApi } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Reveal } from "@/components/ui/reveal";
 import { Panel, PanelHeader, PanelTitle, PanelContent } from "@/components/ui/panel";
 import { LooseMetric } from "@/components/ui/loose-metric";
+import { useAuth } from "@/contexts/AuthContext";
+import { baixarPdfOs } from "@/lib/osPdf";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
   AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
@@ -38,6 +40,8 @@ export default function EditOrder() {
   const [checklistMeta, setChecklistMeta] = useState(null);
   const [checklistDialog, setChecklistDialog] = useState(false);
   const [checklistLoading, setChecklistLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(null);
+  const isAdmin = useAuth()?.user?.perfil === "admin";
   const [orderDisplayNumber, setOrderDisplayNumber] = useState("");
   const initialized = useRef(false);
 
@@ -304,6 +308,29 @@ export default function EditOrder() {
     }
   };
 
+  // BR-095 a BR-098 -- comprovante de entrada/entrega para o cliente. O conteúdo vem do backend
+  // (allowlist, BR-097) e reflete a OS salva, não edições ainda não salvas neste formulário.
+  const handlePdf = async (tipo) => {
+    setPdfLoading(tipo);
+    try {
+      const res = await ordensApi.documento(id, tipo);
+      if (!res?.ok) {
+        const erro = res?.erro || "Não foi possível gerar o PDF";
+        if (isAdmin && erro.includes("Dados da Loja")) {
+          toast.error(erro, { action: { label: "Cadastrar", onClick: () => navigate("/dados-loja") } });
+        } else {
+          toast.error(erro);
+        }
+        return;
+      }
+      await baixarPdfOs(res.documento, orderDisplayNumber || getOrderDisplayNumber({ id }));
+    } catch {
+      toast.error("Não foi possível gerar o PDF");
+    } finally {
+      setPdfLoading(null);
+    }
+  };
+
   const normalizedModelo = form?.modelo?.toLowerCase().trim();
   const filteredEstoque = estoqueList.filter((item) => {
     const itemModelo = item.modelo?.toLowerCase().trim() || "";
@@ -347,12 +374,30 @@ export default function EditOrder() {
           <h1 className="text-2xl font-bold text-foreground">Editar Ordem #{orderDisplayNumber || getOrderDisplayNumber({ id })}</h1>
           <p className="text-muted-foreground text-sm">Atualize os dados da OS</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={() => setShoppingModalOpen(true)}>Adicionar à Lista de Compras</Button>
           <Button type="button" variant="outline" onClick={handleChecklistQr} disabled={checklistLoading}>
             {checklistLoading ? <CircleNotch className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
             Checklist QR
           </Button>
+          {!interna && statusOriginal !== "Cancelado" && (
+            <>
+              <Button type="button" variant="outline" onClick={() => handlePdf("entrada")} disabled={pdfLoading !== null}>
+                {pdfLoading === "entrada" ? <CircleNotch className="mr-2 h-4 w-4 animate-spin" /> : <FilePdf className="mr-2 h-4 w-4" />}
+                PDF de entrada
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handlePdf("entrega")}
+                disabled={pdfLoading !== null || statusOriginal !== "Finalizado"}
+                title={statusOriginal !== "Finalizado" ? "Disponível depois que a OS for finalizada" : undefined}
+              >
+                {pdfLoading === "entrega" ? <CircleNotch className="mr-2 h-4 w-4 animate-spin" /> : <FilePdf className="mr-2 h-4 w-4" />}
+                PDF de entrega
+              </Button>
+            </>
+          )}
           <Button type="button" variant="outline" onClick={handleFinalize}>Finalizar OS</Button>
           <Button type="button" variant="destructive" onClick={() => setCancelDialog(true)}>Cancelar OS</Button>
         </div>

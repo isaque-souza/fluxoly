@@ -217,6 +217,14 @@ export const ordens = {
     patch(`/ordens/${osId}/reparos/${reparoId}/garantia`, data),
   historicoGarantiaReparo: (osId, reparoId) =>
     get(`/ordens/${osId}/reparos/${reparoId}/historico-garantia`),
+  // BR-095 a BR-098 -- conteúdo do comprovante de entrada/entrega para o cliente (o PDF é gerado no navegador).
+  documento: (id, tipo) => get(`/ordens/${id}/documento?tipo=${encodeURIComponent(tipo)}`),
+};
+
+// ── Dados da Loja (BR-094) ───────────────────────────────────────────────────
+export const dadosLoja = {
+  get:  ()     => get("/dados-loja"),
+  save: (data) => put("/dados-loja", data),
 };
 
 // ── Checklist de Aparelho ──────────────────────────────────────────────────
