@@ -2150,3 +2150,31 @@ Sprint prevista:
 
 Responsável:
 —
+
+---
+
+## KI-059
+
+Descrição:
+Na OS, o campo "Valor com Desconto" (`os.valor_descontado`, rótulo em `NewOrder.jsx`/`EditOrder.jsx`) é o
+preço final já com desconto, não o valor do desconto. Mas `fluxoly_core.py::calcular_faturamento_os`
+devolve o Valor Cobrado sempre que ele é maior que zero, e só usa o Valor com Desconto quando o cobrado é
+zero. Quando a OS tem os dois preenchidos, o desconto é ignorado no faturamento, no lucro, na coluna Valor
+da listagem e, desde 2026-11-10, no valor impresso nos comprovantes de OS para o cliente (BR-095/BR-096).
+Achado ao implementar os documentos da OS (`docs/engineering/plans/PLAN-documentos-os-cliente.md`).
+
+Impacto:
+Médio. Se a loja usa os dois campos (cobrado + com desconto), o cliente recebe um comprovante com o valor
+sem desconto, e o faturamento/lucro aparecem maiores do que o valor de fato recebido. Não muta dado, mas
+afeta número financeiro e documento entregue ao cliente.
+
+Status:
+Aberto — decisão de negócio pendente com o CTO: qual valor vale quando os dois campos estão preenchidos.
+Os comprovantes usam a mesma função do resto do sistema de propósito, para não haver dois valores
+diferentes para a mesma OS; corrigir `calcular_faturamento_os` corrige tudo junto.
+
+Sprint prevista:
+A definir com o CTO.
+
+Responsável:
+—

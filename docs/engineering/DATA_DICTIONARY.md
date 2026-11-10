@@ -167,6 +167,7 @@ gera log automaticamente (BR-016), nunca editável.
 | `os_reparos` | Sistema (reflexo de `os.reparo_ids`) | Todos | PK composta, sem coluna própria além das FKs |
 | `custos_operacionais` | Qualquer usuário autenticado | Todos | Sem regra de negócio própria identificada além de CRUD simples |
 | `compras` (legado) | Nenhuma rota ativa aponta para esta tabela hoje | — | Candidata a remoção (KI-014); ver `docs/engineering/DATABASE.md` |
+| `dados_loja` | Só `admin` (`PUT /api/dados-loja`, auditado) | Todo usuário autenticado; impresso nos documentos da OS para o cliente | Linha única (BR-094) |
 | `integracao_sync_estado` / `integracao_os_vistas` | Sistema apenas (sincronização MercadoPhone) | Não exposto por rota própria | Autenticação por token, fora de `ROUTE_PERMISSIONS` (R-07) |
 
 ---
