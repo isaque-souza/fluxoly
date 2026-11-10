@@ -12,11 +12,14 @@ from datetime import date, datetime
 
 from flask import Blueprint, request, session
 
+import fluxoly_clientes_service as clientes_service
 import fluxoly_compras_aparelhos_service as compras_aparelhos_service
+import fluxoly_dados_loja_service as dados_loja_service
 import fluxoly_unidades_serializadas_service as unidades_service
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
 from fluxoly_core import CLIENTE_OS_INTERNA, TIPO_OS_INTERNA
 from fluxoly_mercadophone import atualizar_runtime_mercadophone, carregar_config_mercadophone
+from fluxoly_os import TIPOS_DOCUMENTO_CLIENTE, buscar_os_para_documento, montar_documento_cliente
 from fluxoly_validation import parse_float, parse_int, safe_json
 
 
@@ -392,6 +395,47 @@ def create_api_os_blueprint(deps):
                 "pecas_usadas": pecas_usadas,
             }
         )
+
+    @api_os.route("/ordens/<int:os_id>/documento")
+    def documento_cliente_os(os_id):
+        """Conteúdo do comprovante de entrada/entrega para o cliente (BR-095 a
+        BR-098). Só o que `montar_documento_cliente` monta sai daqui (BR-097);
+        o PDF é desenhado no frontend."""
+        if not usuario_logado():
+            return err("Não autenticado.", 401)
+
+        tipo_documento = (request.args.get("tipo") or "").strip().lower()
+        if tipo_documento not in TIPOS_DOCUMENTO_CLIENTE:
+            return err("Tipo de documento inválido. Use 'entrada' ou 'entrega'.", 400)
+
+        conn = conectar()
+        try:
+            cursor = conn.cursor()
+            os_dados = buscar_os_para_documento(cursor, os_id)
+            loja = dados_loja_service.obter_dados_loja_com_cursor(cursor)
+        finally:
+            conn.close()
+        if not os_dados:
+            return err("OS não encontrada.", 404)
+
+        cliente_cadastro = None
+        if os_dados["cliente_id"]:
+            cliente_cadastro = clientes_service.obter_cliente(conectar, os_dados["cliente_id"])
+            # KI-045: CPF/CNPJ só para quem pode lê-lo -- o documento sai sem ele para os demais.
+            if cliente_cadastro and session.get("usuario_perfil") not in ("admin", "financeiro"):
+                cliente_cadastro = {**cliente_cadastro, "cpf_cnpj": ""}
+
+        documento, erro = montar_documento_cliente(
+            tipo_documento,
+            os_dados,
+            loja,
+            cliente_cadastro,
+            normalizar_status_os(os_dados["status"]),
+            calcular_faturamento_os(os_dados["valor_cobrado"], os_dados["valor_descontado"]),
+        )
+        if erro:
+            return err(erro, 409)
+        return ok(documento=documento)
 
     @api_os.route("/ordens/<int:os_id>/checklist")
     def obter_checklist_os(os_id):

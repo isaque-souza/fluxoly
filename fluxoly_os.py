@@ -1,6 +1,13 @@
 from datetime import datetime
 
-from fluxoly_core import STATUS_FINALIZADO, calcular_data_fim_garantia, texto_limpo, to_float
+from fluxoly_core import (
+    STATUS_CANCELADO,
+    STATUS_FINALIZADO,
+    TIPO_OS_INTERNA,
+    calcular_data_fim_garantia,
+    texto_limpo,
+    to_float,
+)
 
 
 def _consumir_lotes_fifo(cursor, estoque_id, quantidade):
@@ -518,3 +525,121 @@ def devolver_pecas_da_os(cursor, os_id, tipo_movimentacao):
             )
 
         registrar_movimentacao(cursor, estoque_id, tipo_movimentacao, qtd or 0)
+
+
+# Documentos da OS para o cliente (BR-095 a BR-098,
+# docs/engineering/plans/PLAN-documentos-os-cliente.md). A leitura do banco e a
+# montagem ficam separadas: `montar_documento_cliente` é pura e é ela que fecha
+# a allowlist do que pode sair para o cliente (BR-097).
+DOCUMENTO_ENTRADA = "entrada"
+DOCUMENTO_ENTREGA = "entrega"
+TIPOS_DOCUMENTO_CLIENTE = (DOCUMENTO_ENTRADA, DOCUMENTO_ENTREGA)
+
+
+def buscar_os_para_documento(cursor, os_id):
+    """Linha da OS com só as colunas que um documento pode usar, mais os
+    serviços com o snapshot de garantia (BR-062). None se a OS não existe."""
+    cursor.execute(
+        """
+        SELECT id, COALESCE(tipo, ''), COALESCE(cliente, ''), cliente_id,
+               COALESCE(aparelho, ''), COALESCE(modelo, ''), COALESCE(cor, ''),
+               COALESCE(imei, ''), COALESCE(tecnico, ''), COALESCE(status, ''),
+               COALESCE(data, ''), COALESCE(data_finalizado, ''),
+               COALESCE(observacoes, ''), COALESCE(valor_cobrado, 0),
+               COALESCE(valor_descontado, 0)
+        FROM os WHERE id=?
+        """,
+        (os_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    cursor.execute(
+        """
+        SELECT COALESCE(reparos.nome, ''), os_reparos.garantia_nome,
+               os_reparos.garantia_duracao_meses, os_reparos.garantia_data_fim
+        FROM os_reparos
+        JOIN reparos ON reparos.id = os_reparos.reparo_id
+        WHERE os_reparos.os_id=?
+        ORDER BY reparos.nome
+        """,
+        (os_id,),
+    )
+    servicos = cursor.fetchall()
+    chaves = (
+        "id", "tipo", "cliente", "cliente_id", "aparelho", "modelo", "cor", "imei", "tecnico",
+        "status", "data", "data_finalizado", "observacoes", "valor_cobrado", "valor_descontado",
+    )  # fmt: skip
+    dados = dict(zip(chaves, row, strict=True))
+    dados["servicos"] = [
+        {"nome": nome, "garantia_nome": g_nome, "garantia_duracao_meses": g_meses, "garantia_data_fim": g_fim}
+        for nome, g_nome, g_meses, g_fim in servicos
+    ]
+    return dados
+
+
+def montar_documento_cliente(tipo_documento, os_dados, loja, cliente_cadastro, status, valor_total):
+    """Retorna (documento, erro). Só o que está montado aqui sai para o cliente:
+    nunca custo, lucro, peças, fornecedor, vendedor ou integração (BR-097).
+
+    `status` já normalizado; `valor_total` calculado pelo chamador com
+    `calcular_faturamento_os` (mesmo valor da listagem). `cliente_cadastro` é o
+    cadastro vinculado (dict com nome/telefone e, se quem gera pode ver,
+    cpf_cnpj) ou None."""
+    if tipo_documento not in TIPOS_DOCUMENTO_CLIENTE:
+        return None, "Tipo de documento inválido."
+    if os_dados["tipo"] == TIPO_OS_INTERNA:
+        return None, "OS interna não tem documento para cliente."
+    if status == STATUS_CANCELADO:
+        return None, "OS cancelada não gera documento para cliente."
+    if tipo_documento == DOCUMENTO_ENTREGA and status != STATUS_FINALIZADO:
+        return None, "O comprovante de entrega só existe para OS finalizada."
+    if not (loja.get("nome_fantasia") or "").strip():
+        return None, "Cadastre os Dados da Loja antes de gerar documentos."
+
+    cliente = {"nome": os_dados["cliente"], "telefone": "", "cpf_cnpj": ""}
+    if cliente_cadastro:
+        cliente["nome"] = cliente_cadastro.get("nome") or cliente["nome"]
+        cliente["telefone"] = cliente_cadastro.get("telefone") or ""
+        cliente["cpf_cnpj"] = cliente_cadastro.get("cpf_cnpj") or ""
+
+    entrega = tipo_documento == DOCUMENTO_ENTREGA
+    servicos = []
+    for servico in os_dados["servicos"]:
+        item = {"nome": servico["nome"]}
+        if entrega:
+            item["garantia"] = (
+                {
+                    "nome": servico["garantia_nome"] or "",
+                    "duracao_meses": servico["garantia_duracao_meses"],
+                    "data_fim": servico["garantia_data_fim"] or "",
+                }
+                if servico["garantia_nome"]
+                else None
+            )
+        servicos.append(item)
+
+    documento = {
+        "tipo": tipo_documento,
+        "loja": {
+            chave: loja.get(chave) or ""
+            for chave in ("nome_fantasia", "razao_social", "cnpj", "telefone", "email", "endereco")
+        },
+        "termos": loja.get("termos_garantia" if entrega else "termos_entrada") or "",
+        "cliente": cliente,
+        "ordem": {
+            "id": os_dados["id"],
+            "data": os_dados["data"],
+            "data_finalizado": os_dados["data_finalizado"] if entrega else "",
+            "status": status,
+            "aparelho": os_dados["aparelho"],
+            "modelo": os_dados["modelo"],
+            "cor": os_dados["cor"],
+            "imei": os_dados["imei"],
+            "tecnico": os_dados["tecnico"],
+            "observacoes": os_dados["observacoes"],
+            "valor_total": round(valor_total or 0, 2),
+            "servicos": servicos,
+        },
+    }
+    return documento, None
