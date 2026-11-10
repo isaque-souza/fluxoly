@@ -625,6 +625,44 @@ aparelho vendido é o custo inteiro dele, mesmo que a compra ou as peças tenham
 
 ---
 
+## Documentos da OS para o cliente (PDF) e Dados da Loja
+
+**BR-094 — 📋 Especificado (2026-11-10)**
+A loja tem um cadastro único de Dados da Loja: nome fantasia (obrigatório), razão social, CNPJ,
+telefone, e-mail, endereço, texto de termos de entrada e texto de termos de garantia. Só `admin` edita;
+qualquer usuário autenticado lê (os documentos da OS dependem dele).
+*Fonte: Decisão do CTO, 2026-11-10 (cadastro dos dados da loja em tela); permissão por decisão de
+engenharia, mesmo critério das telas administrativas — revisável no QA.*
+
+**BR-095 — 📋 Especificado (2026-11-10)**
+Comprovante de entrada (PDF), entregue quando o cliente deixa o aparelho: cabeçalho com os Dados da Loja,
+número e data da OS, cliente (nome; telefone e CPF/CNPJ quando a OS tem cliente vinculado), aparelho
+(aparelho, modelo, cor, IMEI), serviços solicitados, observações, termos de entrada e campos de assinatura
+do cliente e da loja. Pode ser gerado em qualquer status, exceto Cancelada.
+*Fonte: Decisão do CTO, 2026-11-10.*
+
+**BR-096 — 📋 Especificado (2026-11-10)**
+Comprovante de entrega (PDF), entregue na retirada: tudo do cabeçalho e da identificação de BR-095, mais
+a data de conclusão, os serviços realizados com a garantia de cada um (nome, duração e data de término,
+lidos do snapshot de BR-062 — nunca recalculados), o valor total (valor cobrado − desconto), os termos de
+garantia e o campo de assinatura de retirada. Só existe para OS Finalizada.
+*Fonte: Decisão do CTO, 2026-11-10.*
+
+**BR-097 — 📋 Especificado (2026-11-10)**
+Os documentos para o cliente nunca mostram custo de peças, lucro, peças usadas, fornecedor, técnico,
+vendedor nem dados de integração. A lista do que entra é fechada no backend (allowlist), não filtrada na
+tela. OS interna (BR-090) não gera documento para cliente, porque não tem cliente.
+*Fonte: Decisão do CTO, 2026-11-10 (custo/lucro fora); técnico, vendedor e OS interna por decisão de
+engenharia — revisável no QA.*
+
+**BR-098 — 📋 Especificado (2026-11-10)**
+Sem nome fantasia cadastrado em Dados da Loja, os documentos não são gerados: a tela avisa que é preciso
+cadastrar os Dados da Loja (e só o `admin` vê o atalho para isso). Gerar o documento não grava nada: não há
+registro de emissão nem cópia guardada.
+*Fonte: decisão de engenharia — revisável no QA.*
+
+---
+
 ## Segurança e Permissões
 
 **BR-030 — ✅ Implementado (2026-07-25)**
