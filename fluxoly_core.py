@@ -91,9 +91,12 @@ def coletar_status_opcoes(rows, status_index):
 
 
 def calcular_faturamento_os(valor_cobrado, valor_descontado):
+    """Valor da OS. `valor_descontado` é o preço final com desconto (campo "Valor com
+    Desconto"), não o valor do desconto: quando preenchido, é ele que vale; sem ele, vale
+    o Valor Cobrado (KI-059, decisão do CTO em 2026-11-10)."""
     valor_cobrado = valor_cobrado or 0
     valor_descontado = valor_descontado or 0
-    return valor_cobrado if valor_cobrado > 0 else valor_descontado
+    return valor_descontado if valor_descontado > 0 else valor_cobrado
 
 
 def calcular_lucro_os(tipo, valor_cobrado, valor_descontado, custo):

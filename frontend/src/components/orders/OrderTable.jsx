@@ -50,7 +50,8 @@ const columns = [
     key: "valor",
     header: "Valor",
     className: "text-card-foreground font-medium whitespace-nowrap",
-    render: (os) => formatCurrency(os.valor_cobrado || os.valor_descontado || 0),
+    // KI-059: mesmo valor do backend (`faturamento`) -- o Valor com Desconto vale quando preenchido.
+    render: (os) => formatCurrency(os.faturamento ?? (os.valor_descontado || os.valor_cobrado || 0)),
   },
 ];
 
