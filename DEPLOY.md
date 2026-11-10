@@ -1,24 +1,51 @@
 
-# Deploy IR Flow → Render (backend) & Vercel (frontend)
+# Deploy Fluxoly → servidor próprio (backend) & Vercel (frontend)
 
-## Backend (Render.com)
+> Desde 2026-11 o backend roda no servidor Linux próprio do CTO (Docker + Tailscale Funnel), não mais no
+> Render (ver `docs/operations/PROJECT_STATUS.md`). As seções sobre Render abaixo ficam como histórico.
 
-### 1. Crie uma conta em https://render.com
+## Backend (servidor próprio, deploy automático — ADR-015)
 
-### 2. Novo serviço web
-- Clique em **New +** > **Web Service**
-- Conecte seu repositório (GitHub/GitLab)
-- Escolha o repositório do projeto
+### Como funciona
 
-### 3. Configuração do serviço
-- **Environment**: Docker
-- **Docker Build Context**: `.`
-- **Dockerfile Path**: `Dockerfile`
-- **Start Command**: (deixe em branco, o Dockerfile já define)
-- **Port**: 8080
+```
+merge na main → CI verde (lint, testes, cobertura, build, docker)
+             → job publish_image publica ghcr.io/isaque-souza/fluxoly:latest e :<sha>
+             → Watchtower no servidor vê a :latest nova (checa a cada 5 min)
+             → hook pre-update: backup do banco em /data/backups/backup-pre-update-*.db
+             → recria o container fluxoly (mesmo volume /data, mesmo .env)
+```
 
-### 4. Variáveis de ambiente
-Adicione as variáveis necessárias em **Environment > Add Environment Variable**:
+Arquivo de referência: `deploy/docker-compose.yml`. Watchtower usado é o fork mantido
+`nickfedor/watchtower` — o `containrrr/watchtower` original foi arquivado e não funciona no Docker 29+.
+
+### Instalação (uma vez)
+
+1. **Deixar a imagem acessível ao servidor.** O primeiro `publish_image` cria o pacote
+   `ghcr.io/isaque-souza/fluxoly` no GitHub. Em **GitHub → Packages → fluxoly → Package settings**, mude a
+   visibilidade para **Public** (o código já é público; a imagem não contém segredo nem banco). Se preferir
+   manter privado, rode `docker login ghcr.io` no servidor com um token `read:packages`.
+2. **Copiar o compose para o servidor**, na mesma pasta do `.env` que já está em uso.
+3. **Ajustar o volume de `/data`** no `deploy/docker-compose.yml` para o mesmo volume ou pasta que o
+   compose atual usa. Errar aqui sobe o app com banco vazio. Faça um backup manual de `/data/database.db`
+   antes da troca.
+4. **Ajustar a porta** se o Tailscale Funnel não encaminhar para `127.0.0.1:8080`.
+5. Parar o compose antigo (`docker compose down` na pasta antiga — **sem** `-v`, que apaga volumes) e
+   subir o novo: `docker compose up -d`.
+6. Conferir: `docker compose ps` (os dois containers `Up`, fluxoly `healthy`), `/health` e `/ready` → 200,
+   login pelo frontend.
+
+### No dia a dia
+
+- Merge na `main` → em até ~5 min depois do CI terminar, o backend está atualizado. Acompanhe com
+  `docker logs -f watchtower` e `docker logs -f fluxoly`.
+- **Migrations entram sozinhas** no boot do container novo. O backup `backup-pre-update-*` (últimos 20)
+  é o ponto de volta. Se a cópia falhar, o hook sai com 75 e o Watchtower **não** atualiza nessa rodada.
+- Para pausar o deploy automático: `docker stop watchtower`. Para voltar: `docker start watchtower`.
+- Para fixar uma versão: troque `:latest` por `:<sha>` no compose e rode `docker compose up -d`. O
+  Watchtower não troca uma tag fixa por outra.
+
+### Variáveis de ambiente (`.env` do servidor)
 - `FLASK_SECRET_KEY` (obrigatório)
 - `MERCADO_PHONE_INTEGRATION_ENABLED` (padrão `0` = integração MercadoPhone desligada, ADR-014 — as variáveis `MERCADO_PHONE_*` abaixo só têm efeito com `1`)
 - `MERCADO_PHONE_WEBHOOK_TOKEN` (obrigatório para o webhook de importação de OS funcionar — sem ele, toda requisição é rejeitada com 401)
@@ -30,27 +57,13 @@ Adicione as variáveis necessárias em **Environment > Add Environment Variable*
 - `MERCADO_PHONE_DEFAULT_TECNICO=Aguardando definicao` (opcional)
 - `IR_FLOW_HOST=0.0.0.0`
 - `IR_FLOW_PORT=8080`
-- `IR_FLOW_DATA_DIR=/data` (recomendado)
-- `RENDER_DISK_PATH=/data` (alternativa)
+- `IR_FLOW_DATA_DIR=/data` (já definido no compose)
 - `IR_FLOW_CORS_ORIGINS=https://assistencia-system.vercel.app` (ou uma lista separada por vírgula)
 - `SENTRY_DSN` (opcional — Sprint Observabilidade, 2026-07-25; vazio desabilita a integração por completo)
 - `METRICS_TOKEN` (recomendado em produção — protege `/metrics`; sem essa variável, o endpoint nega por padrão)
 
 > Dica: se usar preview URLs do Vercel, inclua também esses domínios em `IR_FLOW_CORS_ORIGINS`.
 > `PROMETHEUS_MULTIPROC_DIR` não precisa ser configurada manualmente — já vem definida no `Dockerfile`.
-
-### 5. Volume persistente (Disks)
-- Em **Disks**, clique em **Add Disk**
-- Nome: `irflow_data`
-- Mount Path: `/data`
-- Size: 1GB (ou mais, conforme necessidade)
-
-### 6. Deploy
-- Clique em **Create Web Service**
-- O Render irá buildar e subir o backend automaticamente
-
-### 7. Acesso
-- O Render fornecerá uma URL pública (ex: `https://irflow-backend.onrender.com`)
 
 ---
 
@@ -69,7 +82,7 @@ Adicione as variáveis necessárias em **Environment > Add Environment Variable*
 - **Output Directory**: `dist`
 
 ### 4. Variáveis de ambiente (opcional)
-Se precisar apontar para a API do backend Render, adicione:
+Se precisar apontar para a API do backend, adicione:
 - `VITE_API_URL=https://irflow-backend.onrender.com/api`
 
 No código, use `import.meta.env.VITE_API_URL` para consumir a URL da API.
@@ -85,10 +98,10 @@ No código, use `import.meta.env.VITE_API_URL` para consumir a URL da API.
 
 ## Observações
 
-- O backend (Render) serve apenas a API e arquivos de dados.
+- O backend (servidor próprio) serve apenas a API e arquivos de dados.
 - O frontend (Vercel) serve o app React estático e consome a API do backend.
 - Ajuste o CORS no backend se necessário para aceitar requisições do domínio da Vercel.
-- Para backups, acesse o disco `/data` no Render via SSH ou painel.
+- Backups ficam em `/data/backups` no volume do servidor (manuais, `backup-auto-*` diários e `backup-pre-update-*` do deploy).
 - Backups versionados podem ser criados via `POST /api/backup/criar` enviando `{ "versao": "v2" }`.
 - Configuração persistente do Mercado Phone pode ser salva via `POST /api/integracoes/mercadophone/config`.
 
@@ -99,7 +112,7 @@ No código, use `import.meta.env.VITE_API_URL` para consumir a URL da API.
 **Política definida em 2026-08-10** (decisão do CTO — Discovery da Operação Release 1.0, Parte B. Ver
 `docs/company/GO_LIVE_PLAN.md` seção "Plano de rollback" para o registro completo da decisão).
 
-- **Escopo:** rollback é sempre coordenado — reverte backend (Render) e frontend (Vercel) juntos, nunca
+- **Escopo:** rollback é sempre coordenado — reverte backend (servidor próprio) e frontend (Vercel) juntos, nunca
   um sem o outro.
 - **Quando acionar:** bug crítico impedindo operação, perda/corrupção de dados, ou indisponibilidade
   prolongada.
@@ -121,8 +134,10 @@ No código, use `import.meta.env.VITE_API_URL` para consumir a URL da API.
      mecânica (achado do Dry-Run 1B, 2026-08-10, ver `docs/company/GO_LIVE_PLAN.md` seção "Plano de
      rollback"). Decisões possíveis do CTO: resolver de forma controlada, hotfix roll-forward, rollback
      alternativo, ou abortar.
-3. `git push` — dispara redeploy automático em Render (backend) e Vercel (frontend), mesmo fluxo de
-   deploy descrito no topo deste documento.
+3. `git push`/merge na `main` — dispara redeploy automático na Vercel (frontend) e, depois do CI, a
+   publicação da imagem que o Watchtower aplica no servidor (backend), mesmo fluxo descrito no topo deste
+   documento. Para um rollback imediato sem esperar o CI, fixe a tag `:<sha>` anterior no compose do
+   servidor (respeitando a regra de migrations acima).
 4. Smoke test manual: login, criar OS, criar venda, conferir dashboard — confirma que a funcionalidade
    real voltou, não só que o processo subiu.
 5. Se o gatilho envolveu perda/corrupção de dado, restaurar o backup pré-incidente via
@@ -135,6 +150,8 @@ Ainda não há um dry-run local completo sem interrupção, nem um dry-run de in
 ---
 
 ## Preview Seguro (Render PR Preview)
+
+> Histórico: vale enquanto o backend estava no Render. O servidor próprio não tem PR Preview.
 
 **Achado (INC-003, 2026-08-10):** um Render PR Preview herda **todas** as variáveis de ambiente do
 serviço-base na criação (comportamento documentado do próprio Render), incluindo credenciais de
@@ -167,8 +184,8 @@ outra:**
 
 ## Passo a passo resumido
 
-1. Suba o backend no Render seguindo as instruções acima.
+1. Suba o backend no servidor próprio com `deploy/docker-compose.yml` seguindo as instruções acima.
 2. Suba o frontend na Vercel seguindo as instruções acima.
-3. Teste o fluxo completo: frontend (Vercel) consumindo a API (Render).
+3. Teste o fluxo completo: frontend (Vercel) consumindo a API (servidor próprio).
 4. Ajuste variáveis de ambiente e CORS conforme necessário.
 5. `fly.toml` foi removido do repositório — não é mais usado desde a migração para Render + Vercel.

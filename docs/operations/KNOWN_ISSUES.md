@@ -2150,3 +2150,28 @@ Sprint prevista:
 
 Responsável:
 —
+
+---
+
+## KI-059
+
+Descrição:
+Com o deploy automático (ADR-015), toda migration nova que chega na `main` é aplicada no boot do container
+de produção sem ninguém acompanhando. O runner de migrations continua sem trava entre os 2 workers do
+Gunicorn (mesma família de KI-035/KI-058): uma migration nova com `ALTER TABLE` que não siga o padrão do
+hotfix do KI-058 pode derrubar o boot.
+
+Impacto:
+Médio. Mitigado pelo backup `backup-pre-update-*` feito antes de cada atualização (o Watchtower não
+atualiza se o backup falhar) e por `restart: unless-stopped` (a migration idempotente é reaplicada no boot
+seguinte). Não atende critério de `ENGINEERING_GUIDE.md` §11: é risco operacional, não bug observado.
+
+Status:
+Aberto (2026-11-10). Melhoria candidata: serializar o runner entre processos (lock de arquivo ou
+`BEGIN EXCLUSIVE`) ou rodar migrations só no processo mestre do Gunicorn (`on_starting`).
+
+Sprint prevista:
+—
+
+Responsável:
+—

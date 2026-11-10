@@ -9,6 +9,15 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-10 — deploy automático do backend, ADR-015)
+- **chore: deploy automático do backend no servidor próprio** — novo job `publish_image` no CI (só em push
+  na `main`, depois de todos os gates bloqueantes) publica `ghcr.io/isaque-souza/fluxoly:latest` e `:<sha>`.
+  `deploy/docker-compose.yml` sobe o backend e o Watchtower (fork `nickfedor/watchtower:1.24.0`), que
+  atualiza o container quando sai imagem nova. Antes de cada troca, `scripts/backup_pre_update.py` copia o
+  banco para `/data/backups/backup-pre-update-*.db` (últimos 20); se o backup falhar, a atualização é
+  adiada. `aplicar_retencao_backups_automaticos` ganha o parâmetro `prefixo` (padrão inalterado).
+  `DEPLOY.md` reescrito para o servidor próprio. Risco das migrations automáticas registrado no KI-059.
+
 ### Corrigido (2026-11-09 — hotfix)
 - **fix: corrida entre workers na migration 0003 derrubava o boot (KI-058)** — no primeiro boot com a m0003
   pendente, os 2 workers do Gunicorn tentavam criar `os.unidade_serializada_id` ao mesmo tempo e o segundo

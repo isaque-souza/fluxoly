@@ -25,6 +25,7 @@ Para criar uma nova ADR: copie [`templates/ADR_TEMPLATE.md`](templates/ADR_TEMPL
 | [ADR-012](adr/ADR-012.md) | Ambiente de Demonstração/Homologação — Render+Vercel dedicados, `IR_FLOW_ENVIRONMENT=demo`, KI-037 vira bloqueante, isolamento de credenciais por design (lição do INC-003) | Aceita | 2026-08-11 |
 | [ADR-013](adr/ADR-013.md) | "Lista de Aparelhos Disponíveis": app standalone, fonte MercadoPhone, acesso em 2 níveis por senha | Substituída por ADR-014 | 2026-09-03 |
 | [ADR-014](adr/ADR-014.md) | Desvincular o Fluxoly da IR Phones (remove app de estoque e OS interna) e desligar a integração MercadoPhone por flag | Aceita | 2026-11-06 |
+| [ADR-015](adr/ADR-015.md) | Deploy automático do backend no servidor próprio — CI publica imagem no GHCR, Watchtower (fork `nickfedor`) atualiza o container com backup do banco antes | Aceita | 2026-11-10 |
 
 ---
 
