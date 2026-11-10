@@ -74,7 +74,7 @@ def criar_backup(backup_dir, conectar, nome_arquivo=None):
     }
 
 
-def aplicar_retencao_backups_automaticos(backup_dir, limite=90):
+def aplicar_retencao_backups_automaticos(backup_dir, limite=90, prefixo="backup-auto-"):
     def coletar_backups_automaticos(diretorio):
         if not diretorio or not os.path.isdir(diretorio):
             return []
@@ -82,7 +82,7 @@ def aplicar_retencao_backups_automaticos(backup_dir, limite=90):
         for nome in os.listdir(diretorio):
             if not nome.lower().endswith(".db"):
                 continue
-            if not nome.startswith("backup-auto-"):
+            if not nome.startswith(prefixo):
                 continue
             caminho = os.path.join(diretorio, nome)
             if os.path.isfile(caminho):
