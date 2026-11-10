@@ -9,8 +9,8 @@
 `docs/engineering/plans/PLAN-documentos-os-cliente.md`): PDF de entrada e de entrega na tela da OS, gerado
 no navegador com `jspdf`, e cadastro **Dados da Loja** (migration `m0004`, tabela `dados_loja`). Suíte backend
 907 passed (`tests/test_dados_loja.py` 12 casos, `tests/test_os_documento.py` 17), frontend 176/176, lint 0
-erros, build ok. Falta QA manual no servidor. Novo achado **KI-059** (Valor com Desconto ignorado quando há
-Valor Cobrado), decisão de negócio pendente. Antes disso:
+erros, build ok. Falta QA manual no servidor. **KI-059 corrigido** na mesma branch, em commit separado: o Valor com
+Desconto passa a valer no valor da OS quando preenchido (suíte backend 914 passed). Antes disso:
 2026-11-06 — **Desvínculo do Fluxoly com a IR Phones iniciado (ADR-014).** Decisão
 do CTO: remover tudo que liga o sistema à IR Phones e desligar a integração MercadoPhone, em 3 PRs.
 **PR 1 (`chore/remover-app-estoque`):** app `apps/lista-aparelhos-disponiveis/` removido do repositório

@@ -648,10 +648,10 @@ Comprovante de entrega (PDF), entregue na retirada: tudo do cabeçalho e da iden
 a data de conclusão, os serviços realizados com a garantia de cada um (nome, duração e data de término,
 lidos do snapshot de BR-062 — nunca recalculados), o valor total, os termos de garantia e o campo de
 assinatura de retirada. Só existe para OS Finalizada. O valor (previsto na entrada, total na entrega) é o
-mesmo da coluna Valor da listagem de OS: o Valor Cobrado, ou o Valor com Desconto quando o cobrado é zero
-(`calcular_faturamento_os`) — ver KI-059.
+mesmo da coluna Valor da listagem de OS (`calcular_faturamento_os`): o Valor com Desconto quando
+preenchido, senão o Valor Cobrado (KI-059).
 *Fonte: Decisão do CTO, 2026-11-10; regra do valor reaproveitada de `calcular_faturamento_os` por decisão
-de engenharia (sem duplicar a conta), pendente de KI-059.*
+de engenharia (sem duplicar a conta); valor com desconto prevalece por decisão do CTO (KI-059).*
 
 **BR-097 — ✅ Implementado (2026-11-10)**
 Os documentos para o cliente nunca mostram custo de peças, lucro, peças usadas, fornecedor, vendedor nem

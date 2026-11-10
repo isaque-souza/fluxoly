@@ -2153,7 +2153,7 @@ Responsável:
 
 ---
 
-## KI-059
+## ~~KI-059~~ — RESOLVIDO
 
 Descrição:
 Na OS, o campo "Valor com Desconto" (`os.valor_descontado`, rótulo em `NewOrder.jsx`/`EditOrder.jsx`) é o
@@ -2169,12 +2169,15 @@ sem desconto, e o faturamento/lucro aparecem maiores do que o valor de fato rece
 afeta número financeiro e documento entregue ao cliente.
 
 Status:
-Aberto — decisão de negócio pendente com o CTO: qual valor vale quando os dois campos estão preenchidos.
-Os comprovantes usam a mesma função do resto do sistema de propósito, para não haver dois valores
-diferentes para a mesma OS; corrigir `calcular_faturamento_os` corrige tudo junto.
+Resolvido em 2026-11-10 (commit `969a5a2`). Decisão do CTO: quando o Valor com Desconto está preenchido, é
+ele que vale; sem ele, vale o Valor Cobrado. Corrigido só em `calcular_faturamento_os` (fonte única), o
+que acerta junto listagem, relatórios, lucro e os comprovantes para o cliente; a coluna Valor da
+listagem (`OrderTable.jsx`) passou a usar o `faturamento` do backend em vez de repetir a regra.
+Coberto por `tests/test_faturamento_os.py`. Números de faturamento/lucro de OS antigas com os dois campos
+preenchidos mudam (para menor) em relatórios recalculados.
 
 Sprint prevista:
-A definir com o CTO.
+Documentos da OS para o cliente (2026-11-10).
 
 Responsável:
 —
