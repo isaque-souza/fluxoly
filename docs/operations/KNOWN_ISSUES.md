@@ -2206,3 +2206,34 @@ Sprint prevista:
 
 Responsável:
 —
+
+---
+
+## KI-061
+
+Descrição:
+O backend registra data/hora no fuso do container, que em produção é UTC (o container não define `TZ`,
+nem no Render nem no servidor próprio). São 51 usos de `datetime.now()`/`date.today()` fora de testes —
+por exemplo o horário de criação do checklist da OS (`api_os.py:164`), a data padrão de um custo
+(`api_costs.py:39`) e o "hoje" que decide garantia vencida (`api_garantias.py:46`) — e 43 de
+`CURRENT_TIMESTAMP`/`datetime('now')` do SQLite, que é sempre UTC. Na loja (UTC-3), tudo o que acontece
+depois das 21:00 fica com a data do dia seguinte. Achado em 2026-11-10 ao avaliar `TZ=America/Sao_Paulo`
+no compose: definir o fuso só no container corrigiria os 51 usos do Python, mas deixaria os 43 do SQLite
+em UTC — misturando dois fusos no mesmo banco.
+
+Impacto:
+Médio. Datas de operações feitas à noite (21:00-23:59) saem com o dia seguinte; filtros e relatórios por
+dia/mês podem contar o registro no dia errado, e uma garantia pode vencer 3 h antes. Não muta dado
+incorretamente além da data; não atende critério de `ENGINEERING_GUIDE.md` §11 (comportamento de sempre,
+não regressão).
+
+Status:
+Aberto (2026-11-10). Precisa de decisão: gravar tudo em UTC e converter só na exibição/filtros, ou gravar
+tudo no horário da loja (incluindo trocar `CURRENT_TIMESTAMP` por `datetime('now','localtime')`). Dados já
+gravados ficam em UTC em qualquer caso. Não definir `TZ` no container antes dessa decisão.
+
+Sprint prevista:
+—
+
+Responsável:
+—
