@@ -356,3 +356,89 @@ class TestM0003CorridaEntreWorkers:
 
         with pytest.raises(sqlite3.OperationalError):
             m0003.apply(conn.cursor(), conn)
+
+
+class TestTravaEntreWorkers:
+    """KI-060: com a trava, dois workers rodando o bootstrap ao mesmo tempo nunca
+    aplicam migrations em paralelo. Threads com conexões próprias disputam a trava
+    de arquivo do SQLite do mesmo jeito que processos separados."""
+
+    @pytest.fixture
+    def banco_em_tmp(self, tmp_path, monkeypatch):
+        caminho = str(tmp_path / "database.db")
+        monkeypatch.setattr("migrations.runner.DB_PATH", caminho)
+        return caminho
+
+    def test_dois_workers_simultaneos_nunca_aplicam_em_paralelo(self, banco_em_tmp, monkeypatch):
+        import threading
+        import time
+
+        estado = {"rodando": 0, "maximo": 0, "aplicacoes": 0}
+        guarda = threading.Lock()
+
+        class _MigracaoLenta:
+            ID = "9001"
+
+            @staticmethod
+            def apply(cursor, conn):
+                with guarda:
+                    estado["rodando"] += 1
+                    estado["maximo"] = max(estado["maximo"], estado["rodando"])
+                    estado["aplicacoes"] += 1
+                time.sleep(0.3)
+                with guarda:
+                    estado["rodando"] -= 1
+
+        monkeypatch.setattr("migrations.runner.MIGRATIONS", [_MigracaoLenta])
+        largada = threading.Barrier(2)
+        resultados, erros = [], []
+
+        def worker():
+            largada.wait()
+            try:
+                resultados.append(run_migrations())
+            except Exception as exc:  # pragma: no cover - só aparece se a trava falhar
+                erros.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        assert erros == []
+        assert estado["maximo"] == 1
+        assert estado["aplicacoes"] == 1
+        assert sorted(resultados, key=len) == [[], ["9001"]]
+
+    def test_espera_a_trava_do_outro_worker_e_depois_aplica(self, banco_em_tmp):
+        import threading
+        import time
+
+        outro_worker = sqlite3.connect(banco_em_tmp + ".migrations-lock", isolation_level=None, check_same_thread=False)
+        outro_worker.execute("BEGIN EXCLUSIVE")
+        threading.Timer(0.5, outro_worker.close).start()
+
+        inicio = time.monotonic()
+        aplicadas = run_migrations()
+
+        assert time.monotonic() - inicio >= 0.4
+        assert aplicadas == [m.ID for m in MIGRATIONS]
+
+    def test_trava_presa_alem_do_timeout_retorna_lista_vazia(self, banco_em_tmp, monkeypatch):
+        monkeypatch.setattr("migrations.runner._SQLITE_TIMEOUT_SECONDS", 0.2)
+        outro_worker = sqlite3.connect(banco_em_tmp + ".migrations-lock", isolation_level=None)
+        outro_worker.execute("BEGIN EXCLUSIVE")
+        try:
+            assert run_migrations() == []
+        finally:
+            outro_worker.close()
+
+    def test_trava_e_solta_depois_de_rodar(self, banco_em_tmp):
+        run_migrations()
+
+        outro = sqlite3.connect(banco_em_tmp + ".migrations-lock", timeout=0, isolation_level=None)
+        try:
+            outro.execute("BEGIN EXCLUSIVE")  # não levanta "locked"
+        finally:
+            outro.close()

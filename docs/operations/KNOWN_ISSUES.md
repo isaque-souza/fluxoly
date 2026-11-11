@@ -2184,7 +2184,7 @@ Responsável:
 
 ---
 
-## KI-060
+## ~~KI-060~~ — RESOLVIDO
 
 Descrição:
 Com o deploy automático (ADR-015), toda migration nova que chega na `main` é aplicada no boot do container
@@ -2198,8 +2198,13 @@ atualiza se o backup falhar) e por `restart: unless-stopped` (a migration idempo
 seguinte). Não atende critério de `ENGINEERING_GUIDE.md` §11: é risco operacional, não bug observado.
 
 Status:
-Aberto (2026-11-10). Melhoria candidata: serializar o runner entre processos (lock de arquivo ou
-`BEGIN EXCLUSIVE`) ou rodar migrations só no processo mestre do Gunicorn (`on_starting`).
+Resolvido em 2026-11-10 (branch `fix/trava-migrations-entre-workers`): `run_migrations()` sem conexão
+explícita toma uma trava exclusiva (`BEGIN EXCLUSIVE`) num arquivo SQLite próprio
+(`database.db.migrations-lock`, ao lado do banco) antes de aplicar qualquer migration e só solta no fim.
+O segundo worker espera até `IR_FLOW_SQLITE_TIMEOUT_SECONDS` (30 s) e encontra tudo aplicado. Trava fora
+do banco porque `apply()` faz commits no meio, o que soltaria uma trava tomada nele. Funciona em Linux e
+Windows, sem dependência nova. Testes em `tests/test_migrations.py` (`TestTravaEntreWorkers`, 4 casos).
+Os tratamentos do KI-035 e do KI-058 continuam como segunda linha de defesa.
 
 Sprint prevista:
 —
