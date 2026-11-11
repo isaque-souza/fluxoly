@@ -636,11 +636,11 @@ engenharia, mesmo critério das telas administrativas — revisável no QA.*
 
 **BR-095 — ✅ Implementado (2026-11-10)**
 Comprovante de entrada (PDF), entregue quando o cliente deixa o aparelho: cabeçalho com os Dados da Loja,
-número e data da OS, cliente (nome; telefone e CPF/CNPJ quando a OS tem cliente vinculado), aparelho
+número e data da OS, cliente (nome; telefone, e-mail e CPF/CNPJ quando a OS tem cliente vinculado), aparelho
 (aparelho, modelo, cor, IMEI), técnico responsável, serviços solicitados, valor previsto, observações, termos de entrada e campos de assinatura do cliente e da loja. Pode ser gerado em
 qualquer status, exceto Cancelada. O CPF/CNPJ só entra quando quem gera o documento pode lê-lo (`admin` ou
 `financeiro`, KI-045); para os demais perfis, o documento sai sem ele.
-*Fonte: Decisão do CTO, 2026-11-10 (conteúdo, valor previsto e técnico); CPF/CNPJ por perfil por decisão
+*Fonte: Decisão do CTO, 2026-11-10 (conteúdo, valor previsto e técnico; e-mail do cliente e layout em quadros e tabelas no formato de ordem de serviço, 2026-11-10); CPF/CNPJ por perfil por decisão
 de engenharia, consistente com KI-045 — revisável no QA.*
 
 **BR-096 — ✅ Implementado (2026-11-10)**
