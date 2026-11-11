@@ -597,10 +597,11 @@ def montar_documento_cliente(tipo_documento, os_dados, loja, cliente_cadastro, s
     if not (loja.get("nome_fantasia") or "").strip():
         return None, "Cadastre os Dados da Loja antes de gerar documentos."
 
-    cliente = {"nome": os_dados["cliente"], "telefone": "", "cpf_cnpj": ""}
+    cliente = {"nome": os_dados["cliente"], "telefone": "", "email": "", "cpf_cnpj": ""}
     if cliente_cadastro:
         cliente["nome"] = cliente_cadastro.get("nome") or cliente["nome"]
         cliente["telefone"] = cliente_cadastro.get("telefone") or ""
+        cliente["email"] = cliente_cadastro.get("email") or ""
         cliente["cpf_cnpj"] = cliente_cadastro.get("cpf_cnpj") or ""
 
     entrega = tipo_documento == DOCUMENTO_ENTREGA

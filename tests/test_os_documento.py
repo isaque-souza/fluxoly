@@ -60,8 +60,8 @@ def cliente_vinculado():
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO clientes (nome, telefone, email, cpf_cnpj, observacoes) VALUES (?, ?, '', ?, '')",
-            (f"Cliente Cadastro {uuid.uuid4().hex[:6]}", "(11) 98888-7777", "123.456.789-00"),
+            "INSERT INTO clientes (nome, telefone, email, cpf_cnpj, observacoes) VALUES (?, ?, ?, ?, '')",
+            (f"Cliente Cadastro {uuid.uuid4().hex[:6]}", "(11) 98888-7777", "cliente@teste.com", "123.456.789-00"),
         )
         conn.commit()
         cliente_id = cursor.lastrowid
@@ -111,7 +111,7 @@ class TestEntrada:
         assert doc["tipo"] == "entrada"
         assert doc["loja"]["nome_fantasia"] == "Loja Documento Teste"
         assert doc["termos"] == "Termos de entrada."
-        assert doc["cliente"] == {"nome": "Maria Souza", "telefone": "", "cpf_cnpj": ""}
+        assert doc["cliente"] == {"nome": "Maria Souza", "telefone": "", "email": "", "cpf_cnpj": ""}
         ordem = doc["ordem"]
         assert ordem["id"] == os_id
         assert ordem["tecnico"] == "ISAQUE SOUZA"
@@ -201,6 +201,7 @@ class TestCliente:
         _atualizar_os(os_id, cliente_id=cliente_vinculado)
         cliente = _documento(client, os_id, "entrada").get_json()["documento"]["cliente"]
         assert cliente["telefone"] == "(11) 98888-7777"
+        assert cliente["email"] == "cliente@teste.com"
         assert cliente["cpf_cnpj"] == "123.456.789-00"
 
     def test_cpf_omitido_para_quem_nao_pode_ler(self, client, login_como, usuario_tecnico, criar_os, cliente_vinculado):
@@ -210,6 +211,7 @@ class TestCliente:
         resp = _documento(client, os_id, "entrada")
         cliente = resp.get_json()["documento"]["cliente"]
         assert cliente["telefone"] == "(11) 98888-7777"
+        assert cliente["email"] == "cliente@teste.com"
         assert cliente["cpf_cnpj"] == ""
         assert "123.456.789-00" not in resp.get_data(as_text=True)
 
