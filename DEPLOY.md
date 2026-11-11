@@ -19,21 +19,23 @@ merge na main → CI verde (lint, testes, cobertura, build, docker)
 Arquivo de referência: `deploy/docker-compose.yml`. Watchtower usado é o fork mantido
 `nickfedor/watchtower` — o `containrrr/watchtower` original foi arquivado e não funciona no Docker 29+.
 
-### Instalação (uma vez)
+### Instalação no servidor (feita em 2026-11-10)
 
-1. **Deixar a imagem acessível ao servidor.** O primeiro `publish_image` cria o pacote
-   `ghcr.io/isaque-souza/fluxoly` no GitHub. Em **GitHub → Packages → fluxoly → Package settings**, mude a
-   visibilidade para **Public** (o código já é público; a imagem não contém segredo nem banco). Se preferir
-   manter privado, rode `docker login ghcr.io` no servidor com um token `read:packages`.
-2. **Copiar o compose para o servidor**, na mesma pasta do `.env` que já está em uso.
-3. **Ajustar o volume de `/data`** no `deploy/docker-compose.yml` para o mesmo volume ou pasta que o
-   compose atual usa. Errar aqui sobe o app com banco vazio. Faça um backup manual de `/data/database.db`
-   antes da troca.
-4. **Ajustar a porta** se o Tailscale Funnel não encaminhar para `127.0.0.1:8080`.
-5. Parar o compose antigo (`docker compose down` na pasta antiga — **sem** `-v`, que apaga volumes) e
-   subir o novo: `docker compose up -d`.
-6. Conferir: `docker compose ps` (os dois containers `Up`, fluxoly `healthy`), `/health` e `/ready` → 200,
-   login pelo frontend.
+O servidor roda `deploy/docker-compose.yml` em `/opt/fluxoly`, com o `.env` e a pasta `data/` (banco e
+backups, montada em `/data`) ao lado. O backend escuta em `127.0.0.1:5080`, que o Tailscale Funnel expõe.
+O pacote `ghcr.io/isaque-souza/fluxoly` é público (herda a visibilidade do repositório), então o servidor
+baixa a imagem sem login.
+
+Para mudar o compose do servidor: altere `deploy/docker-compose.yml` aqui, copie para `/opt/fluxoly` e rode
+`docker compose up -d` lá. O Watchtower só troca a imagem; não aplica mudanças no compose.
+
+Para reinstalar do zero:
+1. Backup manual de `data/` antes de qualquer troca.
+2. Copiar `deploy/docker-compose.yml` para a pasta, ao lado do `.env` e de `data/`.
+3. `docker compose pull && docker compose up -d` (nunca `docker compose down -v`, que apaga volumes).
+4. Conferir: `docker compose ps` (`fluxoly` `healthy`, `watchtower` `Up`), `/health` e `/ready` → 200,
+   login pelo frontend, e `docker exec fluxoly python /app/scripts/backup_pre_update.py` cria um arquivo
+   em `data/backups/`.
 
 ### No dia a dia
 
@@ -57,7 +59,7 @@ Arquivo de referência: `deploy/docker-compose.yml`. Watchtower usado é o fork 
 - `MERCADO_PHONE_DEFAULT_TECNICO=Aguardando definicao` (opcional)
 - `IR_FLOW_HOST=0.0.0.0`
 - `IR_FLOW_PORT=8080`
-- `IR_FLOW_DATA_DIR=/data` (já definido no compose)
+- `IR_FLOW_DATA_DIR=/data` (opcional — sem ela, o app usa `/data` quando a pasta existe)
 - `IR_FLOW_CORS_ORIGINS=https://assistencia-system.vercel.app` (ou uma lista separada por vírgula)
 - `SENTRY_DSN` (opcional — Sprint Observabilidade, 2026-07-25; vazio desabilita a integração por completo)
 - `METRICS_TOKEN` (recomendado em produção — protege `/metrics`; sem essa variável, o endpoint nega por padrão)

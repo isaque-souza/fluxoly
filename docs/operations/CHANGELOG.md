@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-10 — compose do servidor)
+- **chore: `deploy/docker-compose.yml` igual ao do servidor** — serviço `backend`, `./data:/data` e porta
+  `127.0.0.1:5080`, como roda em `/opt/fluxoly`. `DEPLOY.md` descreve a instalação feita. O fuso do
+  container (`TZ`) ficou de fora de propósito: o app grava datas em UTC e trocar o fuso misturaria dois
+  fusos no banco (KI-061, novo).
+
 ### Adicionado (2026-11-10 — deploy automático do backend, ADR-015)
 - **chore: deploy automático do backend no servidor próprio** — novo job `publish_image` no CI (só em push
   na `main`, depois de todos os gates bloqueantes) publica `ghcr.io/isaque-souza/fluxoly:latest` e `:<sha>`.
