@@ -33,6 +33,26 @@ def _abrir_conexao_propria() -> sqlite3.Connection:
     return conn
 
 
+def _adquirir_trava_entre_processos() -> sqlite3.Connection:
+    """KI-060: serializa run_migrations() entre os workers do Gunicorn, que
+    sobem juntos e rodam o bootstrap ao mesmo tempo (KI-035, KI-058). Trava
+    exclusiva num arquivo SQLite próprio ao lado do banco -- não no banco em
+    si, porque apply() faz commits no meio (e o DDL do sqlite3 faz
+    autocommit), o que soltaria uma trava tomada no banco. Funciona igual em
+    Linux e Windows (build desktop), sem dependência nova.
+
+    Quem chega depois espera até `_SQLITE_TIMEOUT_SECONDS` e então lê
+    schema_migrations já atualizado -- nada a aplicar. A trava é solta ao
+    fechar a conexão devolvida (rollback implícito)."""
+    trava = sqlite3.connect(DB_PATH + ".migrations-lock", timeout=_SQLITE_TIMEOUT_SECONDS, isolation_level=None)
+    try:
+        trava.execute("BEGIN EXCLUSIVE")
+    except BaseException:
+        trava.close()
+        raise
+    return trava
+
+
 def run_migrations(conn: sqlite3.Connection | None = None) -> list[str]:
     """Aplica migrations pendentes em ordem. Idempotente -- seguro em banco
     vazio, atrasado, ou já atualizado. `conn=None` abre conexão própria
@@ -45,10 +65,12 @@ def run_migrations(conn: sqlite3.Connection | None = None) -> list[str]:
     estava migrando neste instante -- ver tratamento de "locked" abaixo).
     """
     conn_propria = conn is None
-    if conn_propria:
-        conn = _abrir_conexao_propria()
+    trava = None
 
     try:
+        if conn_propria:
+            trava = _adquirir_trava_entre_processos()
+            conn = _abrir_conexao_propria()
         cursor = conn.cursor()
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS schema_migrations ("
@@ -95,4 +117,7 @@ def run_migrations(conn: sqlite3.Connection | None = None) -> list[str]:
         raise
     finally:
         if conn_propria:
-            conn.close()
+            if conn is not None:
+                conn.close()
+            if trava is not None:
+                trava.close()

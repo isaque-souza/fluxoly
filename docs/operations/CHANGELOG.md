@@ -17,6 +17,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   negrito; nome do cliente e da loja sob as assinaturas; rodapé com número da OS e paginação. O documento
   passa a trazer o e-mail do cliente vinculado (BR-095). Sem mudança de banco.
 
+### Corrigido (2026-11-10)
+- **fix: migrations não rodam mais em paralelo nos 2 workers (KI-060)** — `run_migrations()` toma uma trava
+  exclusiva em `database.db.migrations-lock` antes de aplicar e só solta no fim; o outro worker espera e
+  encontra tudo aplicado. Fecha a família de corridas no boot (KI-035, KI-058), que passou a importar com
+  o deploy automático (ADR-015).
+
 ### Alterado (2026-11-10 — compose do servidor)
 - **chore: `deploy/docker-compose.yml` igual ao do servidor** — serviço `backend`, `./data:/data` e porta
   `127.0.0.1:5080`, como roda em `/opt/fluxoly`. `DEPLOY.md` descreve a instalação feita. O fuso do
