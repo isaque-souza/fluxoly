@@ -9,6 +9,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-10 — PDF da OS no formato de ordem de serviço)
+- **feat: PDF de entrada e de entrega da OS em quadros e tabelas** — cabeçalho com o nome da loja, os dados
+  dela no centro e "Ordem de serviço Nº" à direita; quadros "Dados do Cliente" e "Dados da OS" lado a lado;
+  tabelas de aparelho e de serviços (na entrega, com garantia e validade); valor total em destaque;
+  observação em quadro; termos com subtítulos centralizados (linhas em maiúsculas) e "Cláusula Nª:" em
+  negrito; nome do cliente e da loja sob as assinaturas; rodapé com número da OS e paginação. O documento
+  passa a trazer o e-mail do cliente vinculado (BR-095). Sem mudança de banco.
+
 ### Corrigido (2026-11-10)
 - **fix: migrations não rodam mais em paralelo nos 2 workers (KI-060)** — `run_migrations()` toma uma trava
   exclusiva em `database.db.migrations-lock` antes de aplicar e só solta no fim; o outro worker espera e
