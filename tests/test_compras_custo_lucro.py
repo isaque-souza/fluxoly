@@ -7,7 +7,7 @@ conferidos por diferença (antes/depois), nunca por valor absoluto.
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -242,3 +242,59 @@ class TestFiltroOrigemCompra:
         ids = {u["id"] for u in resp.get_json()["items"]}
         assert unidade_compra in ids
         assert unidade_avulsa not in ids
+
+
+class TestAlertasDeDados:
+    """Alertas de dados no relatório mensal (PLAN-alertas-dados.md)."""
+
+    # `vendas.criado_em` é UTC (KI-061); o mês do relatório é comparado sem conversão.
+    MES_UTC = datetime.now(UTC).strftime("%Y-%m")
+
+    def _alertas(self, client):
+        resp = client.get(f"/api/compras-aparelhos/relatorio?mes={self.MES_UTC}")
+        assert resp.status_code == 200, resp.get_json()
+        return resp.get_json()["relatorio"]["alertas"]
+
+    def test_aparelho_comprado_vendido_abaixo_do_custo_gera_alerta(self, client, cenario):
+        comprar_e_consertar, vender = cenario
+        unidade_id, _ = comprar_e_consertar(valor_pago=1000, valor_peca=300.0)
+        venda_id = vender(unidade_id, valor=1000)
+
+        alerta = next(a for a in self._alertas(client)["vendas_abaixo_do_custo"] if a["venda_id"] == venda_id)
+
+        assert alerta["base_custo"] == "compra"
+        assert alerta["custo"] == 1300.0 and alerta["prejuizo"] == 300.0
+
+    def test_venda_com_lucro_nao_gera_alerta(self, client, cenario):
+        comprar_e_consertar, vender = cenario
+        unidade_id, _ = comprar_e_consertar()
+        venda_id = vender(unidade_id, valor=3500)
+
+        assert all(a["venda_id"] != venda_id for a in self._alertas(client)["vendas_abaixo_do_custo"])
+
+    def test_sem_compra_usa_preco_custo_do_cadastro(self, client, cenario):
+        _comprar, vender = cenario
+        produto_id = _executar(
+            "INSERT INTO produtos (categoria, marca, modelo, condicao, preco_venda, preco_custo, quantidade, "
+            "requer_rastreio_unidade) VALUES ('iPhone', 'Apple', 'iPhone 14', 'Novo', 4000.0, 2000.0, 0, 1)"
+        )
+        unidade_id = _executar(
+            "INSERT INTO unidades_serializadas (produto_id, imei) VALUES (?, ?)", (produto_id, _imei())
+        )
+        venda_id = vender(unidade_id, valor=1500)
+
+        alerta = next(a for a in self._alertas(client)["vendas_abaixo_do_custo"] if a["venda_id"] == venda_id)
+
+        assert alerta["base_custo"] == "catalogo"
+        assert alerta["custo"] == 2000.0 and alerta["prejuizo"] == 500.0
+
+    def test_aparelho_sem_compra_e_sem_preco_custo_conta_como_sem_custo(self, client, login_como, usuario_admin):
+        login_como(client, usuario_admin)
+        antes = self._alertas(client)["aparelhos_sem_custo"]["total"]
+        produto_id = _executar(
+            "INSERT INTO produtos (categoria, marca, modelo, condicao, preco_venda, quantidade, "
+            "requer_rastreio_unidade) VALUES ('iPhone', 'Apple', 'iPhone 12', 'Seminovo', 2000.0, 0, 1)"
+        )
+        _executar("INSERT INTO unidades_serializadas (produto_id, imei) VALUES (?, ?)", (produto_id, _imei()))
+
+        assert self._alertas(client)["aparelhos_sem_custo"]["total"] == antes + 1

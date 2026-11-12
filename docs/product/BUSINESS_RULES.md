@@ -623,6 +623,16 @@ comprados ainda não vendidos, com o capital parado neles), não do mês consult
 aparelho vendido é o custo inteiro dele, mesmo que a compra ou as peças tenham sido de outro mês.
 *Fonte: Decisão do CTO, 2026-11-08; recorte de "parados" e custo por decisão de engenharia — revisável no QA.*
 
+**BR-099 — ✅ Implementado (2026-11-11)**
+O relatório de compra e revenda traz alertas de margem: (a) **venda abaixo do custo** no mês — aparelho
+comprado com lucro negativo (custo BR-092) ou, quando a unidade não veio de compra, vendido abaixo do
+`preco_custo` do cadastro do produto; (b) **aparelho sem custo** — unidade em estoque (disponível ou em
+reparo) sem compra ativa e sem `preco_custo`, cujo lucro não tem como ser calculado (retrato de hoje,
+lista limitada a 50 com o total). Os alertas só informam: não bloqueiam venda. Mesma visibilidade do
+relatório (`admin`/`financeiro`).
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); uso do `preco_custo` como
+custo de referência por decisão de engenharia — revisável no QA.*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

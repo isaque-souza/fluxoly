@@ -210,3 +210,56 @@ def cancelar(cursor, compra_id, motivo, usuario_id):
         (motivo, usuario_id, compra_id),
     )
     return cursor.rowcount
+
+
+def buscar_vendas_abaixo_custo_catalogo(cursor, inicio, fim):
+    """Alertas de dados (PLAN-alertas-dados.md): itens vigentes de vendas concluídas no período cuja
+    unidade NÃO veio de compra ativa e que saíram abaixo do `produtos.preco_custo` cadastrado."""
+    cursor.execute(
+        """
+        SELECT v.id, v.criado_em, vi.unidade_serializada_id, vi.produto_nome, COALESCE(u.imei, ''),
+               vi.valor_unitario, p.preco_custo
+        FROM vendas_itens vi
+        JOIN vendas v ON v.id = vi.venda_id
+        JOIN produtos p ON p.id = vi.produto_id
+        LEFT JOIN unidades_serializadas u ON u.id = vi.unidade_serializada_id
+        WHERE vi.ativo = 1 AND v.status = 'concluida' AND v.criado_em >= ? AND v.criado_em < ?
+          AND p.preco_custo > 0 AND vi.valor_unitario < p.preco_custo
+          AND NOT EXISTS (
+              SELECT 1 FROM compras_aparelhos c
+              WHERE c.unidade_serializada_id = vi.unidade_serializada_id AND c.status = 'ativa'
+          )
+        ORDER BY v.criado_em, v.id
+        """,
+        (inicio, fim),
+    )
+    return cursor.fetchall()
+
+
+def buscar_aparelhos_sem_custo_em_estoque(cursor, limite):
+    """Alertas de dados (PLAN-alertas-dados.md): unidades de produto em estoque (disponível ou em
+    reparo) sem compra ativa e sem `preco_custo` no cadastro -- o lucro delas não tem como ser
+    calculado. Devolve (total, primeiras `limite` linhas)."""
+    filtro = """
+        FROM unidades_serializadas u
+        JOIN produtos p ON p.id = u.produto_id
+        WHERE u.status IN ('disponivel', 'em_reparo')
+          AND (p.preco_custo IS NULL OR p.preco_custo <= 0)
+          AND NOT EXISTS (
+              SELECT 1 FROM compras_aparelhos c
+              WHERE c.unidade_serializada_id = u.id AND c.status = 'ativa'
+          )
+    """
+    cursor.execute(f"SELECT COUNT(*) {filtro}")
+    total = cursor.fetchone()[0]
+    cursor.execute(
+        f"""
+        SELECT u.id, TRIM(COALESCE(p.modelo, '') || ' ' || COALESCE(p.capacidade, '') || ' ' || COALESCE(p.cor, '')),
+               COALESCE(u.imei, ''), u.status
+        {filtro}
+        ORDER BY u.id
+        LIMIT ?
+        """,
+        (limite,),
+    )
+    return total, cursor.fetchall()

@@ -285,6 +285,8 @@ def obter_relatorio_mensal(conectar, mes):
         pecas_mes = repo.somar_pecas_os_internas_do_periodo(cursor, inicio, fim)
         vendas_rows = repo.buscar_vendas_de_aparelhos_comprados(cursor, inicio, fim)
         estoque_rows = repo.buscar_aparelhos_comprados_em_estoque(cursor)
+        abaixo_catalogo_rows = repo.buscar_vendas_abaixo_custo_catalogo(cursor, inicio, fim)
+        total_sem_custo, sem_custo_rows = repo.buscar_aparelhos_sem_custo_em_estoque(cursor, LIMITE_ALERTA_SEM_CUSTO)
     finally:
         conn.close()
 
@@ -327,7 +329,56 @@ def obter_relatorio_mensal(conectar, mes):
             "disponiveis": len(estoque_rows) - em_reparo,
             "capital_parado": capital_parado,
         },
+        "alertas": _montar_alertas(itens_vendidos, abaixo_catalogo_rows, total_sem_custo, sem_custo_rows),
     }, None
+
+
+LIMITE_ALERTA_SEM_CUSTO = 50
+
+
+def _montar_alertas(itens_vendidos, abaixo_catalogo_rows, total_sem_custo, sem_custo_rows):
+    """Alertas de dados (PLAN-alertas-dados.md) -- protegem a margem:
+    - venda abaixo do custo: aparelho comprado com lucro < 0 (custo BR-092) ou, sem compra, vendido
+      abaixo do `preco_custo` do cadastro (`base_custo` diz qual dos dois);
+    - aparelho sem custo: em estoque, sem compra ativa e sem `preco_custo` -- lucro incalculável."""
+    abaixo = [
+        {
+            "venda_id": i["venda_id"],
+            "vendido_em": i["vendido_em"],
+            "produto_nome": i["produto_nome"],
+            "imei": i["imei"],
+            "valor_venda": i["valor_venda"],
+            "custo": i["custo_total"],
+            "prejuizo": round(i["custo_total"] - i["valor_venda"], 2),
+            "base_custo": "compra",
+        }
+        for i in itens_vendidos
+        if i["lucro"] < 0
+    ]
+    for venda_id, vendido_em, _unidade_id, produto_nome, imei, valor_venda, preco_custo in abaixo_catalogo_rows:
+        abaixo.append(
+            {
+                "venda_id": venda_id,
+                "vendido_em": vendido_em,
+                "produto_nome": produto_nome or "",
+                "imei": imei,
+                "valor_venda": round(valor_venda or 0.0, 2),
+                "custo": round(preco_custo, 2),
+                "prejuizo": round(preco_custo - (valor_venda or 0.0), 2),
+                "base_custo": "catalogo",
+            }
+        )
+    abaixo.sort(key=lambda a: (a["vendido_em"] or "", a["venda_id"]))
+    return {
+        "vendas_abaixo_do_custo": abaixo,
+        "aparelhos_sem_custo": {
+            "total": total_sem_custo,
+            "itens": [
+                {"unidade_serializada_id": uid, "produto_nome": nome or "", "imei": imei, "status": status}
+                for uid, nome, imei, status in sem_custo_rows
+            ],
+        },
+    }
 
 
 def abrir_reparo_interno(cursor, unidade_id, usuario_id):

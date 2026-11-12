@@ -24,6 +24,72 @@ function Metrica({ label, value, className = "text-card-foreground" }) {
   );
 }
 
+const STATUS_UNIDADE = { disponivel: "Disponível", em_reparo: "Em reparo" };
+
+// Alertas de dados (docs/engineering/plans/PLAN-alertas-dados.md): protegem a margem.
+// Sem alerta nenhum, o bloco não aparece.
+function AlertasDados({ alertas }) {
+  const abaixo = alertas?.vendas_abaixo_do_custo || [];
+  const semCusto = alertas?.aparelhos_sem_custo || { total: 0, itens: [] };
+  if (abaixo.length === 0 && semCusto.total === 0) return null;
+
+  return (
+    <div className="bg-card rounded-xl border border-warning/50 overflow-hidden" data-testid="alertas-dados">
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="text-sm font-semibold text-card-foreground">Alertas de margem</h2>
+        <p className="text-xs text-muted-foreground">
+          Vendas do mês abaixo do custo e aparelhos em estoque sem custo conhecido (lucro não calculável).
+        </p>
+      </div>
+      {abaixo.length > 0 && (
+        <div className="px-4 py-3 space-y-2">
+          <p className="text-xs font-medium text-destructive uppercase tracking-wider">
+            Vendidos abaixo do custo ({abaixo.length})
+          </p>
+          <ul className="divide-y divide-border">
+            {abaixo.map((a) => (
+              <li key={`${a.venda_id}-${a.imei}`} data-testid="alerta-abaixo-custo" className="py-2 flex flex-wrap justify-between gap-2 text-sm">
+                <span className="text-card-foreground">
+                  Venda #{a.venda_id} · {a.produto_nome}
+                  {a.imei && <span className="text-muted-foreground font-mono"> · {a.imei}</span>}
+                </span>
+                <span className="text-muted-foreground">
+                  vendido {formatCurrency(a.valor_venda)} · custo {formatCurrency(a.custo)}
+                  {a.base_custo === "catalogo" ? " (cadastro)" : " (compra)"} ·{" "}
+                  <span className="text-destructive font-medium">−{formatCurrency(a.prejuizo)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {semCusto.total > 0 && (
+        <div className="px-4 py-3 space-y-2 border-t border-border">
+          <p className="text-xs font-medium text-warning uppercase tracking-wider">
+            Aparelhos em estoque sem custo ({semCusto.total})
+          </p>
+          <ul className="divide-y divide-border">
+            {semCusto.itens.map((u) => (
+              <li key={u.unidade_serializada_id} data-testid="alerta-sem-custo" className="py-2 flex justify-between gap-2 text-sm">
+                <span className="text-card-foreground">
+                  {u.produto_nome || "Aparelho"}
+                  {u.imei && <span className="text-muted-foreground font-mono"> · {u.imei}</span>}
+                </span>
+                <span className="text-muted-foreground">{STATUS_UNIDADE[u.status] || u.status}</span>
+              </li>
+            ))}
+          </ul>
+          {semCusto.total > semCusto.itens.length && (
+            <p className="text-xs text-muted-foreground">
+              Mostrando {semCusto.itens.length} de {semCusto.total}. Cadastre o custo no produto ou registre a compra.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CompraRevendaReport() {
   const [mes, setMes] = useState(mesAtual);
   const [loading, setLoading] = useState(false);
@@ -90,6 +156,8 @@ export default function CompraRevendaReport() {
             />
             <Metrica label="Capital parado no estoque" value={formatCurrency(relatorio.estoque_atual.capital_parado)} />
           </div>
+
+          <AlertasDados alertas={relatorio.alertas} />
 
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="border-b border-border px-4 py-3">
