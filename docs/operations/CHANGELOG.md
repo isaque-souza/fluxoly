@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
+- **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
+  no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no
+  KI-042 (Dashboard sem vendas → PR #90) e no KI-061 (novas telas seguem a convenção de UTC).
+
 ### Adicionado (2026-11-11 — Lembretes de pós-venda)
 - **feat: lembretes de pós-venda e upgrade** (BR-104) — tela `/lembretes` (menu Vendas) com as vendas que
   completam 7, 30 e 365 dias no dia escolhido e botão "Abrir WhatsApp" (`wa.me`) com mensagem sugerida.

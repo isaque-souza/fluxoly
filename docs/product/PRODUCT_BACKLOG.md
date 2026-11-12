@@ -94,6 +94,42 @@ como fundação, não como item isolado.
 | 24 | Custos extras na unidade, etiqueta com código de barras, IMEI 2 | Compras / Estoque |
 | 25 | Despesas recorrentes, contas bancárias, caixa por sessão | Financeiro — caixa por sessão só se a loja for de fato fechar caixa (na conta observada, a maioria nunca fecha) |
 
+### Status da execução (2026-11-11, noite)
+
+PRs empilhados, **nenhum mergeado em `main`** (merge faz deploy automático e duas etapas mudam o schema).
+Ordem de merge: #87 → #88 → … → #100, cada um sobre o anterior.
+
+| # | Candidato | Resultado |
+|---|---|---|
+| 1 | KI-062 compras do cliente / comprador da unidade | PR #87 |
+| 2 | Tela de auditoria | PR #88 |
+| 3 | Painel de garantias unificado | PR #89 |
+| 4 | Dashboard somando vendas + OS | PR #90 |
+| 5 | Alertas de dados (abaixo do custo, sem custo) | PR #91 (BR-099) |
+| 6 | Pendências na tela inicial | PR #92 — só contas vencidas/vencendo; estoque mínimo precisa de schema, IMEI duplicado já é `UNIQUE` |
+| 7 | Dias em estoque | PR #93 |
+| 8 | Esconder lucro/custo do vendedor | PR #94 (BR-100) — "só as próprias vendas" ficou para o PO |
+| 9 | Formas de pagamento + vários pagamentos | Só plano — `PLAN-onda2-pagamentos-caixa.md` (PR #97) |
+| 10 | Recebimento da OS no caixa | Só plano — idem |
+| 11 | Troca/upgrade completo | Só plano — idem (decisões pendentes em `VENDAS.md`) |
+| 12 | Lucro líquido de taxa | Só plano — idem (depende do 9) |
+| 13 | Previsão da OS + atrasadas | PR #95 (BR-101, migration `m0005`) |
+| 14 | Relato / laudo / observação interna | PR #96 (BR-102, migration `m0006`) |
+| 15 | Autorização de gerente | Só plano — idem (exige ADR) |
+| 16 | Lembretes de pós-venda e upgrade | PR #99 (BR-104) |
+| 17 | Origem e "indicado por" na venda | **Não implementado** — precisa de schema e da lista de origens (decisão do PO) |
+| 18 | Aniversário do cliente | **Não implementado** — data de nascimento é dado pessoal novo (LGPD: finalidade e retenção são decisão do PO) |
+| 19 | Recibo de venda | PR #98 (BR-103) — PDF A4; 80 mm e envio por WhatsApp ficaram fora |
+| 20-25 | Onda 4 | Decisão antes de código — nada implementado |
+
+**Decisões que dependem do PO para destravar o que ficou de fora:**
+1. Vendedor deve ver só as próprias vendas? (`PLAN-esconder-lucro-vendedor.md`)
+2. Pagamentos, recebimento da OS, troca, taxa e autorização de gerente — perguntas em
+   `PLAN-onda2-pagamentos-caixa.md`.
+3. Lista fechada de origens da venda (item 17) e se a loja quer coletar data de nascimento (item 18).
+4. Onda 4 inteira (fiscal, checklist e situações configuráveis, consulta de IMEI paga, etiquetas, caixa
+   por sessão).
+
 ### Sugerido não implementar
 
 Catálogo de dezenas de relatórios sobrepostos; banners de terceiros; horário de acesso; perfis ×
