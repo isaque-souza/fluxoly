@@ -4,7 +4,7 @@ Diferente de `docs/operations/ROADMAP.md` (que responde **quando** — fases e s
 `docs/company/RELEASE_STRATEGY.md` (que responde **em qual versão** cada coisa sai), este documento
 responde **o quê** construir a seguir, em ordem de prioridade de negócio.
 
-**Última revisão:** 2026-07-30
+**Última revisão:** 2026-11-11 (coluna Status verificada contra o código; prioridades inalteradas)
 **Fonte:** priorização de negócio — input direto do Product Owner. Coluna "Status" verificada contra o
 estado real do código/documentação (`docs/engineering/DOMAIN_MODEL.md`, `docs/product/features/`) antes
 de publicar, não copiada às cegas do exemplo dado.
@@ -19,12 +19,12 @@ ajuda a marcar.
 
 | Prioridade | Épico | Status | Valor de Negócio | Item do Release 1.0 | Fonte / Nota |
 |---|---|---|---|---|---|
-| P0 | Vendas | MVP implementado (backend) — `fluxoly_vendas_*.py`, 2026-07-27 (venda de 1 aparelho por vez, sem desconto/comissão/garantia/troca). Fluxo completo segue em Especificação (`docs/product/features/VENDAS.md`) | Muito Alto | Comercial completo | Prioridade #1 do produto — ver `VENDAS.md` "Por que existe". Fluxo completo condicionado a decisões do Product Owner ainda pendentes (timeout de reserva, % comissão, limite de desconto, prazo de garantia, critérios de avaliação de usado) |
-| P0 | Clientes (entidade própria) | Implementado (backend) — `irflow_clientes_*.py`, 2026-07-11 (Sprint P0.1) | Muito Alto | Comercial completo | Pré-requisito estrutural de Vendas, entregue como fundação antes do módulo em si (`docs/engineering/DOMAIN_MODEL.md` seção 1.12). Sem tela — cadastro/busca só via API por enquanto. Decisões de negócio pendentes (deduplicação) seguem `TODO`, ver `CLIENTES.md` |
-| P0 | IMEI Individual | Implementado (backend) — `irflow_unidades_serializadas_*.py`, 2026-07-11 (Sprint P0.1), evoluído de `estoque_unidades` na migração ADR-007 (2026-07-21) | Muito Alto | Comercial completo | Gap de schema resolvido — `docs/engineering/DOMAIN_MODEL.md` seção 1.13. Sem tela; reserva/venda (`reservado`/`vendido`) segue não implementada, depende de Vendas existir. Decisões de negócio pendentes (validação de formato, AirPods/série) seguem `TODO`, ver `IMEI.md` |
-| P0 | Produtos (catálogo comercial) | Implementado (backend) — `irflow_produtos_*.py`, 2026-07-20 (Sprint Comercial 0.1) | Muito Alto | Comercial completo | Lacuna real identificada só agora: nenhum documento desenhava um catálogo comercial (categoria/marca/cor/capacidade/condição/preço) antes desta sprint — `estoque` é peça de reparo, não produto de venda. Domínio novo, separado de Estoque. Sem tela; rastreamento por unidade/IMEI de produtos fica para o Sprint Comercial 0.2, que também vai exigir revisar `vendas.estoque_unidade_id` em `VENDAS.md` |
-| P1 | Financeiro (mínimo) | Não iniciado | Alto | Financeiro mínimo | Escopo restrito a caixa/entradas/saídas/contas a pagar-receber (`RELEASE_STRATEGY.md`, 2026-07-25) — "Financeiro avançado" (DRE, conciliação, indicadores) fica fora da 1.0 |
-| P1 | Caixa | Não iniciado | Alto | Financeiro mínimo | Mesmo item de checklist que Financeiro mínimo — são o mesmo trabalho, não dois épicos separados |
+| P0 | Vendas | Em produção com tela (`Vendas.jsx`/`VendaDetalhe.jsx`) — MVP 2026-07-27 (1 aparelho por venda) + V1.2 Cancelamento, V1.3 Descontos, V1.4 Comissão, V1.5 Garantia (2026-07-27 a 2026-07-30). Falta troca/avaliação de usado e reserva de IMEI (`docs/product/features/VENDAS.md`) | Muito Alto | Comercial completo | Prioridade #1 do produto — ver `VENDAS.md` "Por que existe". Fluxo completo condicionado a decisões do Product Owner ainda pendentes (timeout de reserva, % comissão, limite de desconto, prazo de garantia, critérios de avaliação de usado) |
+| P0 | Clientes (entidade própria) | Implementado com tela — `fluxoly_clientes_*.py` (2026-07-11, Sprint P0.1) + `frontend/src/pages/Clientes.jsx` (`/clientes`); perfil ainda sem compras (KI-062) | Muito Alto | Comercial completo | Pré-requisito estrutural de Vendas, entregue como fundação antes do módulo em si (`docs/engineering/DOMAIN_MODEL.md` seção 1.12). Sem tela — cadastro/busca só via API por enquanto. Decisões de negócio pendentes (deduplicação) seguem `TODO`, ver `CLIENTES.md` |
+| P0 | IMEI Individual | Implementado com tela — `fluxoly_unidades_serializadas_*.py` (2026-07-11, Sprint P0.1, evoluído de `estoque_unidades` na migração ADR-007, 2026-07-21) + `UnidadesSerializadas.jsx` (`/unidades-serializadas`) | Muito Alto | Comercial completo | Gap de schema resolvido — `docs/engineering/DOMAIN_MODEL.md` seção 1.13. Sem tela; reserva/venda (`reservado`/`vendido`) segue não implementada, depende de Vendas existir. Decisões de negócio pendentes (validação de formato, AirPods/série) seguem `TODO`, ver `IMEI.md` |
+| P0 | Produtos (catálogo comercial) | Implementado com tela — `fluxoly_produtos_*.py` (2026-07-20, Sprint Comercial 0.1) + `Produtos.jsx` (`/produtos`) | Muito Alto | Comercial completo | Lacuna real identificada só agora: nenhum documento desenhava um catálogo comercial (categoria/marca/cor/capacidade/condição/preço) antes desta sprint — `estoque` é peça de reparo, não produto de venda. Domínio novo, separado de Estoque. Sem tela; rastreamento por unidade/IMEI de produtos fica para o Sprint Comercial 0.2, que também vai exigir revisar `vendas.estoque_unidade_id` em `VENDAS.md` |
+| P1 | Financeiro (mínimo) | Entregue — 2026-08-10 (BR-067 a BR-069, ciclo ADR-010 encerrado): caixa, contas a pagar/receber, `Financeiro.jsx` (`/financeiro`); item marcado em `RELEASE_1.0_MASTER_CHECKLIST.md` | Alto | Financeiro mínimo | Escopo restrito a caixa/entradas/saídas/contas a pagar-receber (`RELEASE_STRATEGY.md`, 2026-07-25) — "Financeiro avançado" (DRE, conciliação, indicadores) fica fora da 1.0 |
+| P1 | Caixa | Entregue — 2026-08-10, junto com Financeiro mínimo (`movimentacoes_caixa`, `/api/caixa`); recebimento de OS no caixa ainda não existe (origem `os` ausente) | Alto | Financeiro mínimo | Mesmo item de checklist que Financeiro mínimo — são o mesmo trabalho, não dois épicos separados |
 | P1 | Dashboard Executivo | Parcial | Alto | Dashboard Executivo | **Nota de verificação:** já existe um dashboard básico (`frontend/src/pages/Dashboard.jsx`, KPIs de faturamento/lucro/serviços/técnico) — o que falta é a versão executiva completa descrita na visão original (ticket médio, OS atrasadas, top vendedores, margem) |
 | P2 | WhatsApp | Não iniciado | Médio | Fase 4 (Automação) — fora do escopo da 1.0 | Notificação automática de status de OS/venda — pilar "Relacionamento", `BRAND_IDENTITY.md` seção 2 |
 | P2 | CRM | Não iniciado | Médio | Fase 4 (Automação) — fora do escopo da 1.0 | Depende de Clientes (P0) existir como entidade primeiro |
@@ -103,11 +103,9 @@ bancária e multi-loja (fora da 1.0 por `RELEASE_STRATEGY.md`).
 
 ### Observação sobre a Fila Priorizada
 
-Ao montar esta proposta, as colunas "Status" de algumas linhas da fila acima aparecem desatualizadas
-frente a `RELEASE_1.0_MASTER_CHECKLIST.md`: Financeiro mínimo e Caixa constam "Não iniciado", mas foram
-entregues em 2026-08-10; Clientes, IMEI e Produtos constam "Sem tela", mas têm telas; Vendas já tem
-V1.2-V1.5 (cancelamento, desconto, comissão, garantia). Correção de status é factual e pode ser feita à
-parte, sem mexer em prioridade.
+As colunas "Status" da fila foram verificadas contra o código em 2026-11-11 (Vendas, Clientes, IMEI,
+Produtos, Financeiro mínimo e Caixa estavam desatualizadas). Só o status mudou; prioridades e notas do PO
+ficaram como estavam.
 
 ---
 
