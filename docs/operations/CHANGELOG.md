@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: OS)
+- **docs: análise da OS do Mercado Phone** em `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` —
+  listagem, ações, formulário (8 abas), Kanban, garantias e dashboard, observados em modo leitura; lacunas
+  da Fluxoly listadas como candidatos com "Decisão pendente do PO". Sem mudança de código.
+
 ### Alterado (2026-11-10 — PDF da OS no formato de ordem de serviço)
 - **feat: PDF de entrada e de entrega da OS em quadros e tabelas** — cabeçalho com o nome da loja, os dados
   dela no centro e "Ordem de serviço Nº" à direita; quadros "Dados do Cliente" e "Dados da OS" lado a lado;
