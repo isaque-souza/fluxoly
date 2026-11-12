@@ -767,3 +767,60 @@ def resumir_vendas_periodo(conectar, inicio=None, fim=None):
             {"vendedor": r[0] or "—", "quantidade": r[1], "faturamento": round(r[2] or 0.0, 2)} for r in rows
         ],
     }
+
+
+ROTULOS_FORMA_PAGAMENTO = {"pix": "Pix", "cartao": "Cartão", "dinheiro": "Dinheiro", "transferencia": "Transferência"}
+
+
+def montar_recibo_venda(venda, itens, loja, cliente_cadastro):
+    """BR-103 -- conteúdo do recibo de venda para o cliente. Retorna (recibo, erro).
+
+    Só o que está montado aqui sai para o cliente: produto, IMEI, valor praticado e garantia
+    de cada item, total e forma de pagamento. Nunca custo, lucro, comissão, preço de tabela
+    nem motivo de desconto. `cliente_cadastro` já vem com o CPF/CNPJ apagado para quem não
+    pode lê-lo (KI-045, decidido no controller)."""
+    if not venda:
+        return None, "Venda não encontrada."
+    if venda["status"] != "concluida":
+        return None, "Venda cancelada não gera recibo."
+    if not (loja.get("nome_fantasia") or "").strip():
+        return None, "Cadastre os Dados da Loja antes de gerar documentos."
+
+    cliente = {"nome": venda["cliente_nome"], "telefone": venda["cliente_telefone"], "email": "", "cpf_cnpj": ""}
+    if cliente_cadastro:
+        for chave in ("nome", "telefone", "email", "cpf_cnpj"):
+            cliente[chave] = cliente_cadastro.get(chave) or cliente[chave]
+
+    return {
+        "loja": {
+            chave: loja.get(chave) or ""
+            for chave in ("nome_fantasia", "razao_social", "cnpj", "telefone", "email", "endereco")
+        },
+        "termos": loja.get("termos_garantia") or "",
+        "cliente": cliente,
+        "venda": {
+            "id": venda["id"],
+            "data": venda["criado_em"],
+            "vendedor": venda["vendedor_nome"],
+            "forma_pagamento": ROTULOS_FORMA_PAGAMENTO.get(venda["forma_pagamento"], venda["forma_pagamento"] or ""),
+            "valor_total": round(venda["valor_total"] or 0, 2),
+            "observacoes": venda["observacoes"],
+            "itens": [
+                {
+                    "produto": item["produto_nome"],
+                    "imei": item["imei"],
+                    "valor": round(item["valor_unitario"] or 0, 2),
+                    "garantia": (
+                        {
+                            "nome": item["garantia_nome"],
+                            "duracao_meses": item["garantia_duracao_meses"],
+                            "data_fim": item["garantia_data_fim"] or "",
+                        }
+                        if item["garantia_nome"]
+                        else None
+                    ),
+                }
+                for item in itens
+            ],
+        },
+    }, None

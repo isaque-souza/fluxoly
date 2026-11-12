@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CircleNotch, MagnifyingGlass, UserCircle, DeviceMobile, Check, Plus, Eye, Printer, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { clientes as clientesApi, unidadesSerializadas as unidadesApi, vendas as vendasApi, tiposGarantia as tiposGarantiaApi } from "@/api/client";
+import { imprimirReciboVenda } from "@/lib/vendaPdf";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -452,8 +453,8 @@ function NovaVenda() {
               <Button variant="outline" onClick={() => navigate(`/vendas/${vendaConcluida.id}`)}>
                 <Eye className="h-4 w-4 mr-2" />Ver venda
               </Button>
-              <Button variant="outline" onClick={() => toast.info("Impressão ainda não disponível — em breve.")}>
-                <Printer className="h-4 w-4 mr-2" />Imprimir
+              <Button variant="outline" onClick={() => imprimirReciboVenda(vendaConcluida.id)}>
+                <Printer className="h-4 w-4 mr-2" />Imprimir recibo
               </Button>
             </div>
           </PanelContent>

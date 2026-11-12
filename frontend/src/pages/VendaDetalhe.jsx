@@ -5,6 +5,7 @@ import { CircleNotch, ArrowLeft, Printer, UserCircle, CreditCard, Calendar, File
 import { vendas as vendasApi, tiposGarantia as tiposGarantiaApi } from "@/api/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { imprimirReciboVenda } from "@/lib/vendaPdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -331,9 +332,15 @@ export default function VendaDetalhe() {
               <Prohibit className="h-4 w-4 mr-2" />Cancelar venda
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => toast.info("Impressão ainda não disponível — em breve.")}>
-            <Printer className="h-4 w-4 mr-2" />Imprimir
-          </Button>
+          {venda.status === "concluida" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => imprimirReciboVenda(venda.id, user?.perfil === "admin" ? () => navigate("/dados-loja") : undefined)}
+            >
+              <Printer className="h-4 w-4 mr-2" />Imprimir recibo
+            </Button>
+          )}
         </div>
       </div>
 

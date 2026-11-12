@@ -15,7 +15,9 @@ MVP).
 
 from flask import Blueprint, jsonify, request, session
 
+import fluxoly_clientes_service as clientes_service
 import fluxoly_compras_aparelhos_service as compras_aparelhos_service
+import fluxoly_dados_loja_service as dados_loja_service
 import fluxoly_vendas_service as service
 from fluxoly_validation import parse_float, parse_int, safe_json
 
@@ -165,6 +167,28 @@ def create_vendas_blueprint(deps: dict):
                 item["custo_aparelho"] = custo
                 item["lucro"] = compras_aparelhos_service.calcular_lucro(item["valor_unitario"], custo)
         return ok(venda=venda, itens=itens)
+
+    @vendas_api.route("/<int:venda_id>/recibo")
+    def recibo_venda(venda_id):
+        """BR-103 -- conteúdo do recibo para o cliente; o PDF é desenhado no frontend. Mesmo
+        acesso do detalhe da venda (qualquer autenticado)."""
+        if not usuario_logado():
+            return err("Não autenticado.", 401)
+
+        venda, itens = service.obter_venda_com_itens(conectar, venda_id)
+        if not venda:
+            return err("Venda não encontrada.", 404)
+        cliente_cadastro = clientes_service.obter_cliente(conectar, venda["cliente_id"]) if venda["cliente_id"] else None
+        # KI-045: CPF/CNPJ só para quem pode lê-lo -- mesma regra do documento da OS.
+        if cliente_cadastro and session.get("usuario_perfil") not in ("admin", "financeiro"):
+            cliente_cadastro = {**cliente_cadastro, "cpf_cnpj": ""}
+
+        recibo, erro = service.montar_recibo_venda(
+            venda, itens, dados_loja_service.obter_dados_loja(conectar), cliente_cadastro
+        )
+        if erro:
+            return err(erro, 409)
+        return ok(recibo=recibo)
 
     @vendas_api.route("/<int:venda_id>/cancelar", methods=["POST"])
     def cancelar_venda(venda_id):

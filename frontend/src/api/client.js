@@ -382,6 +382,8 @@ export const vendas = {
     return get(`/vendas/garantias${qs ? "?" + qs : ""}`);
   },
   cancelar: (id, data) => post(`/vendas/${id}/cancelar`, data),
+  // BR-103 -- conteúdo do recibo para o cliente (PDF desenhado em lib/vendaPdf.js).
+  recibo: (id) => get(`/vendas/${id}/recibo`),
   // V1.3 -- Descontos e Aprovação (BR-043: Ajuste Comercial Autorizado).
   ajustarDescontoItem: (vendaId, itemId, data) =>
     patch(`/vendas/${vendaId}/itens/${itemId}/ajuste-desconto`, data),
