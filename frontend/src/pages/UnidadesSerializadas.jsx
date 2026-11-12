@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { CircleNotch, MagnifyingGlass, Barcode, DeviceMobile, MapPin, BatteryMedium, ClockCounterClockwise, CaretLeft, CaretRight, Pencil } from "@phosphor-icons/react";
-import { unidadesSerializadas as unidadesApi } from "@/api/client";
+import { unidadesSerializadas as unidadesApi, vendas as vendasApi } from "@/api/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +126,7 @@ function DetalheUnidade({ unidadeId, onClose, canEdit }) {
   const [loading, setLoading] = useState(true);
   const [unidade, setUnidade] = useState(null);
   const [historico, setHistorico] = useState([]);
+  const [venda, setVenda] = useState(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(EMPTY_EDIT_FORM);
   const [submitting, setSubmitting] = useState(false);
@@ -136,6 +137,14 @@ function DetalheUnidade({ unidadeId, onClose, canEdit }) {
       if (uRes?.ok) setUnidade(uRes.unidade);
       else toast.error(uRes?.erro || "Erro ao carregar unidade");
       setHistorico(hRes?.ok ? (hRes.historico || []) : []);
+      // KI-062 -- `venda_id` é gravado por marcar_vendida e limpo por liberar_venda (cancelamento).
+      const vendaId = uRes?.ok ? uRes.unidade?.venda_id : null;
+      if (!vendaId) { setVenda(null); return null; }
+      return vendasApi.get(vendaId).then((vRes) => {
+        if (!vRes?.ok) { setVenda(null); return; }
+        const item = (vRes.itens || []).find((i) => i.unidade_serializada_id === unidadeId) || null;
+        setVenda({ ...vRes.venda, item });
+      }).catch(() => setVenda(null));
     }).finally(() => setLoading(false));
   };
 
@@ -303,15 +312,31 @@ function DetalheUnidade({ unidadeId, onClose, canEdit }) {
               </div>
             )}
 
-            {/* Campos que dependem do módulo de Vendas — ainda não existe */}
+            {/* KI-062 -- comprador e garantia de venda vêm da venda vinculada (`venda_id`) */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Cliente atual</p>
-                <p className="text-sm text-muted-foreground bg-secondary/40 rounded-xl p-3">Sem venda registrada — módulo de Vendas em construção.</p>
+                {venda ? (
+                  <p data-testid="unidade-comprador" className="text-sm text-card-foreground bg-secondary/40 rounded-xl p-3">
+                    {venda.cliente_nome || "—"}
+                    <span className="block text-xs text-muted-foreground">Venda #{venda.id} · {formatDate(venda.criado_em)}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground bg-secondary/40 rounded-xl p-3">Sem venda registrada.</p>
+                )}
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Garantia</p>
-                <p className="text-sm text-muted-foreground bg-secondary/40 rounded-xl p-3">Não aplicável ainda — depende da venda.</p>
+                {venda?.item?.garantia_data_fim ? (
+                  <p data-testid="unidade-garantia" className="text-sm text-card-foreground bg-secondary/40 rounded-xl p-3">
+                    {venda.item.garantia_nome || "Garantia"}
+                    <span className="block text-xs text-muted-foreground">até {formatDate(venda.item.garantia_data_fim)}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground bg-secondary/40 rounded-xl p-3">
+                    {venda ? "Venda sem garantia registrada." : "Não aplicável — sem venda."}
+                  </p>
+                )}
               </div>
             </div>
 

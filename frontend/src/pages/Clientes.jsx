@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { CircleNotch, Plus, Pencil, Trash, MagnifyingGlass, User, Phone, EnvelopeSimple, FileText, UserMinus } from "@phosphor-icons/react";
-import { clientes as clientesApi, ordens as ordensApi, garantias as garantiasApi } from "@/api/client";
+import { clientes as clientesApi, ordens as ordensApi, garantias as garantiasApi, vendas as vendasApi } from "@/api/client";
+import { formatCurrency } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,21 +42,25 @@ function PerfilCliente({ cliente, onClose }) {
   const [loading, setLoading] = useState(true);
   const [ordens, setOrdens] = useState([]);
   const [garantiasCliente, setGarantiasCliente] = useState([]);
+  const [compras, setCompras] = useState([]);
 
   useEffect(() => {
     let ativo = true;
     Promise.all([
       ordensApi.clienteHistory(cliente.nome),
       garantiasApi.list({ q: cliente.nome }),
-    ]).then(([histRes, garRes]) => {
+      // KI-062 -- compras vêm por cliente_id (vínculo real gravado pela venda), não por nome.
+      vendasApi.list({ cliente_id: cliente.id, per_page: 50 }),
+    ]).then(([histRes, garRes, vendasRes]) => {
       if (!ativo) return;
       setOrdens(histRes?.ok ? (histRes.ordens || []) : []);
       setGarantiasCliente(garRes?.ok ? (garRes.garantias || []) : []);
+      setCompras(vendasRes?.ok ? (vendasRes.items || []) : []);
     }).catch(() => {
       if (ativo) toast.error("Erro ao carregar histórico do cliente");
     }).finally(() => { if (ativo) setLoading(false); });
     return () => { ativo = false; };
-  }, [cliente.nome]);
+  }, [cliente.id, cliente.nome]);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -65,7 +70,7 @@ function PerfilCliente({ cliente, onClose }) {
             <User className="h-5 w-5 text-primary" />
             {cliente.nome}
           </DialogTitle>
-          <DialogDescription>Perfil do cliente — dados, histórico de OS e garantias</DialogDescription>
+          <DialogDescription>Perfil do cliente — dados, histórico de OS, garantias e compras</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
@@ -137,10 +142,26 @@ function PerfilCliente({ cliente, onClose }) {
               </div>
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Compras</p>
-                <p className="text-sm text-muted-foreground bg-secondary/40 rounded-lg p-3">
-                  Nenhuma compra registrada ainda — módulo de Vendas em construção.
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Compras {compras.length > 0 && `(${compras.length})`}
                 </p>
+                {compras.length === 0 ? (
+                  <p className="text-sm text-muted-foreground bg-secondary/40 rounded-lg p-3">Nenhuma compra registrada para este cliente.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {compras.map((v) => (
+                      <div key={v.id} data-testid="compra-cliente" className="flex items-center justify-between text-sm bg-secondary/40 rounded-lg px-3 py-2">
+                        <span className="text-card-foreground">
+                          {(v.itens_resumo || []).map((i) => i.produto_nome).join(", ") || `Venda #${v.id}`}
+                          {v.status === "cancelada" && <Badge variant="error" className="ml-2">Cancelada</Badge>}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {formatCurrency(v.valor_total)} · {v.criado_em ? new Date(v.criado_em.replace(" ", "T")).toLocaleDateString("pt-BR") : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}
