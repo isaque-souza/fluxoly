@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-11 — Vendedor sem custo/lucro no Dashboard)
+- **feat: vendedor não vê custo, lucro nem resultado no Dashboard** (BR-100) — o backend deixa de enviar
+  essas chaves para o perfil `vendedor` e a tela esconde os blocos. Limitar o vendedor às próprias vendas
+  ficou como decisão pendente do PO. Plano: `docs/engineering/plans/PLAN-esconder-lucro-vendedor.md`.
+  Etapa 8 dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Dias em estoque)
 - **feat: dias em estoque na lista de unidades** — coluna "Em estoque" (destaque a partir de 90 dias) e
   campo calculado `dias_em_estoque` em `/api/unidades-serializadas` (só unidades na loja). Plano:

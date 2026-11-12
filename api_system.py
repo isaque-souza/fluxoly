@@ -242,33 +242,56 @@ def create_api_system_blueprint(deps):
         faturamento_consolidado = round(faturamento_total + resumo_vendas["faturamento"], 2)
         atendimentos = ordens_finalizadas + resumo_vendas["quantidade"]
 
-        return ok(
-            vendas=resumo_vendas,
-            consolidado={
+        payload = {
+            "vendas": resumo_vendas,
+            "consolidado": {
                 "faturamento": faturamento_consolidado,
                 "faturamento_os": round(faturamento_total, 2),
                 "faturamento_vendas": resumo_vendas["faturamento"],
                 "ticket_medio": round(faturamento_consolidado / atendimentos, 2) if atendimentos else 0,
             },
-            faturamento_total=round(faturamento_total, 2),
-            lucro_total=round(lucro_total, 2),
-            custo_consumido_periodo=round(custo_consumido_periodo, 2),
-            custos_operacionais_periodo=round(custos_operacionais_periodo, 2),
-            resultado_liquido=round(resultado_liquido, 2),
-            ticket_medio=ticket_medio,
-            gasto_total_estoque=round(gasto_total, 2),
-            ordens_finalizadas=ordens_finalizadas,
-            ordens_abertas=ordens_abertas,
-            shopping_pendentes=shopping_pendentes,
-            shopping_urgentes=shopping_urgentes,
-            faturamento_por_dia=[{"date": d, "value": round(faturamento_por_dia[d], 2)} for d in dias_ordenados],
-            lucro_por_tecnico=[{"name": k, "value": round(v, 2)} for k, v in lucro_tecnicos_sorted],
-            servicos_mais_feitos=[{"name": k, "value": v} for k, v in servicos_sorted[:10]],
-            resumo_por_vendedor=[
+            "faturamento_total": round(faturamento_total, 2),
+            "lucro_total": round(lucro_total, 2),
+            "custo_consumido_periodo": round(custo_consumido_periodo, 2),
+            "custos_operacionais_periodo": round(custos_operacionais_periodo, 2),
+            "resultado_liquido": round(resultado_liquido, 2),
+            "ticket_medio": ticket_medio,
+            "gasto_total_estoque": round(gasto_total, 2),
+            "ordens_finalizadas": ordens_finalizadas,
+            "ordens_abertas": ordens_abertas,
+            "shopping_pendentes": shopping_pendentes,
+            "shopping_urgentes": shopping_urgentes,
+            "faturamento_por_dia": [{"date": d, "value": round(faturamento_por_dia[d], 2)} for d in dias_ordenados],
+            "lucro_por_tecnico": [{"name": k, "value": round(v, 2)} for k, v in lucro_tecnicos_sorted],
+            "servicos_mais_feitos": [{"name": k, "value": v} for k, v in servicos_sorted[:10]],
+            "resumo_por_vendedor": [
                 {"vendedor": k, **{kk: round(vv, 2) if isinstance(vv, float) else vv for kk, vv in v.items()}}
                 for k, v in sorted(resumo_por_vendedor.items(), key=lambda x: x[1]["faturamento"], reverse=True)
             ],
-            custos_por_categoria=resumo_custos["por_categoria"],
-        )
+            "custos_por_categoria": resumo_custos["por_categoria"],
+        }
+        if session.get("usuario_perfil") == "vendedor":
+            _ocultar_custo_e_lucro(payload)
+        return ok(**payload)
 
     return api_system
+
+
+# PLAN-esconder-lucro-vendedor.md -- o vendedor vê faturamento e quantidades, nunca custo, lucro ou
+# resultado (mesmo espírito de BR-047/BR-092). Técnico e estoque seguem como antes (decisão do PO).
+CHAVES_CUSTO_LUCRO_DASHBOARD = (
+    "lucro_total",
+    "custo_consumido_periodo",
+    "custos_operacionais_periodo",
+    "resultado_liquido",
+    "gasto_total_estoque",
+    "lucro_por_tecnico",
+    "custos_por_categoria",
+)
+
+
+def _ocultar_custo_e_lucro(payload):
+    for chave in CHAVES_CUSTO_LUCRO_DASHBOARD:
+        payload.pop(chave, None)
+    for linha in payload.get("resumo_por_vendedor", []):
+        linha.pop("lucro", None)

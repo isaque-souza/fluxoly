@@ -633,6 +633,13 @@ relatório (`admin`/`financeiro`).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); uso do `preco_custo` como
 custo de referência por decisão de engenharia — revisável no QA.*
 
+**BR-100 — ✅ Implementado (2026-11-11)**
+O perfil `vendedor` não vê custo, lucro nem resultado no Dashboard (lucro bruto, custo de peças, custos
+operacionais, resultado líquido, valor do estoque, lucro por técnico e por vendedor). Continua vendo
+faturamento, quantidades e ticket médio. `tecnico` e `estoque` seguem como antes até decisão do PO.
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); restringir o vendedor às
+próprias vendas segue como decisão pendente (`PLAN-esconder-lucro-vendedor.md`).*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

@@ -175,3 +175,19 @@ describe("Dashboard — vendas somadas às OS (PLAN-dashboard-vendas-os.md)", ()
     expect(screen.queryByText("Lucro Aparelhos")).not.toBeInTheDocument();
   });
 });
+
+describe("Dashboard — vendedor sem custo/lucro (PLAN-esconder-lucro-vendedor.md)", () => {
+  it("sem as chaves de custo/lucro, esconde Lucro Bruto, Resultado, gráfico de lucro e Resumo Financeiro", async () => {
+    const semCusto = { ...dadosComResultado };
+    ["lucro_total", "custo_consumido_periodo", "custos_operacionais_periodo", "resultado_liquido",
+      "gasto_total_estoque", "lucro_por_tecnico", "custos_por_categoria"].forEach((k) => delete semCusto[k]);
+    mockGet.mockResolvedValue(semCusto);
+    render(<Dashboard />);
+
+    await waitFor(() => expect(screen.getByText("Ticket Médio")).toBeInTheDocument());
+    expect(screen.queryByText("Lucro Bruto")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resultado Líq.")).not.toBeInTheDocument();
+    expect(screen.queryByText("TechChart")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resumo Financeiro")).not.toBeInTheDocument();
+  });
+});
