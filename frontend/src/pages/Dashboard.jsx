@@ -12,6 +12,8 @@ import { ListBlock, ListBlockItem } from "@/components/ui/list-block";
 import { LooseMetric } from "@/components/ui/loose-metric";
 import { formatCurrency } from "@/lib/constants";
 
+import PendenciasHoje from "@/components/dashboard/PendenciasHoje";
+
 const RevenueChartCard = lazy(() => import("@/components/dashboard/RevenueChartCard"));
 const TechnicianProfitChartCard = lazy(() => import("@/components/dashboard/TechnicianProfitChartCard"));
 const ServicesChartCard = lazy(() => import("@/components/dashboard/ServicesChartCard"));
@@ -187,6 +189,8 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      <PendenciasHoje />
 
       {loading && !data ? (
         <DashboardSkeleton />

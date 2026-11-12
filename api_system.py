@@ -11,6 +11,8 @@ from datetime import date, timedelta
 from flask import Blueprint, request, session
 
 import fluxoly_compras_aparelhos_service as compras_aparelhos_service
+import fluxoly_contas_pagar_service as contas_pagar_service
+import fluxoly_contas_receber_service as contas_receber_service
 import fluxoly_vendas_service as vendas_service
 
 from fluxoly_api_helpers import err, ok, usuario_logado
@@ -100,6 +102,24 @@ def create_api_system_blueprint(deps):
         except Exception:
             alerts = []
         return ok(alertas=alerts)
+
+    # ── PENDÊNCIAS DA TELA INICIAL ─────────────────────────────────────────
+
+    @api_system.route("/pendencias")
+    def pendencias():
+        """PLAN-pendencias-tela-inicial.md -- contas a pagar/receber vencidas e que vencem hoje.
+        Valor financeiro: só admin/financeiro (mesmo critério do módulo Financeiro). `hoje` é a data
+        do servidor (UTC em produção -- KI-061)."""
+        if not usuario_logado():
+            return err("Não autenticado.", 401)
+        if session.get("usuario_perfil") not in ("admin", "financeiro"):
+            return err("Permissão negada.", 403)
+        hoje = date.today().isoformat()
+        return ok(
+            hoje=hoje,
+            contas_pagar=contas_pagar_service.resumir_pendencias(conectar, hoje),
+            contas_receber=contas_receber_service.resumir_pendencias(conectar, hoje),
+        )
 
     # ── DASHBOARD ──────────────────────────────────────────────────────────
 

@@ -20,6 +20,8 @@ vi.mock("sonner", () => ({
 vi.mock("@/components/dashboard/RevenueChartCard", () => ({ default: () => <div>RevenueChart</div> }));
 vi.mock("@/components/dashboard/TechnicianProfitChartCard", () => ({ default: () => <div>TechChart</div> }));
 vi.mock("@/components/dashboard/ServicesChartCard", () => ({ default: () => <div>ServicesChart</div> }));
+// Pendências têm teste próprio (PendenciasHoje.test.jsx) e dependem de AuthContext.
+vi.mock("@/components/dashboard/PendenciasHoje", () => ({ default: () => null }));
 
 const dadosComResultado = {
   ok: true,

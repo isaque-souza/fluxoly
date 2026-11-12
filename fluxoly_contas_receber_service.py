@@ -235,3 +235,17 @@ def cancelar_conta_receber(conectar, usuario_id, conta_id):
         conn.close()
 
     return True, None
+
+
+def resumir_pendencias(conectar, hoje):
+    """Pendências da tela inicial (PLAN-pendencias-tela-inicial.md): contas pendentes vencidas e que
+    vencem em `hoje` (`YYYY-MM-DD`), com quantidade e total de cada grupo."""
+    conn = conectar()
+    try:
+        qtd_vencidas, total_vencidas, qtd_hoje, total_hoje = repo.resumir_pendentes_por_vencimento(conn.cursor(), hoje)
+    finally:
+        conn.close()
+    return {
+        "vencidas": {"quantidade": qtd_vencidas, "total": round(total_vencidas or 0.0, 2)},
+        "vencem_hoje": {"quantidade": qtd_hoje, "total": round(total_hoje or 0.0, 2)},
+    }
