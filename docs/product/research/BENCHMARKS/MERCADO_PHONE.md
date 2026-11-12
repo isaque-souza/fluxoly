@@ -15,6 +15,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
+| Clientes e Relatórios | Concluída — cadastro de pessoas, histórico de compras, catálogo de 39 relatórios, alertas, dashboard diário (somente leitura) | 2026-11-11 |
 | Fiscal | Concluída — score fiscal, NF-e, NF de entrada do usado, captura de XML, NFs de vendas (somente leitura; nenhuma nota emitida) | 2026-11-11 |
 
 ---
@@ -687,6 +688,105 @@ destas sugestões dispensa discovery própria (ADR-010) e decisão sobre provedo
 5. **Score fiscal / checklist de configuração**: só depois de existir emissão; boa ideia de UX para
    onboarding.
 6. **Captura de XML de fornecedor, TEF**: fora do escopo da primeira versão fiscal. — seções a adicionar quando cada módulo for analisado em sessão própria.
+
+---
+
+## Clientes
+
+*Walkthrough de 2026-11-11, somente leitura: listagem de pessoas, ações por cliente, menu Ferramentas,
+formulário de cadastro (fechado sem salvar) e "Ver histórico de compras" de um cliente (só a estrutura).
+Nenhum dado de cliente registrado aqui.*
+
+### Fluxo observado
+- **Pessoas:** um cadastro só para Cliente, Fornecedor, Técnico e Motoboy (abas de categoria). Cartões no
+  topo: total de pessoas, total de clientes e **índice de recompra (%)**. Colunas: código, nome, CPF/CNPJ,
+  telefone, e-mail, **último produto comprado**, aniversário, mês de aniversário (filtrável), Instagram.
+- **Ações por cliente:** Editar, Detalhes, WhatsApp, **Ver histórico de compras**, Transferir para outra
+  unidade, Excluir.
+- **Ferramentas:** gerar link para o cliente (cadastro preenchido pelo próprio cliente), lançar crédito,
+  editar em massa, importar clientes/fornecedores, registros deletados, exportar XLS/PDF/XML.
+- **Cadastro (seções):** Identificação (categoria, tipo PF/PJ, CPF/CNPJ com busca automática, origem*
+  — mesma lista do "tipo de venda": Google, Meta, Indicação…, nome*, profissão, nascimento, gênero),
+  Dados fiscais, Contato (telefone, alternativo, e-mail, Instagram, telefones extras), Endereço (CEP com
+  busca), Observações e tags, **Crédito e "IA Blue"** (se o assistente de mensagens pode enviar para o
+  cliente, valor de crédito, limite de crediário), Arquivos.
+- **Histórico de compras:** abre o Relatório histórico de vendas filtrado pelo cliente, com cartões de
+  faturamento, quantidade de vendas e de produtos, lucro médio %, ticket médio, margem média, lucro total,
+  custo total e desconto total, e a lista de itens com IMEI e formas de pagamento.
+
+### Pontos positivos
+- Ficha do cliente com o que importa para recompra: último produto, aniversário, Instagram, histórico com
+  lucro.
+- Índice de recompra como indicador de topo.
+- Link para o cliente preencher o próprio cadastro.
+
+### Pontos negativos
+- Origem do cliente quase nunca é preenchida no cadastro (no relatório Perfil de clientes, ~96% "não
+  informado"), embora a origem seja registrada em cada venda. Duplicação de conceito que a loja não mantém.
+- Cliente, fornecedor, técnico e motoboy no mesmo cadastro mistura papéis.
+
+## Relatórios
+
+*Walkthrough de 2026-11-11, somente leitura: catálogo "Visão geral - Atalhos", Dashboard de alertas
+(estoque e vendas), Perfil de clientes, Dashboard diário e o relatório de histórico de vendas (via
+cliente). Nenhum valor da loja registrado aqui.*
+
+### Fluxo observado
+- **Catálogo com 39 relatórios**, busca e favoritos, agrupados: Vendas (8: dashboard diário, dashboard
+  geral mensal, canal de venda, estado do aparelho, **funil de venda**, tipo de entrega, histórico,
+  consolidado), Vendedores (4: comissão, vendas por vendedor, por forma de pagamento), Estoque (7: por
+  modelo/GB, por aparelho, itens vendidos, resumo por tipo com custo e venda), Financeiro (8: DRE mensal,
+  DRE gerencial, DRE multilojas, **conta bancária × vendas** para conferir se as taxas batem, sangrias e
+  suprimentos, por forma de pagamento, **taxa de cartão por venda**), Clientes (4: programa de indicação,
+  perfil, **ranking**, **aniversariantes do dia**), OS (1: detalhado por serviço e peça), Integrações
+  (Meta Ads × vendas), Técnicos (comissão), Outros (acessos ao catálogo online, alertas, metas, uso de
+  recursos, retrospectiva anual).
+- **Dashboard diário:** período, faturamento, quantidade de vendas, lucro, ticket médio, % de lucro, lucro
+  médio e últimas vendas com **valor líquido (sem taxa) × valor total × lucro** por venda.
+- **Dashboard de alertas:** o sistema aponta problemas de dados por módulo, com contagem.
+  Estoque: produto 50% abaixo da média de preço, custo = 0, **valor de venda ≤ custo**, produto sem foto,
+  estoque negativo. Vendas: **venda com prejuízo**, valor recebido < valor da venda, venda cancelada,
+  venda sem termo de garantia. Fiscal; OS e Financeiro "em desenvolvimento". Alertas podem ser ignorados.
+- **Perfil de clientes:** gráficos de PF × PJ, faixa etária, gênero e origem.
+
+### Pontos positivos
+- **Alertas de dados** (venda com prejuízo, custo zerado, preço abaixo do custo): o sistema avisa antes
+  do erro virar prejuízo, sem o lojista montar relatório.
+- Lucro **líquido de taxa de cartão** por venda, e conferência taxa configurada × o que caiu no banco.
+- Relatórios de comissão por vendedor e por técnico prontos.
+- Aniversariantes do dia e ranking de clientes: ação comercial direta.
+
+### Pontos negativos
+- 39 relatórios, com sobreposição (três de itens vendidos, três de detalhes de estoque) e uma pasta
+  "Antigos": excesso de opção, difícil saber qual usar.
+- Vários dependem de dados que a loja não preenche (origem do cliente, metas).
+
+### Impacto para Fluxoly (Clientes e Relatórios)
+
+**A Fluxoly já tem:** cadastro de cliente (nome, telefone, e-mail, CPF/CNPJ, observações) com perfil que
+mostra histórico de OS e garantias; relatórios de faturamento, lucro bruto, custo de peças, custos
+operacionais, técnicos, e a aba Compra e revenda (BR-093).
+
+**Achado na comparação (KI-062):** o perfil do cliente e o detalhe da unidade ainda mostram o placeholder
+"módulo de Vendas em construção", embora Vendas exista e grave `cliente_id`/`unidade_serializada_id`. O
+histórico de compras do cliente já está no banco, só não é exibido.
+
+**Não tem (encontrado no Mercado Phone):** histórico de compras do cliente com totais; aniversário,
+Instagram, endereço; crédito do cliente; índice de recompra; ranking de clientes e aniversariantes;
+dashboard diário com lucro; lucro líquido de taxa; alertas de dados (venda com prejuízo, custo zerado);
+relatórios de comissão.
+
+#### Decisão pendente do PO
+Candidatos por relação valor × esforço, na leitura deste benchmark (sugestão, não decisão):
+1. **Corrigir KI-062**: mostrar compras no perfil do cliente e o comprador na unidade. Esforço baixo, dado
+   já existe.
+2. **Alertas de dados** começando por "venda abaixo do custo" e "unidade sem custo": consultas simples
+   sobre dados que a Fluxoly já tem (custo por aparelho, BR-092); protege a margem.
+3. **Dashboard diário** (faturamento, lucro, ticket médio do dia): agrega vendas + OS já existentes.
+4. **Aniversário do cliente + lista de aniversariantes**: um campo novo e um filtro; ação de recompra via
+   WhatsApp.
+5. **Ranking / recompra de clientes**: depende de 1.
+6. Não replicar o catálogo de 39 relatórios: preferir poucos relatórios com filtros.
 
 ---
 

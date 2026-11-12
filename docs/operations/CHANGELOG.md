@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Clientes e Relatórios)
+- **docs: análise de Clientes e Relatórios do Mercado Phone** — ficha com histórico de compras, índice de
+  recompra, catálogo de relatórios, dashboard de alertas de dados e dashboard diário. Novo **KI-062**:
+  perfil do cliente e detalhe da unidade ainda mostram "módulo de Vendas em construção". Sem mudança de
+  código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Fiscal)
 - **docs: análise do Fiscal do Mercado Phone** — score fiscal, NF-e de entrada do usado, captura de XML,
   notas a partir de venda/OS/estoque; recomendações condicionadas a discovery e escolha de provedor. Sem
