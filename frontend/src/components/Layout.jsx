@@ -3,8 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   SquaresFour, ClipboardText, Package, ShoppingBag, Wrench, CurrencyDollar,
   ChartBar, Kanban, Shield, Tag, Users, SignOut, User, UserCircle, HardDrives,
-  Barcode, ShoppingCart, DeviceMobile, Storefront,
-} from "@phosphor-icons/react";
+  Barcode, ShoppingCart, DeviceMobile, Storefront, ListMagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import GlobalAlerts from "./GlobalAlerts";
 import ThemeToggle from "./ThemeToggle";
@@ -71,6 +70,7 @@ const navSections = [
     items: [
       { path: "/dados-loja", label: "Dados da Loja", icon: Storefront, adminOnly: true },
       { path: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
+      { path: "/auditoria", label: "Auditoria", icon: ListMagnifyingGlass, perfis: ["admin", "financeiro"] },
       { path: "/backup", label: "Backups", icon: HardDrives, adminOnly: true },
     ],
   },

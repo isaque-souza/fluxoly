@@ -10,6 +10,7 @@ const Landing = lazy(() => import("@/pages/Landing"));
 const Login = lazy(() => import("@/pages/Login"));
 const ChecklistDevice = lazy(() => import("@/pages/ChecklistDevice"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Auditoria = lazy(() => import("@/pages/Auditoria"));
 const Orders = lazy(() => import("@/pages/Orders"));
 const NewOrder = lazy(() => import("@/pages/NewOrder"));
 const EditOrder = lazy(() => import("@/pages/EditOrder"));
@@ -96,6 +97,7 @@ function AppRoutes() {
           <Route path="/backup" element={<Backup />} />
           <Route path="/dados-loja" element={<DadosLoja />} />
           <Route path="/usuarios" element={<Users />} />
+          <Route path="/auditoria" element={<Auditoria />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
