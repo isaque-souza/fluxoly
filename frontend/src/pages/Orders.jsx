@@ -115,6 +115,7 @@ export default function Orders() {
   const { tecnicos, vendedores } = extractMeta(ordens);
   const abertas = ordens.filter((o) => o.status === "Em andamento" || o.status === "Aguardando peca").length;
   const finalizadas = ordens.filter((o) => o.status === "Finalizado").length;
+  const atrasadas = ordens.filter((o) => o.atrasada).length;
 
   return (
     <div className="space-y-5">
@@ -142,6 +143,7 @@ export default function Orders() {
             <LooseMetric label="Total" value={ordens.length} />
             <LooseMetric label="Em aberto" value={abertas} valueClassName="text-warning" />
             <LooseMetric label="Finalizadas" value={finalizadas} valueClassName="text-success" />
+            {atrasadas > 0 && <LooseMetric label="Atrasadas" value={atrasadas} valueClassName="text-destructive" />}
           </div>
 
           <OrderFilters filters={filters} setFilters={setFilters} tecnicos={tecnicos} vendedores={vendedores} constants={constants} />

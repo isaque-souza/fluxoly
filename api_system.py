@@ -16,7 +16,7 @@ import fluxoly_contas_receber_service as contas_receber_service
 import fluxoly_vendas_service as vendas_service
 
 from fluxoly_api_helpers import err, ok, usuario_logado
-from fluxoly_core import TIPO_OS_INTERNA
+from fluxoly_core import TIPO_OS_INTERNA, os_atrasada
 
 
 def create_api_system_blueprint(deps):
@@ -137,7 +137,7 @@ def create_api_system_blueprint(deps):
         dados, reparos_por_os, custos = carregar_os_com_relacoes(cursor, order_by="os.id DESC")
 
         lucro_total = faturamento_total = custo_consumido_periodo = 0.0
-        ordens_finalizadas = ordens_abertas = 0
+        ordens_finalizadas = ordens_abertas = ordens_atrasadas = 0
         lucro_por_tecnico = {}
         resumo_por_vendedor = {}
         servicos_mais_feitos = {}
@@ -182,6 +182,8 @@ def create_api_system_blueprint(deps):
                     faturamento_por_dia[data] = faturamento_por_dia.get(data, 0) + faturamento_os
             elif status_aberto(status):
                 ordens_abertas += 1
+                if os_atrasada(status, os_item[18]):  # BR-101
+                    ordens_atrasadas += 1
 
             for reparo_nome in reparos_por_os.get(os_id, {}).get("nomes", []) or [tipo]:
                 if reparo_nome:
@@ -259,6 +261,7 @@ def create_api_system_blueprint(deps):
             "gasto_total_estoque": round(gasto_total, 2),
             "ordens_finalizadas": ordens_finalizadas,
             "ordens_abertas": ordens_abertas,
+            "ordens_atrasadas": ordens_atrasadas,
             "shopping_pendentes": shopping_pendentes,
             "shopping_urgentes": shopping_urgentes,
             "faturamento_por_dia": [{"date": d, "value": round(faturamento_por_dia[d], 2)} for d in dias_ordenados],

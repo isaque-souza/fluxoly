@@ -86,6 +86,27 @@ def status_aberto(valor):
     return status_norm not in {STATUS_FINALIZADO, STATUS_CANCELADO}
 
 
+def normalizar_data_previsao(valor):
+    """BR-101 -- previsão de entrega da OS: `YYYY-MM-DD` ou vazio (sem previsão).
+    Retorna (data_ou_None, erro)."""
+    texto = (valor or "").strip() if isinstance(valor, str) else ("" if valor is None else str(valor))
+    if not texto:
+        return None, None
+    try:
+        return datetime.strptime(texto, "%Y-%m-%d").strftime("%Y-%m-%d"), None
+    except ValueError:
+        return None, "Data de previsão inválida (use AAAA-MM-DD)."
+
+
+def os_atrasada(status, data_previsao, hoje=None):
+    """BR-101 -- atrasada = ainda aberta (nem finalizada nem cancelada) e previsão já passou.
+    Vence no fim do dia da previsão: no próprio dia ainda não está atrasada."""
+    if not data_previsao or not status_aberto(status):
+        return False
+    hoje_txt = (hoje or datetime.now().date()).strftime("%Y-%m-%d")
+    return data_previsao < hoje_txt
+
+
 def coletar_status_opcoes(rows, status_index):
     return sorted({normalizar_status_os(row[status_index]) for row in rows if row[status_index]})
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DataTable } from "@/components/ui/data-table";
 import OrderStatusBadge from "./OrderStatusBadge";
+import OrderAtrasadaBadge from "./OrderAtrasadaBadge";
 import { formatCurrency, getOrderDisplayNumber } from "@/lib/constants";
 
 const columns = [
@@ -38,7 +39,12 @@ const columns = [
   {
     key: "status",
     header: "Status",
-    render: (os) => <OrderStatusBadge status={os.status} />,
+    render: (os) => (
+      <div className="flex flex-wrap items-center gap-1">
+        <OrderStatusBadge status={os.status} />
+        <OrderAtrasadaBadge os={os} />
+      </div>
+    ),
   },
   {
     key: "data_os",

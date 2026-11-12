@@ -8,6 +8,7 @@ from migrations.versions import (
     m0002_financeiro_minimo,
     m0003_compras_aparelhos,
     m0004_dados_loja,
+    m0005_os_data_previsao,
 )
 
 MIGRATIONS = [
@@ -15,4 +16,5 @@ MIGRATIONS = [
     m0002_financeiro_minimo,
     m0003_compras_aparelhos,
     m0004_dados_loja,
+    m0005_os_data_previsao,
 ]

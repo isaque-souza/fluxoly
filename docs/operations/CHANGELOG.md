@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Previsão de entrega da OS)
+- **feat: previsão de entrega e OS atrasada** (BR-101) — campo "Previsão de entrega" na criação e edição da
+  OS; selo "Atrasada" na lista e no Kanban, métrica "Atrasadas" na lista e "OS Atrasadas" no Dashboard.
+  **Migration `m0005`** (coluna nullable `os.data_previsao`, aditiva, sem backfill). Plano:
+  `docs/engineering/plans/PLAN-os-data-previsao.md`. Etapa 9 (Onda 2) dos candidatos do benchmark.
+
 ### Alterado (2026-11-11 — Vendedor sem custo/lucro no Dashboard)
 - **feat: vendedor não vê custo, lucro nem resultado no Dashboard** (BR-100) — o backend deixa de enviar
   essas chaves para o perfil `vendedor` e a tela esconde os blocos. Limitar o vendedor às próprias vendas
