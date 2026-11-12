@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Tela inicial e Configurações)
+- **docs: análise de Tela inicial e Configurações do Mercado Phone** — avisos de pendências, widgets,
+  parâmetros gerais, gestão de acesso (visibilidade de vendas, horário), senhas mestras, situações de OS
+  configuráveis, notificações e modelos de documentos. Corrige a seção Clientes e Relatórios: o Dashboard
+  da Fluxoly já tem lucro e ticket médio, mas só de OS. Sem mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Clientes e Relatórios)
 - **docs: análise de Clientes e Relatórios do Mercado Phone** — ficha com histórico de compras, índice de
   recompra, catálogo de relatórios, dashboard de alertas de dados e dashboard diário. Novo **KI-062**:

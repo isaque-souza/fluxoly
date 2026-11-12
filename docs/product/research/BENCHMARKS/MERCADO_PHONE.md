@@ -15,6 +15,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
+| Tela inicial e Configurações | Concluída — avisos, widgets, parâmetros, gestão de acesso, senhas mestras, situações de OS, notificações (somente leitura) | 2026-11-11 |
 | Clientes e Relatórios | Concluída — cadastro de pessoas, histórico de compras, catálogo de 39 relatórios, alertas, dashboard diário (somente leitura) | 2026-11-11 |
 | Fiscal | Concluída — score fiscal, NF-e, NF de entrada do usado, captura de XML, NFs de vendas (somente leitura; nenhuma nota emitida) | 2026-11-11 |
 
@@ -765,7 +766,9 @@ cliente). Nenhum valor da loja registrado aqui.*
 
 **A Fluxoly já tem:** cadastro de cliente (nome, telefone, e-mail, CPF/CNPJ, observações) com perfil que
 mostra histórico de OS e garantias; relatórios de faturamento, lucro bruto, custo de peças, custos
-operacionais, técnicos, e a aba Compra e revenda (BR-093).
+operacionais, técnicos, e a aba Compra e revenda (BR-093); Dashboard com lucro bruto, ticket médio e
+resultado líquido — calculados só sobre OS (`api_system.py`: ticket médio = faturamento ÷ OS
+finalizadas), sem as vendas.
 
 **Achado na comparação (KI-062):** o perfil do cliente e o detalhe da unidade ainda mostram o placeholder
 "módulo de Vendas em construção", embora Vendas exista e grave `cliente_id`/`unidade_serializada_id`. O
@@ -773,7 +776,7 @@ histórico de compras do cliente já está no banco, só não é exibido.
 
 **Não tem (encontrado no Mercado Phone):** histórico de compras do cliente com totais; aniversário,
 Instagram, endereço; crédito do cliente; índice de recompra; ranking de clientes e aniversariantes;
-dashboard diário com lucro; lucro líquido de taxa; alertas de dados (venda com prejuízo, custo zerado);
+dashboard que some vendas + OS; lucro líquido de taxa; alertas de dados (venda com prejuízo, custo zerado);
 relatórios de comissão.
 
 #### Decisão pendente do PO
@@ -787,6 +790,89 @@ Candidatos por relação valor × esforço, na leitura deste benchmark (sugestã
    WhatsApp.
 5. **Ranking / recompra de clientes**: depende de 1.
 6. Não replicar o catálogo de 39 relatórios: preferir poucos relatórios com filtros.
+
+---
+
+## Tela inicial e Configurações
+
+*Walkthrough de 2026-11-11, somente leitura: tela inicial (atalhos, avisos, widgets), Configurações →
+Visão geral, Parâmetros gerais, Gestão de acesso (formulário de um usuário aberto e fechado sem salvar),
+Situações da OS, Notificações, Modelos de documentos e Senhas mestras. Nenhum dado de usuário ou cliente
+registrado aqui.*
+
+### Tela inicial — fluxo observado
+- **Atalhos** configuráveis (Nova venda, Clientes, Estoque, OS, Dashboard de alertas).
+- **Avisos** com contagem e link direto para a lista: itens abaixo do mínimo, agendamentos,
+  aniversariantes do dia, contas a receber vencendo hoje, **OS com previsão vencida**, **produtos com IMEI
+  duplicado**. É a "lista de pendências do dia" — a tela abre dizendo o que precisa de ação.
+- Carrossel de banners de terceiros (anúncios de agências, fornecedores) ocupando metade da área nobre.
+- **Meus widgets**: filtro de período, gráfico de OS por situação, gráfico de vendas, dashboard diário de
+  vendas e últimas vendas com lucro; widgets podem ser ocultados e o layout salvo por usuário.
+- O lucro no dashboard pode ser escondido de vendedores (parâmetro "Bloquear lucro no dash para
+  vendedores", ligado nesta loja).
+
+### Configurações — fluxo observado
+- **Visão geral**: todos os cadastros auxiliares agrupados por módulo — Global (configurações, gestão de
+  acesso, dados da empresa), Pessoas (pessoas, vendedores), Venda (funil, canais, tipo de entrega, termos
+  de garantia), Estoque (modelos, GB, estado do aparelho, cor, tipo, disponibilidade), Financeiro (formas
+  de pagamento, bancos), OS (configurações, serviços, peças, modelos de checklist, situações), Fiscal.
+- **Parâmetros gerais**: liga/desliga módulos (caixa, crédito do cliente, programa de indicação),
+  preencher forma de pagamento automaticamente, logo nos termos, IMEI no código da NF-e, entrada no
+  estoque pela NF-e de entrada, cabeçalho dos documentos (editor de texto rico).
+- **Gestão de acesso**: usuário com permissões por módulo (Cadastros básicos, Estoque, Ferramentas,
+  Financeiro, Fiscal, Informações gerenciais, OS, Relatórios, Tela inicial, Venda) + perfis customizados
+  (esta loja não criou nenhum: usa só os módulos por usuário), tela inicial por usuário, lojas
+  permitidas, **controle de visualização de vendas** (vendedor relacionado, ver todas as vendas ou só as
+  próprias, só um tipo de venda, só as do dia) e **horário de acesso por dia da semana**.
+- **Senhas mestras**: senhas de gerente com conjunto de permissões, pedidas na hora da ação sensível —
+  cancelar/descancelar venda, devolução/troca, desconto acima do limite, editar/excluir estoque, excluir
+  OS, transferir estoque ou cliente entre lojas, emitir NF-e/NFC-e, abrir/reabrir/editar/excluir caixa,
+  editar/excluir contas; editar venda pode exigir senha "somente nas concluídas". A loja usa três (geral,
+  estoque, comercial/atendente).
+- **Situações da OS**: cadastráveis, com cor, finalidade (em andamento / finalizado / cancelada) e modelo
+  de mensagem de WhatsApp por situação. A loja usa seis (inclui Orçamento, Aprovado, Aguardando peça).
+- **Notificações**: resumos diários automáticos (contas a pagar, contas a receber, aniversariantes) e
+  notificações de OS e de vendas, cada um ativável.
+- **Modelos de documentos**: recibo de venda A4 e 80 mm (térmica), recibo de OS A4, cada um configurável.
+
+### Pontos positivos
+- **Avisos na tela inicial**: pendências operacionais com contagem e um clique até a lista.
+- **Senha mestre**: o atendente executa a operação sensível na hora, com autorização do gerente, sem
+  precisar de outro login — e fica registrado quem autorizou.
+- Controle fino do que o vendedor vê (só as próprias vendas, sem lucro).
+- Situações da OS com significado fixo (finalidade) mas nome livre — a loja adapta sem quebrar relatório.
+- Configurações centralizadas por módulo numa tela só.
+
+### Pontos negativos
+- Banners de anúncio de terceiros na tela inicial do sistema de gestão.
+- Muitos parâmetros sem explicação do efeito (dependem de ícone de ajuda/vídeo).
+- Duas formas de controlar acesso (módulos por usuário e perfis customizados) para o mesmo fim.
+
+### Impacto para Fluxoly (Tela inicial e Configurações)
+
+**A Fluxoly já tem:** perfis fixos `admin`/`tecnico`/`vendedor`/`estoque`/`financeiro`
+(`fluxoly_core.py::PERFIS_OPCOES`, sem hierarquia, BR-003) com restrição por rota; desativação de usuário;
+dados da loja (`DadosLoja.jsx`); tipos de garantia e tipos de reparo cadastráveis; Dashboard (só OS — ver
+Clientes e Relatórios). O botão "Imprimir" de Vendas existe, mas ainda só avisa "Impressão ainda não
+disponível" (previsto na V1.8 do roadmap) — recibo de venda é lacuna, não diferença de modelo.
+
+**Não tem:** avisos/pendências na tela inicial; autorização de gerente na hora (senha mestre) para
+cancelamento, desconto acima do limite e exclusões; restringir vendedor às próprias vendas ou esconder
+lucro; horário de acesso; situações de OS configuráveis (são 4 fixas em `fluxoly_core.py`);
+notificações/resumos automáticos; parâmetros de módulo liga/desliga.
+
+#### Decisão pendente do PO
+Candidatos (sugestão, não decisão):
+1. **Painel de pendências na tela inicial**: OS com previsão vencida, contas vencendo hoje, estoque abaixo
+   do mínimo, IMEI duplicado. Só consultas sobre dados existentes.
+2. **Autorização de gerente na operação** (cancelar venda, desconto acima do limite, excluir), com
+   registro em `audit_log` de quem autorizou. Relevante para segurança e auditoria; exige plano (mexe em
+   autorização — aprovação obrigatória pelo CLAUDE.md).
+3. **Esconder lucro/custo do perfil vendedor** e limitar a listagem às próprias vendas: complementa os
+   perfis fixos sem criar permissão granular completa.
+4. Situações de OS configuráveis: só se a loja precisar de "Orçamento"/"Aprovado" — avaliar contra a
+   máquina de estados atual antes.
+5. Não implementar: banners de terceiros, horário de acesso, duplicidade perfis × módulos.
 
 ---
 
