@@ -24,6 +24,7 @@ Depende de: `fluxoly_unidades_serializadas_repository.py` (SQL),
 """
 
 import sqlite3
+from datetime import date
 
 import fluxoly_unidades_serializadas_repository as repo
 from fluxoly_audit import registrar_log_auditoria
@@ -65,6 +66,22 @@ def _origem_label(estoque_modelo, estoque_descricao, produto_modelo, produto_des
     return (estoque_modelo or estoque_descricao) or (produto_modelo or produto_descricao) or ""
 
 
+# Dias em estoque (PLAN-dias-em-estoque.md): só conta enquanto a unidade está na loja.
+STATUS_EM_ESTOQUE = ("disponivel", "reservado", "em_reparo")
+
+
+def calcular_dias_em_estoque(criado_em, status, hoje=None):
+    """Dias desde o cadastro da unidade (`criado_em`), só para status em estoque; `None` para
+    vendida/devolvida ou data ilegível. Data-base em UTC, como `criado_em` (KI-061)."""
+    if status not in STATUS_EM_ESTOQUE or not criado_em:
+        return None
+    try:
+        entrada = date.fromisoformat(str(criado_em)[:10])
+    except ValueError:
+        return None
+    return max(0, ((hoje or date.today()) - entrada).days)
+
+
 def _unidade_com_origem_para_dict(row):
     """Mesma forma de `_unidade_para_dict`, com campos de origem (join) para listagem/exibição."""
     if not row:
@@ -74,6 +91,7 @@ def _unidade_com_origem_para_dict(row):
      _produto_categoria, _produto_marca) = row[13:19]
     _estoque_sku, _produto_sku = row[19:21]
     _estoque_valor, _produto_preco_venda, _produto_cor, _produto_capacidade = row[21:25]
+    base["dias_em_estoque"] = calcular_dias_em_estoque(base["criado_em"], base["status"])
     base["origem_tipo"] = "estoque" if base["estoque_id"] else ("produto" if base["produto_id"] else None)
     base["origem_label"] = _origem_label(_estoque_modelo, _estoque_descricao, _produto_modelo, _produto_descricao)
     base["produto_categoria"] = _produto_categoria

@@ -52,6 +52,24 @@ describe("UnidadesSerializadas — estados e status semântico", () => {
     expect(screen.getByText("Estoque").className).toContain("bg-secondary/60");
   });
 
+  it("mostra dias em estoque com destaque a partir de 90 dias e traço para vendida", async () => {
+    mockList.mockResolvedValue({
+      ok: true,
+      total: 3,
+      items: [
+        { id: 11, imei: "356000000000011", status: "disponivel", origem_tipo: "produto", dias_em_estoque: 1 },
+        { id: 12, imei: "356000000000012", status: "em_reparo", origem_tipo: "produto", dias_em_estoque: 120 },
+        { id: 13, imei: "356000000000013", status: "vendido", origem_tipo: "produto", dias_em_estoque: null },
+      ],
+    });
+    render(<UnidadesSerializadas />);
+
+    await waitFor(() => expect(screen.getByTestId("unidade-dias-11")).toHaveTextContent("1 dia"));
+    expect(screen.getByTestId("unidade-dias-12")).toHaveTextContent("120 dias");
+    expect(screen.getByText("120 dias").className).toContain("text-warning");
+    expect(screen.getByTestId("unidade-dias-13")).toHaveTextContent("—");
+  });
+
   it("mostra EmptyState quando não há unidades", async () => {
     mockList.mockResolvedValue({ ok: true, total: 0, items: [] });
     render(<UnidadesSerializadas />);

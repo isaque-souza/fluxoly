@@ -74,6 +74,20 @@ const SORT_OPTIONS = [
 
 const PER_PAGE = 20;
 
+// Dias em estoque (docs/engineering/plans/PLAN-dias-em-estoque.md). Destaque visual a partir de
+// 90 dias -- só leitura, não muda nenhuma regra. Vendida/devolvida vem `null` do backend.
+const DIAS_ESTOQUE_DESTAQUE = 90;
+
+function DiasEmEstoque({ dias }) {
+  if (dias === null || dias === undefined) return <span className="text-muted-foreground">—</span>;
+  const parado = dias >= DIAS_ESTOQUE_DESTAQUE;
+  return (
+    <span className={parado ? "text-warning font-medium" : "text-muted-foreground"} title={parado ? "Parado há 90 dias ou mais" : undefined}>
+      {dias === 1 ? "1 dia" : `${dias} dias`}
+    </span>
+  );
+}
+
 function formatDate(value) {
   if (!value) return "—";
   // criado_em vem como "YYYY-MM-DD HH:MM:SS" (datetime('now') do SQLite)
@@ -578,7 +592,7 @@ export default function UnidadesSerializadas() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        {["IMEI", "Origem", "Status", "Localização", "Cadastrado em"].map((h) => (
+                        {["IMEI", "Origem", "Status", "Em estoque", "Localização", "Cadastrado em"].map((h) => (
                           <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             {h}
                           </th>
@@ -606,6 +620,9 @@ export default function UnidadesSerializadas() {
                             </td>
                             <td className="px-4 py-3">
                               <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap" data-testid={`unidade-dias-${item.id}`}>
+                              <DiasEmEstoque dias={item.dias_em_estoque} />
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">{item.localizacao || "—"}</td>
                             <td className="px-4 py-3 text-muted-foreground">{formatDate(item.criado_em)}</td>
