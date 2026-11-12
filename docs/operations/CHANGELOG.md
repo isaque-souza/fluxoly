@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — Planos da Onda 2 que dependem do PO)
+- **docs: rascunho técnico de formas de pagamento, recebimento da OS, troca, lucro líquido e autorização de
+  gerente** — `docs/engineering/plans/PLAN-onda2-pagamentos-caixa.md`: estado atual, schema proposto e as
+  perguntas que o PO precisa responder antes de implementar. Nada implementado.
+
 ### Adicionado (2026-11-11 — Relato, laudo e observação interna da OS)
 - **feat: relato do cliente, laudo técnico e observação interna na OS** (BR-102) — painel "Relato, laudo e
   observações" em Nova/Editar OS; relato e laudo saem no PDF de entrada/entrega, a observação interna
