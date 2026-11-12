@@ -43,6 +43,21 @@ describe("Orders — estados loading/success/empty/error", () => {
     expect(screen.getByText("Em andamento")).toBeInTheDocument();
   });
 
+  it("BR-101: OS atrasada ganha selo e entra na métrica Atrasadas", async () => {
+    mockList.mockResolvedValue({
+      ok: true,
+      ordens: [
+        { id: 1, cliente: "Maria", status: "Em andamento", atrasada: true, data_previsao: "2026-11-01" },
+        { id: 2, cliente: "João", status: "Em andamento", atrasada: false, data_previsao: "2099-01-01" },
+      ],
+    });
+    renderOrders();
+
+    await waitFor(() => expect(screen.getByText("Maria")).toBeInTheDocument());
+    expect(screen.getAllByTestId("os-atrasada").length).toBeGreaterThan(0);
+    expect(screen.getByText("Atrasadas")).toBeInTheDocument();
+  });
+
   it("mostra EmptyState quando não há ordens", async () => {
     mockList.mockResolvedValue({ ok: true, ordens: [] });
     renderOrders();

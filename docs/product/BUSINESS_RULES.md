@@ -640,6 +640,14 @@ faturamento, quantidades e ticket médio. `tecnico` e `estoque` seguem como ante
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); restringir o vendedor às
 próprias vendas segue como decisão pendente (`PLAN-esconder-lucro-vendedor.md`).*
 
+**BR-101 — ✅ Implementado (2026-11-11)**
+A OS pode ter uma **previsão de entrega** (data, opcional, editável a qualquer momento). Está
+**atrasada** a OS ainda aberta (nem finalizada nem cancelada) cuja previsão é anterior a hoje — no
+próprio dia da previsão ainda não está atrasada. Atraso é calculado, nunca gravado, e só sinaliza
+(selo na lista e no Kanban, contagem no Dashboard); não bloqueia nada. OS sem previsão nunca atrasa.
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); "vence no fim do dia" por
+decisão de engenharia — revisável no QA.*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

@@ -7,6 +7,7 @@ import { getOrderDisplayNumber, getStatusVariant } from "@/lib/constants";
 import { ErrorState } from "@/components/ui/error-state";
 import { Reveal } from "@/components/ui/reveal";
 import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
+import OrderAtrasadaBadge from "@/components/orders/OrderAtrasadaBadge";
 
 // Tom visual por variante semântica -- mesma fonte de verdade (getStatusVariant,
 // lib/constants.js) usada pelo OrderStatusBadge em Orders/EditOrder, para que o
@@ -154,7 +155,10 @@ export default function Kanban() {
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
                         </Link>
                       </div>
-                      <OrderStatusBadge status={os.status} />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <OrderStatusBadge status={os.status} />
+                        <OrderAtrasadaBadge os={os} />
+                      </div>
                       {os.tecnico && (
                         <p className="text-xs text-muted-foreground">👤 {os.tecnico}</p>
                       )}

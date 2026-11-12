@@ -241,6 +241,9 @@ export default function Dashboard() {
                 {veCustoLucro && <LooseMetric label="Lucro Bruto" value={formatCurrency(data?.lucro_total)} />}
                 <LooseMetric label="Finalizadas" value={data?.ordens_finalizadas ?? "—"} />
                 <LooseMetric label="Em Aberto" value={data?.ordens_abertas ?? "—"} valueClassName="text-warning" />
+                {data?.ordens_atrasadas > 0 && (
+                  <LooseMetric label="OS Atrasadas" value={data.ordens_atrasadas} valueClassName="text-destructive" />
+                )}
                 <LooseMetric label="Peças Pendentes" value={data?.shopping_pendentes ?? "—"} />
                 <LooseMetric label="Urgentes" value={data?.shopping_urgentes ?? "—"} valueClassName="text-destructive" />
                 <LooseMetric label="Ticket Médio" value={formatCurrency(data?.ticket_medio)} />

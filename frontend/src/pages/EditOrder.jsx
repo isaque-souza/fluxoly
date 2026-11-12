@@ -81,6 +81,7 @@ export default function EditOrder() {
           valor_descontado: os.valor_descontado || "",
           data_os: os.data ? os.data.split("T")[0] : new Date().toISOString().split("T")[0],
           observacoes: os.observacoes || "",
+          data_previsao: os.data_previsao || "",
         });
         setSelectedReparos(os.reparo_ids || []);
         const pecasMap = {};
@@ -460,6 +461,10 @@ export default function EditOrder() {
               <div className="space-y-1.5">
                 <Label htmlFor="edit-order-data-os">Data da OS</Label>
                 <Input id="edit-order-data-os" type="date" value={form.data_os} onChange={(e) => setField("data_os", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-order-data-previsao">Previsão de entrega</Label>
+                <Input id="edit-order-data-previsao" type="date" value={form.data_previsao} onChange={(e) => setField("data_previsao", e.target.value)} />
               </div>
             </div>
           </PanelContent>

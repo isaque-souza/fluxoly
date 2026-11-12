@@ -17,7 +17,7 @@ import fluxoly_compras_aparelhos_service as compras_aparelhos_service
 import fluxoly_dados_loja_service as dados_loja_service
 import fluxoly_unidades_serializadas_service as unidades_service
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
-from fluxoly_core import CLIENTE_OS_INTERNA, TIPO_OS_INTERNA
+from fluxoly_core import CLIENTE_OS_INTERNA, TIPO_OS_INTERNA, normalizar_data_previsao, os_atrasada
 from fluxoly_mercadophone import atualizar_runtime_mercadophone, carregar_config_mercadophone
 from fluxoly_os import TIPOS_DOCUMENTO_CLIENTE, buscar_os_para_documento, montar_documento_cliente
 from fluxoly_validation import parse_float, parse_int, safe_json
@@ -227,6 +227,8 @@ def create_api_os_blueprint(deps):
             "observacoes": row[11] or "" if len(row) > 11 else "",
             "origem_integracao": row[16] or "" if len(row) > 16 else "",
             "id_externo_integracao": row[17] or "" if len(row) > 17 else "",
+            "data_previsao": row[18] or "" if len(row) > 18 else "",
+            "atrasada": os_atrasada(status, row[18] if len(row) > 18 else ""),
         }
 
     def _ordem_lista_por_id_desc(item):
@@ -330,7 +332,8 @@ def create_api_os_blueprint(deps):
                 COALESCE(imei, ''), COALESCE(origem_integracao, ''),
                 COALESCE(id_externo_integracao, ''),
                 COALESCE(data_finalizado, ''),
-                unidade_serializada_id
+                unidade_serializada_id,
+                COALESCE(data_previsao, '')
             FROM os
             WHERE id=?
             """,
@@ -392,6 +395,8 @@ def create_api_os_blueprint(deps):
                 "id_externo_integracao": row[17] or "",
                 "data_finalizado": row[18] or "",
                 "unidade_serializada_id": row[19],
+                "data_previsao": row[20] or "",
+                "atrasada": os_atrasada(status, row[20]),
                 "pecas_usadas": pecas_usadas,
             }
         )
@@ -659,6 +664,9 @@ def create_api_os_blueprint(deps):
         valor_descontado = parse_float(body.get("valor_descontado"), default=0.0)
         data = (body.get("data_os") or "").strip() or datetime.now().strftime("%Y-%m-%d")
         status_raw = (body.get("status") or "Em andamento").strip()
+        data_previsao, erro_previsao = normalizar_data_previsao(body.get("data_previsao"))
+        if erro_previsao:
+            return err(erro_previsao)
 
         status = normalizar_status_os(status_raw)
 
@@ -700,8 +708,8 @@ def create_api_os_blueprint(deps):
                 """
                 INSERT INTO os (tipo, cliente, aparelho, tecnico, reparo_id, status,
                     valor_cobrado, valor_descontado, custo_pecas, data, observacoes, modelo, vendedor, cor, imei,
-                    unidade_serializada_id)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    unidade_serializada_id, data_previsao)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     tipo,
@@ -720,6 +728,7 @@ def create_api_os_blueprint(deps):
                     cor,
                     imei,
                     unidade_serializada_id,
+                    data_previsao,
                 ),
             )
             novo_id = cursor.lastrowid
@@ -777,6 +786,11 @@ def create_api_os_blueprint(deps):
         data_os = (body.get("data_os") or "").strip() or datetime.now().strftime("%Y-%m-%d")
         status = normalizar_status_os(body.get("status") or "", status_padrao="")
         aparelho = modelo
+        # BR-101 -- só mexe na previsão quando o cliente manda o campo (cliente antigo não apaga).
+        atualizar_previsao = "data_previsao" in body
+        data_previsao, erro_previsao = normalizar_data_previsao(body.get("data_previsao"))
+        if erro_previsao:
+            return err(erro_previsao)
 
         # BR-090 -- OS interna: mesmos campos forçados da criação (ver criar_ordem).
         interna = tipo == TIPO_OS_INTERNA
@@ -870,6 +884,8 @@ def create_api_os_blueprint(deps):
                     os_id,
                 ),
             )
+            if atualizar_previsao:
+                cursor.execute("UPDATE os SET data_previsao=? WHERE id=?", (data_previsao, os_id))
             salvar_reparos_os(cursor, os_id, reparo_ids)
 
             if resolvidos:

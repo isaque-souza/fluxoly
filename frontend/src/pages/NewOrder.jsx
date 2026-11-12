@@ -28,6 +28,7 @@ const EMPTY_FORM = {
   valor_descontado: "",
   data_os: new Date().toISOString().split("T")[0],
   observacoes: "",
+  data_previsao: "",
 };
 
 export default function NewOrder() {
@@ -230,6 +231,10 @@ export default function NewOrder() {
               <div className="space-y-1.5">
                  <Label htmlFor="order-data-os">Data da OS</Label>
                  <Input id="order-data-os" type="date" value={form.data_os} onChange={(e) => setField("data_os", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                 <Label htmlFor="order-data-previsao">Previsão de entrega</Label>
+                 <Input id="order-data-previsao" type="date" value={form.data_previsao} onChange={(e) => setField("data_previsao", e.target.value)} />
               </div>
             </div>
           </PanelContent>
