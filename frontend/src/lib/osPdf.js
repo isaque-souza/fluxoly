@@ -374,6 +374,9 @@ export function montarPdfOs(JsPDF, documento, numero) {
   pdf.setLineWidth(0.2);
   y += ESPACO_ENTRE_BLOCOS + 1;
 
+  // BR-102 -- relato e laudo vêm do backend só quando preenchidos; observação interna nunca vem.
+  if (ordem.relato_cliente) quadroDeTexto("Relato do cliente", ordem.relato_cliente);
+  if (ordem.laudo_tecnico) quadroDeTexto("Laudo técnico", ordem.laudo_tecnico);
   if (ordem.observacoes) quadroDeTexto("Observação", ordem.observacoes);
 
   if (documento.termos) termos(entrega ? "TERMOS DE GARANTIA" : "TERMOS DE ENTRADA", documento.termos);

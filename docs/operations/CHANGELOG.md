@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Relato, laudo e observação interna da OS)
+- **feat: relato do cliente, laudo técnico e observação interna na OS** (BR-102) — painel "Relato, laudo e
+  observações" em Nova/Editar OS; relato e laudo saem no PDF de entrada/entrega, a observação interna
+  nunca. **Migration `m0006`** (três colunas nullable em `os`, aditiva, sem backfill). Plano:
+  `docs/engineering/plans/PLAN-os-relato-laudo.md`. Etapa 10 (Onda 2) dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Previsão de entrega da OS)
 - **feat: previsão de entrega e OS atrasada** (BR-101) — campo "Previsão de entrega" na criação e edição da
   OS; selo "Atrasada" na lista e no Kanban, métrica "Atrasadas" na lista e "OS Atrasadas" no Dashboard.

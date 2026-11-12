@@ -7,7 +7,7 @@ import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, o
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import OrderTextosPanel from "@/components/orders/OrderTextosPanel";
 import { formatCurrency, getOrderDisplayNumber, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK, TIPO_OS_INTERNA } from "@/lib/constants";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -82,6 +82,9 @@ export default function EditOrder() {
           data_os: os.data ? os.data.split("T")[0] : new Date().toISOString().split("T")[0],
           observacoes: os.observacoes || "",
           data_previsao: os.data_previsao || "",
+          relato_cliente: os.relato_cliente || "",
+          laudo_tecnico: os.laudo_tecnico || "",
+          observacao_interna: os.observacao_interna || "",
         });
         setSelectedReparos(os.reparo_ids || []);
         const pecasMap = {};
@@ -664,15 +667,7 @@ export default function EditOrder() {
           </PanelContent>
         </Panel>
 
-        {/* Observações */}
-        <Panel>
-          <PanelHeader>
-            <PanelTitle>Observações</PanelTitle>
-          </PanelHeader>
-          <PanelContent className="space-y-4">
-            <Textarea value={form.observacoes} onChange={(e) => setField("observacoes", e.target.value)} />
-          </PanelContent>
-        </Panel>
+        <OrderTextosPanel form={form} setField={setField} idPrefix="edit-order" />
 
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting} data-testid="order-save-button">
