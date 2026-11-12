@@ -656,6 +656,16 @@ do cliente — complementa a lista do que não sai (BR-097).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); relato/laudo no documento
 por decisão de engenharia — revisável no QA.*
 
+**BR-103 — ✅ Implementado (2026-11-11)**
+Venda concluída gera **recibo para o cliente** (PDF): dados da loja, cliente, data, vendedor, forma de
+pagamento, cada item com produto, IMEI, valor praticado e garantia (snapshot, BR-057), total, observação
+da venda e termos de garantia dos Dados da Loja. **Nunca** sai custo, lucro, comissão, preço de tabela
+nem motivo de desconto. CPF/CNPJ só quando quem gera pode lê-lo (KI-045). Venda cancelada não gera
+recibo; sem Dados da Loja cadastrados também não. Qualquer perfil autenticado gera (mesmo acesso do
+detalhe da venda).
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); conteúdo espelhado do
+comprovante de entrega da OS (BR-097).*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

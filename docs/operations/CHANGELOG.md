@@ -9,6 +9,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Recibo de venda)
+- **feat: recibo de venda em PDF** (BR-103) — o botão "Imprimir" da venda (detalhe e tela de venda
+  concluída), que era só um aviso "em breve", passa a baixar o recibo: loja, cliente, item com IMEI e
+  garantia, total e termos; nunca custo, lucro ou comissão. Novo `GET /api/vendas/<id>/recibo`. Plano:
+  `docs/engineering/plans/PLAN-recibo-venda.md`. Etapa 12 (Onda 3) dos candidatos do benchmark.
+- **refactor:** primitivas de desenho do PDF da OS extraídas para `frontend/src/lib/pdfDocumento.js` (commit
+  próprio, sem mudança no documento da OS), usadas pelos dois documentos.
+
 ### Documentação (2026-11-11 — Planos da Onda 2 que dependem do PO)
 - **docs: rascunho técnico de formas de pagamento, recebimento da OS, troca, lucro líquido e autorização de
   gerente** — `docs/engineering/plans/PLAN-onda2-pagamentos-caixa.md`: estado atual, schema proposto e as

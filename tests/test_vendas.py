@@ -1786,3 +1786,100 @@ class TestDashboardVendasOS:
         resp = client.get("/api/dashboard?start_date=2000-01-01&end_date=2000-01-31").get_json()
         assert resp["vendas"]["quantidade"] == 0
         assert resp["vendas"]["ticket_medio"] == 0
+
+
+@pytest.fixture
+def loja_para_recibo():
+    """Recibo exige Dados da Loja (mesmo padrão de tests/test_os_documento.py)."""
+    conn = _app.conectar()
+    try:
+        conn.execute("DELETE FROM dados_loja")
+        conn.execute(
+            "INSERT INTO dados_loja (id, nome_fantasia, termos_garantia) VALUES (1, 'Loja Recibo Teste', 'Termos.')"
+        )
+        conn.commit()
+        yield
+        conn.execute("DELETE FROM dados_loja")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+class TestReciboVenda:
+    """Recibo de venda para o cliente (BR-103, PLAN-recibo-venda.md)."""
+
+    def _cpf(self, cenario, cpf="123.456.789-09"):
+        conn = _app.conectar()
+        try:
+            conn.execute("UPDATE clientes SET cpf_cnpj=? WHERE id=?", (cpf, cenario["cliente_id"]))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def test_anonimo_recebe_401(self, client):
+        assert client.get("/api/vendas/1/recibo").status_code == 401
+
+    def test_recibo_traz_item_garantia_e_total_sem_custo_nem_comissao(
+        self, client, login_como, usuario_admin, cenario_venda, loja_para_recibo
+    ):
+        login_como(client, usuario_admin)
+        self._cpf(cenario_venda)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+
+        resp = client.get(f"/api/vendas/{venda_id}/recibo")
+
+        assert resp.status_code == 200, resp.get_json()
+        recibo = resp.get_json()["recibo"]
+        assert recibo["loja"]["nome_fantasia"] == "Loja Recibo Teste"
+        assert recibo["termos"] == "Termos."
+        assert recibo["cliente"]["cpf_cnpj"] == "123.456.789-09"
+        assert recibo["venda"]["valor_total"] == 3200.0
+        assert recibo["venda"]["forma_pagamento"] == "Pix"
+        item = recibo["venda"]["itens"][0]
+        assert item["valor"] == 3200.0
+        assert item["garantia"]["nome"] == "Garantia Teste Padrão"
+        texto = resp.get_data(as_text=True)
+        for proibido in ("custo", "lucro", "comissao", "valor_tabela", "motivo_desconto"):
+            assert proibido not in texto, proibido
+
+    def test_vendedor_recebe_recibo_sem_cpf(
+        self, client, login_como, usuario_vendedor, cenario_venda, loja_para_recibo
+    ):
+        login_como(client, usuario_vendedor)
+        self._cpf(cenario_venda)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+
+        recibo = client.get(f"/api/vendas/{venda_id}/recibo").get_json()["recibo"]
+
+        assert recibo["cliente"]["cpf_cnpj"] == ""
+
+    def test_venda_cancelada_nao_gera_recibo(
+        self, client, login_como, usuario_admin, cenario_venda, loja_para_recibo
+    ):
+        login_como(client, usuario_admin)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+        client.post(f"/api/vendas/{venda_id}/cancelar", json={"motivo": "erro_lancamento"})
+
+        resp = client.get(f"/api/vendas/{venda_id}/recibo")
+
+        assert resp.status_code == 409
+        assert "cancelada" in resp.get_json()["erro"]
+
+    def test_sem_dados_da_loja_pede_cadastro(self, client, login_como, usuario_admin, cenario_venda):
+        conn = _app.conectar()
+        try:
+            conn.execute("DELETE FROM dados_loja")
+            conn.commit()
+        finally:
+            conn.close()
+        login_como(client, usuario_admin)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+
+        resp = client.get(f"/api/vendas/{venda_id}/recibo")
+
+        assert resp.status_code == 409
+        assert "Dados da Loja" in resp.get_json()["erro"]
+
+    def test_venda_inexistente_404(self, client, login_como, usuario_admin):
+        login_como(client, usuario_admin)
+        assert client.get("/api/vendas/999999999/recibo").status_code == 404
