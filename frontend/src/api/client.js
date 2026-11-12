@@ -222,6 +222,14 @@ export const ordens = {
 };
 
 // ── Dados da Loja (BR-094) ───────────────────────────────────────────────────
+// ── Auditoria (leitura do audit_log, admin/financeiro) ─────────────────────
+export const auditoria = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return get(`/auditoria${qs ? "?" + qs : ""}`);
+  },
+};
+
 export const dadosLoja = {
   get:  ()     => get("/dados-loja"),
   save: (data) => put("/dados-loja", data),

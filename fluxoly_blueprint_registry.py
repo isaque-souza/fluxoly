@@ -123,6 +123,7 @@ from fluxoly_storage import (
     salvar_configuracoes_integracoes,
 )
 from fluxoly_tipos_garantia_controller import create_tipos_garantia_blueprint
+from fluxoly_auditoria_controller import create_auditoria_blueprint
 from fluxoly_tipos_garantia_service import obter_tipo_garantia
 from fluxoly_unidades_serializadas_controller import create_unidades_serializadas_blueprint
 from fluxoly_vendas_controller import create_vendas_blueprint
@@ -463,3 +464,9 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
     # da OS para o cliente -- ver docs/engineering/plans/PLAN-documentos-os-cliente.md)
     # ========================================================================
     app.register_blueprint(create_dados_loja_blueprint({"conectar": conectar}))
+
+    # ========================================================================
+    # REGISTRO DO BLUEPRINT DE AUDITORIA (leitura do audit_log, admin/financeiro
+    # -- ver docs/engineering/plans/PLAN-tela-auditoria.md)
+    # ========================================================================
+    app.register_blueprint(create_auditoria_blueprint({"conectar": conectar}))
