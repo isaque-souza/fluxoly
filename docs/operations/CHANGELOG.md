@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Tela de auditoria)
+- **feat: tela de Auditoria** (`/auditoria`, admin/financeiro) — consulta do `audit_log` com filtros por
+  módulo, ação, nº do registro e período, paginação e detalhe antes/depois campo a campo. Novo
+  `GET /api/auditoria` (só leitura). Plano: `docs/engineering/plans/PLAN-tela-auditoria.md`. Etapa 2 dos
+  candidatos do benchmark Mercado Phone.
+
 ### Corrigido (2026-11-11 — KI-062)
 - **fix: compras do cliente e comprador da unidade** — o perfil do cliente lista as vendas dele
   (`/api/vendas?cliente_id=`, canceladas com badge) e o detalhe da unidade mostra comprador, venda e
