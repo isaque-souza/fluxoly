@@ -15,6 +15,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
+| Ferramentas e Marketplace | Concluída — automações de WhatsApp, indicação, catálogo, assinatura, loja de apps, serviços por uso (somente leitura) | 2026-11-11 |
 | Tela inicial e Configurações | Concluída — avisos, widgets, parâmetros, gestão de acesso, senhas mestras, situações de OS, notificações (somente leitura) | 2026-11-11 |
 | Clientes e Relatórios | Concluída — cadastro de pessoas, histórico de compras, catálogo de 39 relatórios, alertas, dashboard diário (somente leitura) | 2026-11-11 |
 | Fiscal | Concluída — score fiscal, NF-e, NF de entrada do usado, captura de XML, NFs de vendas (somente leitura; nenhuma nota emitida) | 2026-11-11 |
@@ -873,6 +874,76 @@ Candidatos (sugestão, não decisão):
 4. Situações de OS configuráveis: só se a loja precisar de "Orçamento"/"Aprovado" — avaliar contra a
    máquina de estados atual antes.
 5. Não implementar: banners de terceiros, horário de acesso, duplicidade perfis × módulos.
+
+---
+
+## Ferramentas e Marketplace
+
+*Walkthrough de 2026-11-11, somente leitura: menu Ferramentas (MP Lab, Fidelização, Documentos, Consulta
+Score, Central de alertas, Catálogo online, Preços do dia) e Marketplace (Loja de apps, Carteira MP).
+Nada foi ativado, configurado, consultado ou comprado. Nenhum dado de cliente nem valor registrado aqui.*
+
+### Ferramentas — fluxo observado
+- **Fidelização → "IA Blue"**: automações de WhatsApp disparadas por gatilho — pós-venda em 1, 7, 15, 30
+  e 180 dias (filtrável por produto), aniversário (com imagem) e **"upgrade" 1 ano após a compra**. Nesta
+  loja está ativo e com milhares de disparos: é das ferramentas mais usadas da conta.
+- **Programa de indicação**: a venda registra o cliente que indicou; painel com clientes indicadores,
+  vendas indicadas e faturamento. Em uso.
+- Relatório de aniversário, ranking de clientes; cashback "em breve".
+- **Documentos → Assinatura digital**: contrato de venda e de OS enviados para assinatura eletrônica,
+  com status e prazo; cobrada por uso. Pouco usada aqui.
+- **Consulta Score**: score de crédito do CPF antes de parcelar, cobrada por consulta. Nunca usada aqui.
+- **Catálogo online**: vitrine pública com link próprio, contatos (WhatsApp, Instagram), layout, banners,
+  FAQ e calculadora de aparelhos opcional; produto entra no catálogo com ordem de exibição e saúde da
+  bateria. Praticamente sem uso nesta loja (um produto).
+- **Preços do dia**: preços de fornecedores via parceiro (buscador de fornecedores de São Paulo), pago à
+  parte.
+- **MP Lab**: gerador por IA (chat) de recibos, dashboards e catálogo, a partir de modelos.
+
+### Marketplace — fluxo observado
+- **Loja de apps** com categorias (Pagamento no boleto, Vendas e marketing, IA e automação, Fiscal e
+  financeiro, Operação). Integrações "incluso no plano": **API** e **WhatsApp** (ativos nesta loja),
+  Webhooks, crediário de terceiros (PayJoy, Paymobi), operadora de telefonia, Meta Ads e Conversions API,
+  assistente de IA ("My Blue", ativo), **MCP para Claude e ChatGPT** (consultar relatórios, estoque e
+  vendas por IA), sistema financeiro externo, garantias de fornecedores de acessórios (registro automático
+  ao vender), seguro de smartphone (ativo), simulador de upgrade.
+- **"Pague só pelo que usar"**: consulta de IMEI simples/completa (blacklist, furto e roubo; autopreenche
+  o produto), consulta de CPF, assinatura digital, score de crédito.
+- **Carteira MP**: saldo pré-pago que paga esses serviços por uso.
+
+### Pontos positivos
+- **Pós-venda automático por WhatsApp**, incluindo o lembrete de troca/upgrade depois de um ano: é
+  recompra sem esforço do vendedor — e é o recurso que esta loja mais usa entre as ferramentas.
+- Indicação amarrada à venda (quem indicou quem), base para recompensa.
+- **Consulta de IMEI com blacklist/furto antes de comprar um usado**: protege a compra de aparelho.
+- API e MCP abertos: a loja pode integrar sem depender do fornecedor.
+
+### Pontos negativos
+- Muitas ferramentas pouco ou nunca usadas nesta conta (catálogo, score, assinatura, preços do dia):
+  amplitude de catálogo não vira uso.
+- Vários recursos são parceiros pagos à parte ou cobrados por uso via carteira pré-paga — custo
+  fragmentado e pouco previsível para a loja.
+
+### Impacto para Fluxoly (Ferramentas e Marketplace)
+
+**A Fluxoly já tem:** integração com o Mercado Phone que consome a API dele (`fluxoly_mercadophone.py`);
+tela de IMEI/unidade serializada; garantias de reparo e de venda.
+
+**Não tem:** mensagens automáticas (pós-venda, aniversário, lembrete de upgrade); registro de indicação
+na venda; consulta de IMEI em base de bloqueio/roubo; catálogo público; assinatura eletrônica; API
+pública documentada (já ❌ em `FEATURE_MATRIX_TEMPLATE.md`).
+
+#### Decisão pendente do PO
+Candidatos (sugestão, não decisão):
+1. **Lembretes de pós-venda e de upgrade** — mesmo sem disparo automático, uma lista diária "clientes
+   que compraram há 7/30/365 dias" com botão de WhatsApp (link `wa.me`, sem API paga) entrega a maior
+   parte do valor. Depende de KI-062 (compras do cliente) e conversa com "WhatsApp (notificações
+   automáticas)" já ❌ na feature matrix.
+2. **Indicação na venda** (campo "indicado por" apontando para cliente): pequeno, e a loja usa.
+3. **Consulta de IMEI na compra de usado** — depende de provedor externo pago; avaliar custo e
+   fornecedor antes (decisão de integração, não de código).
+4. Não implementar agora: catálogo online, score de crédito, assinatura eletrônica, carteira pré-paga,
+   gerador por IA — baixo uso observado ou fora do foco da Fase atual.
 
 ---
 

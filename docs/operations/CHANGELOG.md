@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Ferramentas e Marketplace)
+- **docs: análise de Ferramentas e Marketplace do Mercado Phone** — automações de pós-venda por WhatsApp,
+  programa de indicação, catálogo online, assinatura digital, consulta de score/IMEI, loja de integrações
+  (API, MCP, webhooks) e carteira pré-paga. Encerra o walkthrough de todos os módulos. Sem mudança de
+  código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Tela inicial e Configurações)
 - **docs: análise de Tela inicial e Configurações do Mercado Phone** — avisos de pendências, widgets,
   parâmetros gerais, gestão de acesso (visibilidade de vendas, horário), senhas mestras, situações de OS
