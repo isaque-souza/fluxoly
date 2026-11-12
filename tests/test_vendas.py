@@ -1722,9 +1722,9 @@ class TestDashboardVendasOS:
     def _hoje():
         # `vendas.criado_em` é CURRENT_TIMESTAMP (UTC); o filtro do dashboard compara com a data
         # pedida sem converter fuso -- comportamento atual de todo o sistema (KNOWN_ISSUES, fuso).
-        from datetime import datetime, timezone
+        from datetime import UTC, datetime
 
-        return datetime.now(timezone.utc).date().isoformat()
+        return datetime.now(UTC).date().isoformat()
 
     def _dashboard(self, client):
         hoje = self._hoje()
