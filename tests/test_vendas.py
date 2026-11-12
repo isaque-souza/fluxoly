@@ -1883,3 +1883,57 @@ class TestReciboVenda:
     def test_venda_inexistente_404(self, client, login_como, usuario_admin):
         login_como(client, usuario_admin)
         assert client.get("/api/vendas/999999999/recibo").status_code == 404
+
+
+class TestLembretesPosVenda:
+    """Lembretes de pós-venda e upgrade (BR-104, PLAN-lembretes-pos-venda.md)."""
+
+    HOJE = "2030-06-15"
+
+    def _datar_venda(self, venda_id, dia):
+        conn = _app.conectar()
+        try:
+            conn.execute("UPDATE vendas SET criado_em=? WHERE id=?", (f"{dia} 15:00:00", venda_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _grupo(self, resp, tipo):
+        return next(g for g in resp["grupos"] if g["tipo"] == tipo)
+
+    def test_anonimo_401_e_tecnico_financeiro_403(self, client, login_como, usuario_tecnico, usuario_financeiro):
+        assert client.get("/api/vendas/lembretes").status_code == 401
+        for usuario in (usuario_tecnico, usuario_financeiro):
+            login_como(client, usuario)
+            assert client.get("/api/vendas/lembretes").status_code == 403
+
+    def test_data_invalida_400(self, client, login_como, usuario_vendedor):
+        login_como(client, usuario_vendedor)
+        assert client.get("/api/vendas/lembretes?data=15/06/2030").status_code == 400
+
+    @pytest.mark.parametrize(("dia_venda", "tipo"), [("2030-06-08", "pos_venda"), ("2030-05-16", "satisfacao"), ("2029-06-15", "upgrade")])
+    def test_venda_aparece_no_marco_certo(self, client, login_como, usuario_vendedor, cenario_venda, dia_venda, tipo):
+        login_como(client, usuario_vendedor)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+        self._datar_venda(venda_id, dia_venda)
+
+        resp = client.get(f"/api/vendas/lembretes?data={self.HOJE}").get_json()
+
+        assert resp["data"] == self.HOJE
+        item = next(i for i in self._grupo(resp, tipo)["itens"] if i["venda_id"] == venda_id)
+        assert item["telefone"] == "11999998888"
+        assert item["data_venda"] == dia_venda
+        outros = [g for g in resp["grupos"] if g["tipo"] != tipo]
+        assert all(i["venda_id"] != venda_id for g in outros for i in g["itens"])
+
+    def test_venda_cancelada_ou_fora_do_marco_nao_aparece(self, client, login_como, usuario_admin, cenario_venda):
+        login_como(client, usuario_admin)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+        self._datar_venda(venda_id, "2030-06-09")  # 6 dias: fora dos marcos
+        resp = client.get(f"/api/vendas/lembretes?data={self.HOJE}").get_json()
+        assert all(i["venda_id"] != venda_id for g in resp["grupos"] for i in g["itens"])
+
+        self._datar_venda(venda_id, "2030-06-08")
+        client.post(f"/api/vendas/{venda_id}/cancelar", json={"motivo": "erro_lancamento"})
+        resp = client.get(f"/api/vendas/lembretes?data={self.HOJE}").get_json()
+        assert all(i["venda_id"] != venda_id for g in resp["grupos"] for i in g["itens"])

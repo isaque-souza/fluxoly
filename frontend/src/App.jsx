@@ -21,6 +21,7 @@ const Stock = lazy(() => import("@/pages/Stock"));
 const Produtos = lazy(() => import("@/pages/Produtos"));
 const Clientes = lazy(() => import("@/pages/Clientes"));
 const Vendas = lazy(() => import("@/pages/Vendas"));
+const Lembretes = lazy(() => import("@/pages/Lembretes"));
 const VendaDetalhe = lazy(() => import("@/pages/VendaDetalhe"));
 const UnidadesSerializadas = lazy(() => import("@/pages/UnidadesSerializadas"));
 const Financeiro = lazy(() => import("@/pages/Financeiro"));
@@ -82,6 +83,7 @@ function AppRoutes() {
           <Route path="/garantias" element={<Garantias />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/vendas" element={<Vendas />} />
+          <Route path="/lembretes" element={<Lembretes />} />
           <Route path="/vendas/:id" element={<VendaDetalhe />} />
           <Route path="/produtos" element={<Produtos />} />
           <Route path="/unidades-serializadas" element={<UnidadesSerializadas />} />

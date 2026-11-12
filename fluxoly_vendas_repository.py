@@ -520,3 +520,26 @@ def resumir_vendas_por_vendedor(cursor, inicio=None, fim=None):
         params,
     )
     return cursor.fetchall()
+
+
+def buscar_vendas_concluidas_nas_datas(cursor, datas):
+    """Lembretes de pós-venda (PLAN-lembretes-pos-venda.md): vendas concluídas cujo dia de
+    `criado_em` está em `datas` (`YYYY-MM-DD`, UTC como o resto do sistema -- KI-061), com o
+    cliente e os produtos vigentes. Uma linha por venda."""
+    if not datas:
+        return []
+    marcadores = ",".join("?" for _ in datas)
+    cursor.execute(
+        f"""
+        SELECT v.id, substr(v.criado_em, 1, 10), v.cliente_id, COALESCE(c.nome, ''),
+               COALESCE(c.telefone, ''), GROUP_CONCAT(vi.produto_nome, ', ')
+        FROM vendas v
+        JOIN vendas_itens vi ON vi.venda_id = v.id AND vi.ativo = 1
+        LEFT JOIN clientes c ON c.id = v.cliente_id
+        WHERE v.status = 'concluida' AND substr(v.criado_em, 1, 10) IN ({marcadores})
+        GROUP BY v.id
+        ORDER BY v.criado_em, v.id
+        """,
+        list(datas),
+    )
+    return cursor.fetchall()

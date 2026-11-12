@@ -36,7 +36,7 @@ Depende de: `fluxoly_clientes_service.py` (validar cliente),
 
 import sqlite3
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 import fluxoly_caixa_service as caixa_service
 import fluxoly_clientes_service as clientes_service
@@ -824,3 +824,36 @@ def montar_recibo_venda(venda, itens, loja, cliente_cadastro):
             ],
         },
     }, None
+
+
+# Lembretes de pós-venda e upgrade (PLAN-lembretes-pos-venda.md, BR-104): dias desde a venda em que
+# a loja procura o cliente. A mensagem sugerida fica no frontend; aqui só o marco.
+MARCOS_LEMBRETE = ((7, "pos_venda"), (30, "satisfacao"), (365, "upgrade"))
+
+
+def listar_lembretes_pos_venda(conectar, hoje=None):
+    """BR-104 -- vendas concluídas que completam exatamente 7, 30 ou 365 dias em `hoje`, agrupadas
+    por marco. Lista do dia: não guarda "já contatado" (sem schema); para recuperar um dia perdido,
+    consulta-se a data dele."""
+    hoje = hoje or date.today()
+    datas = {(hoje - timedelta(days=dias)).isoformat(): (dias, tipo) for dias, tipo in MARCOS_LEMBRETE}
+    conn = conectar()
+    try:
+        rows = repo.buscar_vendas_concluidas_nas_datas(conn.cursor(), list(datas))
+    finally:
+        conn.close()
+
+    grupos = {tipo: {"dias": dias, "tipo": tipo, "itens": []} for dias, tipo in MARCOS_LEMBRETE}
+    for venda_id, dia_venda, cliente_id, cliente_nome, telefone, produtos in rows:
+        _dias, tipo = datas[dia_venda]
+        grupos[tipo]["itens"].append(
+            {
+                "venda_id": venda_id,
+                "data_venda": dia_venda,
+                "cliente_id": cliente_id,
+                "cliente_nome": cliente_nome,
+                "telefone": telefone,
+                "produtos": produtos or "",
+            }
+        )
+    return {"data": hoje.isoformat(), "grupos": [grupos[tipo] for _dias, tipo in MARCOS_LEMBRETE]}

@@ -13,6 +13,8 @@ venda básica desta fatia (seu papel é avaliação de usado, fora de escopo do
 MVP).
 """
 
+from datetime import date
+
 from flask import Blueprint, jsonify, request, session
 
 import fluxoly_clientes_service as clientes_service
@@ -114,6 +116,23 @@ def create_vendas_blueprint(deps: dict):
             return err("Não autenticado.", 401)
         termo = (request.args.get("q") or "").strip()
         return ok(**service.listar_garantias_venda(conectar, termo))
+
+    @vendas_api.route("/lembretes")
+    def listar_lembretes():
+        """BR-104 -- lembretes de pós-venda e upgrade do dia (`?data=AAAA-MM-DD`, padrão hoje).
+        Perfis que vendem (admin/vendedor): é contato comercial com o cliente."""
+        if not usuario_logado():
+            return err("Não autenticado.", 401)
+        if not usuario_pode_vender():
+            return err("Permissão negada.", 403)
+        data_txt = (request.args.get("data") or "").strip()
+        hoje = None
+        if data_txt:
+            try:
+                hoje = date.fromisoformat(data_txt)
+            except ValueError:
+                return err("Data inválida (use AAAA-MM-DD).")
+        return ok(**service.listar_lembretes_pos_venda(conectar, hoje))
 
     @vendas_api.route("", methods=["POST"])
     def criar_venda():
