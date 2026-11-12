@@ -1759,6 +1759,27 @@ class TestDashboardVendasOS:
         login_como(client, usuario_financeiro)
         assert "lucro_aparelhos" in self._dashboard(client)["vendas"]
 
+    def test_vendedor_nao_recebe_custo_lucro_nem_resultado(self, client, login_como, usuario_vendedor):
+        """PLAN-esconder-lucro-vendedor.md."""
+        from api_system import CHAVES_CUSTO_LUCRO_DASHBOARD
+
+        login_como(client, usuario_vendedor)
+        resp = self._dashboard(client)
+
+        assert resp["ok"] is True
+        for chave in CHAVES_CUSTO_LUCRO_DASHBOARD:
+            assert chave not in resp, chave
+        assert all("lucro" not in linha for linha in resp["resumo_por_vendedor"])
+        assert "faturamento_total" in resp and "ordens_finalizadas" in resp
+
+    def test_admin_financeiro_e_tecnico_continuam_vendo_lucro(
+        self, client, login_como, usuario_admin, usuario_financeiro, usuario_tecnico
+    ):
+        for usuario in (usuario_admin, usuario_financeiro, usuario_tecnico):
+            login_como(client, usuario)
+            resp = self._dashboard(client)
+            assert "lucro_total" in resp and "resultado_liquido" in resp
+
     def test_periodo_fora_nao_conta_venda(self, client, login_como, usuario_admin, cenario_venda):
         login_como(client, usuario_admin)
         client.post("/api/vendas", json=_payload(cenario_venda))

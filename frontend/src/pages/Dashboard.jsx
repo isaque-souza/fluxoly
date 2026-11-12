@@ -154,6 +154,8 @@ export default function Dashboard() {
   const vendas = data?.vendas;
   const faturamentoHero = data?.consolidado?.faturamento ?? data?.faturamento_total;
   const lucroAparelhos = vendas?.lucro_aparelhos;
+  // Vendedor não recebe custo/lucro/resultado (PLAN-esconder-lucro-vendedor.md): sem a chave, o bloco some.
+  const veCustoLucro = data?.lucro_total !== undefined;
 
   return (
     <div className="space-y-6">
@@ -236,17 +238,19 @@ export default function Dashboard() {
 
               {/* Métricas soltas -- peso secundário, sem moldura */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
-                <LooseMetric label="Lucro Bruto" value={formatCurrency(data?.lucro_total)} />
+                {veCustoLucro && <LooseMetric label="Lucro Bruto" value={formatCurrency(data?.lucro_total)} />}
                 <LooseMetric label="Finalizadas" value={data?.ordens_finalizadas ?? "—"} />
                 <LooseMetric label="Em Aberto" value={data?.ordens_abertas ?? "—"} valueClassName="text-warning" />
                 <LooseMetric label="Peças Pendentes" value={data?.shopping_pendentes ?? "—"} />
                 <LooseMetric label="Urgentes" value={data?.shopping_urgentes ?? "—"} valueClassName="text-destructive" />
                 <LooseMetric label="Ticket Médio" value={formatCurrency(data?.ticket_medio)} />
-                <LooseMetric
-                  label="Resultado Líq."
-                  value={formatCurrency(data?.resultado_liquido)}
-                  valueClassName={data?.resultado_liquido >= 0 ? "text-success" : "text-destructive"}
-                />
+                {veCustoLucro && (
+                  <LooseMetric
+                    label="Resultado Líq."
+                    value={formatCurrency(data?.resultado_liquido)}
+                    valueClassName={data?.resultado_liquido >= 0 ? "text-success" : "text-destructive"}
+                  />
+                )}
               </div>
 
               {vendas && (
@@ -289,7 +293,7 @@ export default function Dashboard() {
               <Suspense fallback={<div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4"><ChartFallback /><ChartFallback /></div>}>
                 <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
                   <RevenueChartCard data={revenueData} />
-                  <TechnicianProfitChartCard data={techData} />
+                  {veCustoLucro && <TechnicianProfitChartCard data={techData} />}
                 </div>
               </Suspense>
               <div className="grid lg:grid-cols-3 gap-4">
@@ -298,7 +302,7 @@ export default function Dashboard() {
                 </Suspense>
 
                 {/* Resumo Financeiro -- bloco de lista, peso secundário */}
-                <div className="lg:col-span-2">
+                {veCustoLucro && <div className="lg:col-span-2">
                   <h3 className="text-sm font-medium text-card-foreground mb-2">Resumo Financeiro</h3>
                   <ListBlock>
                     {[
@@ -313,7 +317,7 @@ export default function Dashboard() {
                       </ListBlockItem>
                     ))}
                   </ListBlock>
-                </div>
+                </div>}
               </div>
             </>
           )}
