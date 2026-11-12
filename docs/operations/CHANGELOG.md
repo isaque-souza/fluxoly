@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — proposta de backlog a partir do benchmark Mercado Phone)
+- **docs: proposta de candidatos no `PRODUCT_BACKLOG.md`** — 25 candidatos consolidados de todos os
+  módulos do benchmark, em quatro ondas (dados existentes, fundação de pagamentos, relacionamento,
+  decisões antes de código), cada um com prioridade/esforço sugeridos, item da Release 1.0 e evidência.
+  Marcada como pendente do PO; a Fila Priorizada não foi alterada.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Garantia, Checklist e Auditoria)
 - **docs: análise de Garantia, Checklist e Auditoria do Mercado Phone** — termos de garantia e de compra
   com cálculo de vencimento, monitoramento de garantias por item, checklist configurável, log de auditoria

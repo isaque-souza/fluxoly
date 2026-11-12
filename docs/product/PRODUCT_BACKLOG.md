@@ -33,6 +33,84 @@ ajuda a marcar.
 
 ---
 
+## Proposta — candidatos do benchmark Mercado Phone (2026-11-11)
+
+> **Status: proposta, decisão pendente do PO.** Nada abaixo entra na Fila Priorizada até o Product Owner
+> aprovar. Prioridade, esforço e ordem são **sugestões** derivadas do walkthrough somente leitura em
+> `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` (todos os módulos, 2026-11-11) cruzado com o código
+> atual — cada linha aponta para a seção do benchmark onde está a evidência.
+
+**Critério usado:** (1) o que avança um item aberto do `RELEASE_1.0_MASTER_CHECKLIST.md`; (2) uso real
+observado na conta da loja (recurso que ela usa pesa mais do que recurso que só existe); (3) esforço —
+preferência por o que só lê dados que a Fluxoly já grava; (4) dependências.
+
+**Achado transversal:** "formas de pagamento cadastradas (com taxa e prazo) + vários pagamentos por
+operação" aparece como pré-requisito em Vendas, OS, Financeiro e Relatórios. Destrava pagamento na OS e
+recebimento no caixa, venda PIX + cartão, troca abatendo do valor e lucro líquido de taxa. Por isso está
+como fundação, não como item isolado.
+
+### Onda 1 — ganhos rápidos sobre dados que já existem (sem mudança de schema)
+
+| # | Candidato | Prioridade sugerida | Esforço | Item Release 1.0 | Evidência (seção do benchmark) / nota |
+|---|---|---|---|---|---|
+| 1 | Corrigir **KI-062**: compras no perfil do cliente e comprador na unidade | P0 | Baixo | Comercial completo | Clientes e Relatórios — dado já gravado em `vendas.cliente_id` |
+| 2 | **Tela de auditoria** sobre `audit_log` (filtros, antes/depois) | P1 | Baixo | Configurações / Segurança | Garantia, Checklist e Auditoria — log já gravado em quase todos os domínios, sem tela |
+| 3 | **Painel de garantias unificado** (vendas + OS, dias restantes, vencidas) | P1 | Baixo/médio | Assistência completa | Garantia, Checklist e Auditoria — página Garantias hoje só mostra OS |
+| 4 | **Dashboard somando vendas + OS** (faturamento, lucro, ticket médio, top vendedores) | P1 | Médio | Dashboard Executivo | Clientes e Relatórios; Tela inicial — hoje o Dashboard calcula só sobre OS |
+| 5 | **Alertas de dados**: venda abaixo do custo, unidade sem custo | P1 | Baixo | Comercial completo | Clientes e Relatórios — protege margem; custo por aparelho já existe (BR-092) |
+| 6 | **Pendências na tela inicial**: contas vencendo hoje/vencidas, estoque abaixo do mínimo, IMEI duplicado | P2 | Baixo | Dashboard Executivo | Tela inicial e Configurações; Financeiro (indicadores vencidos) |
+| 7 | **Dias em estoque** na lista de unidades | P2 | Baixo | Comercial completo | Compras / Estoque |
+| 8 | **Esconder lucro/custo do perfil vendedor** e limitar às próprias vendas | P2 | Baixo/médio | Segurança | Tela inicial e Configurações — mexe em autorização: plano obrigatório (CLAUDE.md) |
+
+### Onda 2 — fundação estrutural (schema, plano aprovado obrigatório)
+
+| # | Candidato | Prioridade sugerida | Esforço | Item Release 1.0 | Evidência / nota |
+|---|---|---|---|---|---|
+| 9 | **Formas de pagamento cadastradas + vários pagamentos por operação** | P0 | Alto | Comercial completo / Financeiro | Vendas, Financeiro — fundação dos itens 10-12 |
+| 10 | **Recebimento da OS no caixa** (origem `os`, parcial/saldo) | P0 | Médio | Assistência completa / Financeiro | OS, Financeiro — hoje o dinheiro da assistência não aparece no caixa |
+| 11 | **Troca/upgrade completo** (usado abate do valor, entra no estoque) | P1 | Médio | Comercial completo | Vendas, Compras / Estoque — já existe em parte (`compras_aparelhos` origem troca); decisões pendentes em `VENDAS.md` |
+| 12 | **Lucro líquido de taxa** por venda | P2 | Baixo (após 9) | Dashboard Executivo | Clientes e Relatórios |
+| 13 | **Data de previsão da OS + destaque de atrasada** | P1 | Médio | Dashboard Executivo ("OS atrasadas") | OS — `os` não tem data de previsão hoje |
+| 14 | **Relato do cliente / laudo / observação interna** na OS | P2 | Médio | Assistência completa | OS |
+| 15 | **Autorização de gerente na operação** (cancelar, desconto acima do limite, excluir), registrada no `audit_log` | P2 | Médio | Segurança | Tela inicial e Configurações — depende do item 2 para consulta |
+
+### Onda 3 — relacionamento e recompra (versão simples, sem API paga)
+
+| # | Candidato | Prioridade sugerida | Esforço | Item Release 1.0 | Evidência / nota |
+|---|---|---|---|---|---|
+| 16 | **Lembretes de pós-venda e upgrade** (lista diária 7/30/365 dias + botão `wa.me`) | P2 | Médio | Fora da 1.0 (Fase 4 — WhatsApp/CRM) | Ferramentas e Marketplace — recurso mais usado da conta; depende do item 1 |
+| 17 | **Origem e "indicado por" na venda** | P2 | Baixo | Fora da 1.0 | Vendas, Ferramentas — a loja preenche na venda, não no cliente |
+| 18 | **Aniversário do cliente + aniversariantes** | P3 | Baixo | Fora da 1.0 | Clientes e Relatórios |
+| 19 | **Recibo de venda** (impressão A4/80 mm, envio por WhatsApp) | P1 | Médio | Comercial completo | Vendas; Tela inicial e Configurações — botão "Imprimir" é placeholder (V1.8) |
+
+### Onda 4 — decisões antes de código
+
+| # | Candidato | Nota |
+|---|---|---|
+| 20 | **Fiscal: emitir ou integrar com emissor externo** | Fiscal — decisão de estratégia (Fase 3 em `RELEASE_STRATEGY.md`); se emitir, começar pela NFC-e da venda |
+| 21 | Checklist configurável pela loja | Garantia, Checklist e Auditoria — muda `os_checklists` |
+| 22 | Situações de OS configuráveis (Orçamento → Aprovado) | OS; Tela inicial e Configurações — muda máquina de estados |
+| 23 | Consulta de IMEI em base de bloqueio/roubo; termo de compra do usado | Compras / Estoque; Garantia — depende de provedor externo pago (custo, contrato, LGPD) |
+| 24 | Custos extras na unidade, etiqueta com código de barras, IMEI 2 | Compras / Estoque |
+| 25 | Despesas recorrentes, contas bancárias, caixa por sessão | Financeiro — caixa por sessão só se a loja for de fato fechar caixa (na conta observada, a maioria nunca fecha) |
+
+### Sugerido não implementar
+
+Catálogo de dezenas de relatórios sobrepostos; banners de terceiros; horário de acesso; perfis ×
+módulos duplicados; aplicação retroativa de termos; catálogo online, score de crédito, assinatura
+eletrônica, carteira pré-paga e gerador por IA (baixo ou nenhum uso observado); DRE/conciliação/integração
+bancária e multi-loja (fora da 1.0 por `RELEASE_STRATEGY.md`).
+
+### Observação sobre a Fila Priorizada
+
+Ao montar esta proposta, as colunas "Status" de algumas linhas da fila acima aparecem desatualizadas
+frente a `RELEASE_1.0_MASTER_CHECKLIST.md`: Financeiro mínimo e Caixa constam "Não iniciado", mas foram
+entregues em 2026-08-10; Clientes, IMEI e Produtos constam "Sem tela", mas têm telas; Vendas já tem
+V1.2-V1.5 (cancelamento, desconto, comissão, garantia). Correção de status é factual e pode ser feita à
+parte, sem mexer em prioridade.
+
+---
+
 ## Como usar este documento
 
 - **Prioridade (P0–P3)** é ordem de importância de negócio, não ordem de implementação necessariamente —
