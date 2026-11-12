@@ -2242,3 +2242,32 @@ Sprint prevista:
 
 Responsável:
 —
+
+---
+
+## KI-062
+
+Descrição:
+Duas telas ainda mostram o placeholder "módulo de Vendas em construção", deixado de propósito na Sprint
+Comercial 1.2 (2026-07-21), quando Vendas não existia. Vendas está implementada desde 2026-07-27 e grava
+`vendas.cliente_id` e `vendas_itens.unidade_serializada_id`, mas as telas não foram ligadas a esses dados:
+- `frontend/src/pages/Clientes.jsx:142` — o perfil do cliente mostra "Nenhuma compra registrada ainda —
+  módulo de Vendas em construção." para qualquer cliente, inclusive quem já comprou.
+- `frontend/src/pages/UnidadesSerializadas.jsx:310` — o detalhe da unidade mostra "Sem venda registrada —
+  módulo de Vendas em construção." em "Cliente atual", inclusive para unidade vendida.
+Achado em 2026-11-11 ao comparar a ficha de cliente do Mercado Phone (benchmark) com a da Fluxoly.
+
+Impacto:
+Baixo/médio. Nenhum dado é alterado, mas a tela afirma algo falso ("nenhuma compra") e esconde o histórico
+de compras do cliente e o comprador de cada aparelho, informação que já existe no banco. Não atende
+critério de `ENGINEERING_GUIDE.md` §11 (não é regressão nem perda de dado).
+
+Status:
+Aberto (2026-11-11). Correção provável: endpoint (ou filtro em `/api/vendas`) por `cliente_id` e por
+`unidade_serializada_id`, e trocar os dois placeholders pela lista real.
+
+Sprint prevista:
+—
+
+Responsável:
+—
