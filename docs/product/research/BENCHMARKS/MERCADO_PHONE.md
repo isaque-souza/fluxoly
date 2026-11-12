@@ -15,7 +15,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
-| Fiscal | Pendente | — |
+| Fiscal | Concluída — score fiscal, NF-e, NF de entrada do usado, captura de XML, NFs de vendas (somente leitura; nenhuma nota emitida) | 2026-11-11 |
 
 ---
 
@@ -592,7 +592,101 @@ Candidatos por relação valor × esforço, na leitura deste benchmark (sugestã
 
 ## Fiscal
 
-Ainda não percorrido — seções a adicionar quando cada módulo for analisado em sessão própria.
+*Walkthrough de 2026-11-11, somente leitura: Score fiscal, NF-e (lista), NF de entrada (upgrade),
+Capturador de XML de entrada, Histórico de NFs de vendas, TEF e Relatório de NF. Não abertos: "Atualizar
+empresa - Fiscal" e Configurações fiscais (alteram cadastro fiscal da loja), nem o formulário de emissão.
+Nenhuma nota foi emitida e nenhum dado de destinatário foi registrado.*
+
+### Objetivo observado
+Emitir as notas que uma loja de celular precisa (NFC-e no balcão, NF-e de saída, NF-e de entrada do usado
+comprado de pessoa física, NFS-e da assistência) a partir das vendas, OS e entradas de estoque, sem outro
+sistema.
+
+### Fluxo observado
+- **Menu:** Atualizar empresa - Fiscal · Score fiscal · NF-e · NF de entrada (upgrade) · Capturador - XML
+  entrada · Histórico NFs - Vendas · TEF · Relatório de NF · Configurações.
+- **Score fiscal:** nota percentual da configuração fiscal da loja (regime tributário avaliado), com atalhos
+  (certificado digital, dados fiscais, séries de NF-e, editar produtos em massa, alíquota por estado,
+  natureza da operação, tributações, tipos de produto) e checklist em duas partes: **Empresa** (certificado
+  digital e validade, regime, CNPJ/IE/endereço, série) e **Produtos** (quantos produtos estão sem NCM, sem
+  CFOP, sem CST/CSOSN, sem origem da mercadoria), mais uma lista de pendências.
+- **NF-e:** lista de notas avulsas (código, número, tipo de operação, cliente, data, valor, status) com
+  "Lançar NF-e". Pouco usada na conta.
+- **NF de entrada (upgrade):** nota de entrada emitida pela própria loja para o aparelho comprado de
+  pessoa física na troca. Lista com cliente/fornecedor, data, produto (modelo, bateria, IMEI), **se o
+  aparelho já foi vendido**, valor e status na SEFAZ ("Autorizado o uso da NF-e"); totais de quantidade e
+  valor. Usada com frequência na conta.
+- **Capturador - XML entrada:** importar XML ou buscar pela chave as notas emitidas contra o CNPJ da loja
+  (fornecedores), com status de estoque, método de captura e manifestação do destinatário.
+- **Histórico NFs - Vendas:** vendas com nota (NFC-e/NF-e), com produtos e NCM, tipos de produto, valor da
+  nota × valor da venda, número, série, formas de pagamento, CFOP.
+- **TEF:** histórico de transações de cartão integradas (vazio na conta).
+- **Relatório de NF:** totais de notas de entrada e saída por período.
+- Emissão também a partir dos documentos: menu "NF" na OS (NFS-e e NF-e dos produtos), "NFs" na venda e
+  "Emitir NF-e de entrada" na unidade de estoque.
+
+### Campos existentes
+No produto (ver Compras/Estoque): CEST, NCM, origem, CST/CSOSN, CFOP estadual/interestadual de entrada e
+saída, código de benefício fiscal, tributação. Na venda/OS: natureza da operação.
+
+### Regras percebidas
+- A nota nasce do documento de negócio (venda, OS, entrada), não é digitada do zero.
+- O aparelho comprado de pessoa física recebe NF-e de entrada da própria loja (sem nota do vendedor), e o
+  sistema acompanha se ele já foi revendido.
+- Valor da nota pode ser diferente do valor da venda (as duas colunas aparecem lado a lado).
+- A qualidade do cadastro fiscal dos produtos é medida e cobrada (score).
+
+### Integrações
+SEFAZ (NF-e, NFC-e), prefeitura (NFS-e), Receita (consulta de notas emitidas contra o CNPJ / manifestação),
+certificado digital A1, TEF.
+
+### Pontos positivos
+- **Score fiscal** transforma uma configuração difícil num checklist com porcentagem e pendências.
+- **NF de entrada do usado** resolve um problema real e específico de loja de seminovos.
+- Captura automática das notas de fornecedores pela chave/CNPJ.
+- Emissão a partir da venda/OS: o lojista não redigita.
+
+### Pontos negativos
+- Exige cadastro fiscal completo de cada produto (NCM, CFOP, CST…); na conta, centenas de produtos ainda
+  estão sem esses campos.
+- O sistema permite valor da nota diferente do valor da venda sem nenhum alerta ou justificativa
+  registrada; para a Fluxoly, qualquer divergência deveria ser explícita e auditável.
+- Vários caminhos para emitir a mesma coisa (menu Fiscal, venda, OS, estoque).
+
+### Perguntas em aberto
+- Qual provedor de emissão eles usam (próprio ou intermediário) e o custo por nota?
+- NFC-e é emitida automaticamente ao finalizar a venda ou só sob demanda?
+- A NF de entrada do usado é exigência legal no estado da loja ou prática de proteção (procedência)?
+
+### Impacto para Fluxoly
+
+**A Fluxoly hoje:** não emite nenhuma nota. `RELEASE_STRATEGY.md` coloca Nota Fiscal na **Fase 3 —
+Automação**, à frente de Multiempresa (decisão de 2026-08-05). Nenhuma discovery fiscal foi feita.
+
+**Não tem (encontrado no Mercado Phone):** tudo do módulo: NFC-e/NF-e de saída, NF-e de entrada do usado,
+NFS-e da OS, captura de XML de fornecedor, cadastro fiscal do produto, score fiscal, TEF.
+
+#### Reaproveitar
+TODO — depende de decisão do PO (ver abaixo); nada aqui foi aprovado.
+
+#### Adaptar
+TODO — depende de decisão do PO.
+
+#### Não implementar
+TODO — depende de decisão do PO.
+
+#### Decisão pendente do PO
+Fiscal é um domínio de alto risco (legal, certificado digital, SEFAZ/prefeitura por município); nenhuma
+destas sugestões dispensa discovery própria (ADR-010) e decisão sobre provedor de emissão:
+1. **Decidir primeiro se a Fluxoly emite nota ou integra com um emissor externo** (API de terceiro).
+   Emitir direto exige certificado, homologação por estado e manutenção legal contínua.
+2. Se emitir: **começar pela NFC-e da venda** (balcão), que cobre o caso mais frequente.
+3. **NF-e de entrada do usado** como segundo passo: casa com a Compra de aparelhos que já existe
+   (BR-083+) e é diferencial específico de loja de seminovos.
+4. **NFS-e da OS**: depende do município da loja; avaliar por cliente.
+5. **Score fiscal / checklist de configuração**: só depois de existir emissão; boa ideia de UX para
+   onboarding.
+6. **Captura de XML de fornecedor, TEF**: fora do escopo da primeira versão fiscal. — seções a adicionar quando cada módulo for analisado em sessão própria.
 
 ---
 

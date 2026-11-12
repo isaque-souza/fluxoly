@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Fiscal)
+- **docs: análise do Fiscal do Mercado Phone** — score fiscal, NF-e de entrada do usado, captura de XML,
+  notas a partir de venda/OS/estoque; recomendações condicionadas a discovery e escolha de provedor. Sem
+  mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Financeiro)
 - **docs: análise do Financeiro do Mercado Phone** — contas a pagar/receber, despesas fixas, caixa por
   sessão, contas bancárias, formas de pagamento com prazo, conciliação e DRE; lacunas da Fluxoly como
