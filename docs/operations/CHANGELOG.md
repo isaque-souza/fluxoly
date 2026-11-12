@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Compras/Estoque)
+- **docs: análise de Compras/Estoque do Mercado Phone** — estoque por unidade com dias em estoque, busca
+  consolidada de IMEI, custos extras, certificado de procedência; seção de Vendas corrigida (a troca já
+  existe em parte via Compra de aparelhos). Sem mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Vendas)
 - **docs: análise de Vendas do Mercado Phone** no mesmo documento — PDV multi-item/multi-pagamento,
   simulador de upgrade (aparelho na troca), trocas e devoluções, histórico por item; lacunas da Fluxoly

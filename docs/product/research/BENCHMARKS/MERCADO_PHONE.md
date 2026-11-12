@@ -13,6 +13,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | Visão geral (menus, telas principais, impressão de navegação) | Concluída — superficial, não é walkthrough de fluxo | 2026-07-22 |
 | Vendas | Concluída — PDV, histórico, upgrade, trocas/devoluções, orçamentos (somente leitura; nenhuma venda criada ou finalizada) | 2026-11-11 |
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
+| Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Pendente | — |
 | Fiscal | Pendente | — |
 
@@ -145,9 +146,13 @@ logado, cancelamento com motivo (V1.2), ajuste de valor/desconto por item com hi
 garantia por item (Tipos de Garantia), custo/lucro por aparelho comprado (BR-092/093) e caixa
 (`movimentacoes_caixa`).
 
+**Já existe em parte:** o aparelho de troca pode ser registrado como Compra de aparelho com origem `troca`,
+cliente, venda vinculada e forma de pagamento `abatido_na_venda` (BR-083 a BR-089). Mas a venda em si não
+"enxerga" o abatimento: o valor e o pagamento da venda continuam separados da compra.
+
 **Não tem (encontrado no Mercado Phone):** mais de um item por venda (acessórios); mais de uma forma de
 pagamento por venda (hoje uma de 4: pix/cartão/dinheiro/transferência) e parcelas; aparelho usado como
-pagamento (upgrade); simulador de upgrade com tabela de valor de usado; troca/devolução com crédito ao
+forma de pagamento dentro da própria venda; simulador de upgrade com tabela de valor de usado; troca/devolução com crédito ao
 cliente; origem do cliente (tipo de venda / indicado por); tipo de entrega; pré-venda; recibo por
 WhatsApp/e-mail e impressão 80mm; valor exibido ao cliente separado do valor interno; nota fiscal.
 
@@ -164,7 +169,8 @@ TODO — depende de decisão do PO.
 Candidatos por relação valor × esforço, na leitura deste benchmark (sugestão, não decisão):
 1. **Venda com aparelho na troca (upgrade)**: o usado do cliente abate do valor e entra no estoque como
    unidade serializada. É o fluxo mais característico de loja de iPhone e a Fluxoly já tem metade da
-   estrutura (Compra de aparelhos, BR-083+, que cria a unidade). Precisa de discovery (ADR-010).
+   estrutura (Compra de aparelhos com origem `troca` e pagamento `abatido_na_venda`, BR-083+); falta
+   juntar compra e venda numa operação só. Precisa de discovery (ADR-010).
 2. **Vários pagamentos por venda (com parcelas)**: pré-requisito para upgrade e para "PIX + cartão", comum
    no balcão. Mexe em `vendas`/caixa (mudança de schema).
 3. **Acessórios na mesma venda (multi-item)**: `vendas_itens` já foi modelada para isso; falta o item não
@@ -315,6 +321,147 @@ Candidatos por relação valor × esforço, na leitura deste benchmark (sugestã
 7. **WhatsApp / link de acompanhamento**: pilar "Relacionamento" da marca; o link público reaproveitaria o
    padrão do checklist, mas KI-002 (token sem expiração) precisa ser resolvido antes.
 8. **NFS-e**: fora do escopo atual; avaliar junto do módulo Fiscal.
+
+---
+
+## Compras / Estoque
+
+*Walkthrough de 2026-11-11, somente leitura: Estoque atual (filtros, menus Estoque geral / Cadastrar /
+Ferramentas, ações por unidade, disponibilidade), formulário de cadastro de aparelho (todas as abas,
+fechado sem salvar), Ordem de compra, Busca consolidada de IMEI, Movimentações de estoque, Inventário,
+Produtos vendidos e Certificado de procedência. Não percorrido: Etiquetas, Configurações de estoque,
+transferência entre unidades, gerar um certificado e criar inventário. Nenhum dado de cliente registrado.*
+
+### Objetivo observado
+Controlar o estoque **por unidade** (cada aparelho com IMEI, custo e situação próprios) junto com
+acessórios e peças por quantidade, sabendo há quanto tempo cada aparelho está parado e de onde veio.
+
+### Fluxo observado
+- **Menu:** Estoque atual · Ordem de compra · Histórico de IMEI · Movimentações de estoque · Inventário ·
+  Produtos vendidos/sem estoque · Etiquetas · Certificado de procedência / Teste IMEI · Configurações.
+- **Estoque atual:** uma linha por unidade, colorida pela disponibilidade. Colunas: código, descrição
+  completa (gerada: modelo - GB - cor - IMEI - serial - estado), IMEI, valor de venda, valor de custo,
+  quantidade, data de entrada, **dias em estoque**, disponibilidade (alterável na própria linha), modelo,
+  GB, marca, categoria, subcategoria, fornecedor. Filtros rápidos: "apenas estoque atual", "apenas com NF-e
+  de entrada", "IMEI duplicados", tipo (aparelho/acessório/peça/bike). Visões: estoque de aparelhos,
+  acessórios, peças, bikes/patinetes.
+- **Disponibilidade** (configurável; na conta): Disponível para venda, Disponível com detalhe, Análise,
+  Laboratório.
+- **Ações por unidade:** Editar; Assinar termo de compra; Termo de compra; Excluir; Duplicar lançamento;
+  Gerar etiqueta; **Transferir para outra unidade (loja)**; Gerar código de barras; Emitir NF-e de entrada;
+  Informar status da NF-e de entrada; **Vender** (atalho para o PDV).
+- **Ferramentas:** estoque multiempresa, editar em massa, alterar em lote, histórico de transferências,
+  gerar inventário, importar produtos em massa, registros deletados, histórico de alterações em massa,
+  exportar CSV/XLS/PDF/XML.
+- **Cadastro (Aparelho / Acessório / Peça / Serviço / Bike):** modal com 10 abas — Dados gerais, Despesas,
+  Forma de pagamento, Custos extras, Catálogo, Anexos, Movimentação de estoque, Checklist, Histórico de
+  alterações, Outras informações.
+- **Ordem de compra:** existe (lista com situação, fornecedor, valor), mas a conta tem **zero** registros:
+  a loja cadastra a entrada direto no estoque.
+- **Histórico de IMEI:** "Busca consolidada" — digita IMEI/IMEI 2/serial e vê todas as referências do
+  aparelho no sistema (compra, estoque, consultas, OS e vendas).
+- **Movimentações de estoque:** log de toda entrada/saída com produto, fornecedor, usuário, data, tipo
+  (Saída…), origem (Venda…) e ID de origem, quantidade, **saldo após o movimento**, custo e venda unitários
+  e totais, observação ("Adicionado produto à venda"). Ações: lançar movimento, alterar em lote, gerar
+  inventário.
+- **Inventário:** contagem de estoque com lista de inventários. A conta não tem nenhum.
+- **Produtos vendidos:** unidades que saíram, com ID da venda, IMEI, serial, modelo, GB, cor.
+- **Certificado de procedência / Teste IMEI:** digita o IMEI e o sistema consulta o aparelho Apple (devolve
+  modelo, região/variante, capacidade, cor e IMEI 2) e gera um certificado. Usado várias vezes por dia na
+  conta: é conferência de aparelho na compra/troca e documento para o cliente.
+
+### Campos existentes
+**Dados gerais (aparelho):** Tipo*, IMEI*, IMEI 2*, Modelo*, Serial, Cor*, Categoria*, **Saúde da bateria***,
+Estado do aparelho* (Novo, Seminovo, Open box, Acessório…), SKU, Código de barras, Disponibilidade*, GB*,
+Memória RAM, Marca, Subcategoria, Ciclo de bateria, Quantidade, Quantidade mínima, Valor de custo*, Valor
+de venda*, Mark-up %, Margem %, Lucro R$, Data de entrada*, Dias de garantia, Observação, Tags. **Dados do
+fornecedor:** Tipo de fornecedor (Fornecedor **ou Cliente** — aparelho comprado de pessoa física),
+Fornecedor*. **Dados para NF:** CEST, NCM, origem, CST/CSOSN, CFOPs, código de benefício fiscal,
+tributação.
+
+**Outras abas:** Despesas (só depois de salvar); Forma de pagamento da compra (várias, com parcelas);
+**Custos extras** (descrição, valor, "gerar despesa" no financeiro, "desconsiderar no relatório" — somam
+ao custo do produto, ex.: frete, reparo); Catálogo (exibir no catálogo web, nome de exibição, valor a
+prazo, nº de parcelas); Checklist (modelo); Outras informações (usuário, data de modificação, código da
+ordem de compra, log).
+
+### Regras percebidas
+- IMEI 2 obrigatório para aparelho; há filtro dedicado a IMEI duplicado (a duplicidade não é bloqueada
+  na entrada, é auditada depois).
+- Custo do aparelho = custo de compra + custos extras, com opção de lançar cada custo como despesa.
+- Mark-up, margem e lucro calculados no cadastro.
+- Aparelho comprado de cliente usa o próprio cliente como "fornecedor".
+- Toda saída por venda gera movimentação com saldo após o movimento.
+- Estoque separado por loja (multiempresa), com transferência entre unidades.
+
+### Integrações
+Consulta de IMEI/procedência Apple, NF-e de entrada, catálogo web, impressão de etiqueta e código de barras,
+importação em massa.
+
+### Pontos positivos
+- **Dias em estoque** por unidade: mostra o aparelho parado (capital imobilizado) sem relatório.
+- **Busca consolidada de IMEI**: uma tela responde "o que aconteceu com este aparelho?".
+- **Certificado de procedência**: confere o aparelho na compra e vira argumento de venda.
+- **Custos extras** que sobem o custo do aparelho: lucro real por unidade.
+- Disponibilidade operacional (análise, laboratório, com detalhe) separada de vendido/não vendido.
+- Movimentação com saldo após o movimento e origem rastreável.
+
+### Pontos negativos
+- Cadastro com 10 abas e cerca de 30 campos para dar entrada em um aparelho; vários campos fiscais no
+  mesmo formulário.
+- IMEI duplicado é detectado por filtro, não impedido na entrada.
+- Ordem de compra e inventário existem mas não são usados nesta conta: funcionalidades que o lojista não
+  adotou.
+- A lista de "Estado do aparelho" mistura estado (Novo/Seminovo) com tipo (Acessório, Serviços) e tem
+  valores repetidos ("NOVO" duas vezes), sinal de lista livre sem governança.
+
+### Perguntas em aberto
+- De onde vem o dado do certificado de procedência (fonte da consulta) e qual o custo por consulta?
+- "Transferir para outra unidade" move o custo e o histórico junto?
+- A disponibilidade "Laboratório" se liga a uma OS interna automaticamente?
+
+### Impacto para Fluxoly
+
+Comparado com o estoque da Fluxoly em 2026-11-11 (`unidades_serializadas`, `produtos`, `estoque`,
+`estoque_lotes`, `movimentacoes`, `compras_aparelhos` em `DATABASE.md`; `UnidadesSerializadas.jsx`).
+
+**A Fluxoly já tem:** unidade serializada por IMEI com status (disponível, em reparo, vendido,
+devolvido); IMEI único no banco (mais rígido que o Mercado Phone); saúde da bateria na unidade; catálogo
+de produtos com custo, venda e margem calculada; peças por lote com custo FIFO; **compra de aparelho**
+com origem (marketplace/troca/outro), cliente vendedor, forma de pagamento (inclusive "abatido na venda")
+e saída de caixa (BR-083 a BR-089); OS interna para consertar aparelho comprado e lucro por aparelho
+(BR-090 a BR-093).
+
+**Não tem (encontrado no Mercado Phone):** dias em estoque; busca consolidada por IMEI (compra + estoque
++ OS + venda em uma tela); certificado/consulta de procedência; custos extras somados ao custo da unidade
+(hoje só o custo da OS interna); disponibilidade operacional configurável (análise, com detalhe…);
+movimentação com saldo e origem para unidades e produtos (hoje `movimentacoes` cobre só `estoque` de
+peças); etiqueta e código de barras; IMEI 2; inventário; transferência entre lojas; importação em massa.
+
+#### Reaproveitar
+TODO — depende de decisão do PO (ver abaixo); nada aqui foi aprovado.
+
+#### Adaptar
+TODO — depende de decisão do PO.
+
+#### Não implementar
+TODO — depende de decisão do PO.
+
+#### Decisão pendente do PO
+Candidatos por relação valor × esforço, na leitura deste benchmark (sugestão, não decisão):
+1. **Dias em estoque** na lista de unidades (com destaque acima de N dias): esforço baixo, todos os dados já
+   existem (`criado_em` da unidade ou data da compra).
+2. **Busca consolidada por IMEI**: uma tela juntando compra, unidade, OS e venda. Os vínculos já existem
+   (`compras_aparelhos`, `os.imei`/`unidade_serializada_id`, `vendas_itens`); é só leitura, sem mudança de
+   schema.
+3. **Custos extras na unidade** (frete, peça, película aplicada…), somando ao custo e ao lucro por aparelho
+   (BR-092): completa o "lucro real por aparelho" que a Fluxoly já começou.
+4. **Etiqueta com código de barras/IMEI**: reaproveita o gerador de PDF no navegador.
+5. **IMEI 2**: coluna nova e opcional em `unidades_serializadas`.
+6. **Certificado de procedência**: depende de um serviço externo de consulta de IMEI (custo, contrato, LGPD).
+   Precisa de decisão de negócio antes de qualquer discovery.
+7. **Inventário, transferência entre lojas, ordem de compra**: a conta observada não usa os dois primeiros
+   nem ordem de compra; multiloja depende da decisão de multiempresa (ADR-005). Baixa prioridade.
 
 ---
 
