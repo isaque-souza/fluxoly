@@ -2245,7 +2245,7 @@ Responsável:
 
 ---
 
-## KI-062
+## ~~KI-062~~ — RESOLVIDO
 
 Descrição:
 Duas telas ainda mostram o placeholder "módulo de Vendas em construção", deixado de propósito na Sprint
@@ -2263,11 +2263,15 @@ de compras do cliente e o comprador de cada aparelho, informação que já exist
 critério de `ENGINEERING_GUIDE.md` §11 (não é regressão nem perda de dado).
 
 Status:
-Aberto (2026-11-11). Correção provável: endpoint (ou filtro em `/api/vendas`) por `cliente_id` e por
-`unidade_serializada_id`, e trocar os dois placeholders pela lista real.
+Resolvido em 2026-11-11 (commit `772eebb`, branch `fix/ki-062-compras-cliente-unidade`). Só frontend, sem
+endpoint novo: o perfil do cliente usa o filtro `cliente_id` que `GET /api/vendas` já aceitava (lista as
+compras, inclusive canceladas, com badge); o detalhe da unidade usa `unidades_serializadas.venda_id`
+(gravado por `marcar_vendida`, limpo por `liberar_venda` no cancelamento) e `GET /api/vendas/<id>` para
+mostrar comprador e garantia do item. Coberto por 4 casos novos em `Clientes.test.jsx` e
+`UnidadesSerializadas.test.jsx`.
 
 Sprint prevista:
-—
+Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11-11).
 
 Responsável:
 —

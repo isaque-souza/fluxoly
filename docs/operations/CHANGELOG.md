@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-11 — KI-062)
+- **fix: compras do cliente e comprador da unidade** — o perfil do cliente lista as vendas dele
+  (`/api/vendas?cliente_id=`, canceladas com badge) e o detalhe da unidade mostra comprador, venda e
+  garantia do item, no lugar dos placeholders "módulo de Vendas em construção". Só frontend
+  (`Clientes.jsx`, `UnidadesSerializadas.jsx`); frontend 183/183, lint ok, build ok.
+
 ### Documentação (2026-11-11 — status da Fila Priorizada do backlog)
 - **docs: atualiza a coluna Status do `PRODUCT_BACKLOG.md`** — Vendas (V1.2-V1.5 com tela), Clientes,
   IMEI e Produtos (com tela), Financeiro mínimo e Caixa (entregues em 2026-08-10) estavam desatualizados.

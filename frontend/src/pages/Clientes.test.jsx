@@ -6,11 +6,13 @@ import Clientes from "./Clientes";
 const mockList = vi.fn();
 const mockGarantiasList = vi.fn();
 const mockClienteHistory = vi.fn().mockResolvedValue({ ok: true, ordens: [] });
+const mockVendasList = vi.fn().mockResolvedValue({ ok: true, items: [] });
 
 vi.mock("@/api/client", () => ({
   clientes: { list: (...args) => mockList(...args) },
   ordens: { clienteHistory: (...args) => mockClienteHistory(...args) },
   garantias: { list: (...args) => mockGarantiasList(...args) },
+  vendas: { list: (...args) => mockVendasList(...args) },
 }));
 
 vi.mock("sonner", () => ({
@@ -107,5 +109,46 @@ describe("Clientes — estados e status semântico (PR 5)", () => {
     await user.click(screen.getByText("Carla Souza"));
 
     await waitFor(() => expect(screen.getByText("Nenhuma OS encontrada para este cliente.")).toBeInTheDocument());
+  });
+
+  it("KI-062: perfil do cliente lista as compras buscadas por cliente_id", async () => {
+    // o teste KI-048 acima deixa clienteHistory rejeitando -- restaura o caminho feliz
+    mockClienteHistory.mockResolvedValue({ ok: true, ordens: [] });
+    mockList.mockResolvedValue({
+      ok: true,
+      items: [{ id: 7, nome: "Carla Souza", telefone: "11999990000" }],
+    });
+    mockVendasList.mockResolvedValueOnce({
+      ok: true,
+      items: [
+        { id: 31, status: "concluida", valor_total: 3500, criado_em: "2026-11-01 10:00:00", itens_resumo: [{ produto_nome: "iPhone 13 128GB" }] },
+        { id: 32, status: "cancelada", valor_total: 900, criado_em: "2026-11-02 11:00:00", itens_resumo: [{ produto_nome: "iPhone 11" }] },
+      ],
+    });
+    render(<Clientes />);
+
+    await waitFor(() => expect(screen.getByText("Carla Souza")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Carla Souza"));
+
+    await waitFor(() => expect(screen.getAllByTestId("compra-cliente")).toHaveLength(2));
+    expect(mockVendasList).toHaveBeenCalledWith({ cliente_id: 7, per_page: 50 });
+    expect(screen.getByText("iPhone 13 128GB")).toBeInTheDocument();
+    expect(screen.getByText("Cancelada")).toBeInTheDocument();
+    expect(screen.queryByText(/módulo de Vendas em construção/)).not.toBeInTheDocument();
+  });
+
+  it("KI-062: perfil sem compras mostra mensagem sem placeholder de módulo em construção", async () => {
+    // o teste KI-048 acima deixa clienteHistory rejeitando -- restaura o caminho feliz
+    mockClienteHistory.mockResolvedValue({ ok: true, ordens: [] });
+    mockList.mockResolvedValue({ ok: true, items: [{ id: 8, nome: "Bruno Lima" }] });
+    mockVendasList.mockResolvedValueOnce({ ok: true, items: [] });
+    render(<Clientes />);
+
+    await waitFor(() => expect(screen.getByText("Bruno Lima")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Bruno Lima"));
+
+    await waitFor(() => expect(screen.getByText("Nenhuma compra registrada para este cliente.")).toBeInTheDocument());
   });
 });
