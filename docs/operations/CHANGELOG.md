@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Financeiro)
+- **docs: análise do Financeiro do Mercado Phone** — contas a pagar/receber, despesas fixas, caixa por
+  sessão, contas bancárias, formas de pagamento com prazo, conciliação e DRE; lacunas da Fluxoly como
+  candidatos com "Decisão pendente do PO". Sem mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Compras/Estoque)
 - **docs: análise de Compras/Estoque do Mercado Phone** — estoque por unidade com dias em estoque, busca
   consolidada de IMEI, custos extras, certificado de procedência; seção de Vendas corrigida (a troca já

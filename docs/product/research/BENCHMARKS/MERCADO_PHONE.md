@@ -14,7 +14,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | Vendas | Concluída — PDV, histórico, upgrade, trocas/devoluções, orçamentos (somente leitura; nenhuma venda criada ou finalizada) | 2026-11-11 |
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
-| Financeiro | Pendente | — |
+| Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
 | Fiscal | Pendente | — |
 
 ---
@@ -465,9 +465,134 @@ Candidatos por relação valor × esforço, na leitura deste benchmark (sugestã
 
 ---
 
-## Financeiro, Fiscal
+## Financeiro
 
-Ainda não percorridos — seções a adicionar quando cada módulo for analisado em sessão própria.
+*Walkthrough de 2026-11-11, somente leitura: Despesas (lista, filtros, ações, formulário de nova despesa
+fechado sem salvar), Despesas fixas, Caixas (lista e menu de ações), Saldo bancário (contas), Movimentações
+financeiras, Conciliação bancária, Calendário e Configurações (Formas de pagamento, Configuração do DRE,
+fechada sem salvar). Receitas não aberta (o menu indica que espelha Despesas). Nenhum valor financeiro da
+loja nem dado de pessoa foi registrado aqui.*
+
+### Objetivo observado
+Fazer a gestão financeira completa da loja (contas a pagar e receber, caixas diários, contas bancárias,
+conciliação e DRE) alimentada automaticamente por vendas, OS e compras de estoque.
+
+### Fluxo observado
+- **Menu:** Despesas · Receitas · Caixas · Saldo bancário · Movimentações financeiras · Conciliação
+  bancária · Calendário · Configurações (Parâmetros, Fornecedores, Categorias, Plano de contas, Tags,
+  Formas de pagamento, Bancos, Configuração DRE, Modelos de WhatsApp).
+- **Despesas:** cartões no topo (vencem hoje, vencidos, a vencer, pagos, total no período), filtro rápido
+  (vencidos, vencem hoje, a vencer, pagos, total do período, pendente do mês atual), período de vencimento
+  com setas mês a mês, ações em lote. Colunas: id, origem (Manual, Venda…, filtrável por código da venda),
+  categoria, título, situação, pessoa, valor total, vencimento, valor pago, valor a pagar. Ações: editar,
+  WhatsApp, duplicar lançamento, recibo, imprimir A4/80mm, excluir.
+- **Nova despesa:** cabeçalho Valor total · Total do pagamento · Saldo; abas Dados gerais, Arquivos,
+  Detalhes. Campos: título*, tipo (despesa), pessoa (+ cadastrar), vencimento*, competência*, situação*
+  (Em aberto…), categoria (plano de contas hierárquico: 2. Despesas → 2.1 Compra de produtos, 2.2 Outras
+  despesas, Despesas fixas), forma de cobrança, nº da parcela, tags, observações; valor*, multa/juros,
+  desconto, valor total; pagamentos (forma*, valor*, parcelas, data*, caixa), vários por lançamento.
+  Detalhes: considerar em relatórios? (sim/não), nº da venda, usuário criador.
+- **Despesas fixas:** recorrência (mensal…) com próximo vencimento a gerar e quantos lançamentos futuros
+  já existem; cartões de valor mensal, total de contas fixas e recorrências expirando.
+- **Caixas:** um caixa por dia/operador ("Caixa do dia DD/MM HH:MM - Nome"), com abertura, fechamento,
+  sangrias, suprimentos, troco, saldo final dos movimentos × **saldo final informado** (conferência) e
+  status. Ações: fechar caixa, detalhes, editar abertura, nova sangria/suprimento, excluir. Botão de
+  transferência bancária.
+- **Saldo bancário (contas):** cada conta (bancos, maquininhas, "Dinheiro", "Fornecedor") com data inicial,
+  saldo final, **saldo pela integração** e status da integração bancária (conectado / não conectado).
+- **Movimentações financeiras:** extrato único de entradas e saídas, com origem (Vendas, Contas a pagar,
+  Estoque…), forma de pagamento, banco e observação gerada ("Venda #N para: …", "Compra de produtos…");
+  cartões total entrada / saída / saldo.
+- **Conciliação bancária:** importação de extrato (OFX ou integração) por conta, com progresso de itens
+  conciliados e status (não conciliado / parcial).
+- **Calendário:** visão dia/semana/mês/agenda de contas a pagar/receber, crediários e pagamentos de OS.
+- **Formas de pagamento:** cada forma ligada a uma conta bancária, com "dias para cair" (prazo de
+  recebimento), ativo e "mostrar no PDV". Na conta há formas por maquininha e bandeira, crediário e
+  cashback.
+- **Configuração do DRE:** mapeia venda, OS, CMV de venda, CMV de OS, taxa de cartão e perdas de estoque
+  para contas do plano de contas.
+
+### Campos existentes
+Ver "Fluxo observado" (formulário de despesa). Receita tem a mesma estrutura, com tipo Receita.
+
+### Regras percebidas
+- Venda, OS e entrada de estoque geram lançamentos financeiros automaticamente, com origem rastreável.
+- Cada forma de pagamento cai numa conta bancária com prazo próprio: o saldo por conta e o calendário de
+  recebimentos saem disso.
+- Lançamento tem vencimento e competência separados (regime de caixa × competência no DRE).
+- Caixa é por sessão (abrir/fechar), mas fechar não é obrigatório: na conta observada a maioria dos caixas
+  recentes segue "Aberto" e o saldo informado no fechamento fica zerado.
+- Lançamento pode ficar fora dos relatórios ("considerar em relatórios? não").
+
+### Integrações
+Open finance/integração bancária (saldo e extrato), importação OFX, maquininhas (TEF/POS), WhatsApp
+(cobrança/recibo), impressão de recibo.
+
+### Pontos positivos
+- Uma visão de "o que vence hoje / está vencido / a vencer" logo no topo, com filtro rápido.
+- Formas de pagamento ligadas à conta e ao prazo: responde "quanto vai cair amanhã e em qual banco".
+- Movimentações com origem e texto gerado ("Venda #N…"): auditoria sem abrir cada documento.
+- Despesas fixas com recorrência automática.
+- Plano de contas + configuração do DRE: lucro por competência sem planilha.
+- Conciliação com o extrato real do banco.
+
+### Pontos negativos
+- Muitos conceitos para um lojista (competência, plano de contas, natureza, DRE, conciliação), com pouca
+  orientação na tela.
+- Caixa diário existe mas não é fechado na prática (conferência perdida); o sistema não força nem alerta.
+- Conciliação pouco usada na conta (3 importações, nenhuma completa).
+- "Fornecedor" e "Dinheiro" cadastrados como bancos para caber no modelo.
+
+### Perguntas em aberto
+- A taxa da maquininha é descontada automaticamente do valor recebido (líquido × bruto)?
+- Cancelar uma venda estorna o lançamento financeiro?
+- O que acontece com um caixa que nunca é fechado (os lançamentos seguem válidos? entra no relatório?).
+
+### Impacto para Fluxoly
+
+Comparado com o Financeiro Mínimo da Fluxoly em 2026-11-11 (`movimentacoes_caixa`, `contas_pagar`,
+`contas_receber` em `DATABASE.md`, BR-067 a BR-069; `Financeiro.jsx`).
+
+**A Fluxoly já tem:** caixa único com entradas e saídas, estorno que preserva auditoria, origem rastreável
+(manual, venda, conta a pagar, conta a receber, compra de aparelho) e garantia no banco contra lançamento
+duplicado de venda/compra; contas a pagar e a receber com vencimento, categoria (texto) e baixa que lança
+no caixa na mesma transação.
+
+**Não tem (encontrado no Mercado Phone):** caixa por sessão (abrir/fechar com conferência, sangria,
+suprimento); contas bancárias e saldo por conta; formas de pagamento cadastradas com prazo de recebimento
+e taxa; recebimento de OS no financeiro (origem `os` não existe em `movimentacoes_caixa`); pagamento
+parcial e parcelas; despesas recorrentes; indicadores vencidos/hoje/a vencer; calendário; plano de contas e
+DRE; competência separada do vencimento; anexos no lançamento; conciliação bancária e integração com banco.
+
+#### Reaproveitar
+TODO — depende de decisão do PO (ver abaixo); nada aqui foi aprovado.
+
+#### Adaptar
+TODO — depende de decisão do PO.
+
+#### Não implementar
+TODO — depende de decisão do PO.
+
+#### Decisão pendente do PO
+Candidatos por relação valor × esforço, na leitura deste benchmark (sugestão, não decisão):
+1. **Recebimento de OS no caixa** (origem `os`): hoje o dinheiro da assistência não aparece no financeiro;
+   liga com "pagamento na OS" da seção OS.
+2. **Indicadores vencidos / vencem hoje / a vencer** nas contas a pagar e receber: esforço baixo, dados já
+   existem.
+3. **Despesas recorrentes** (aluguel, sistema, salários): gera os lançamentos do mês automaticamente.
+4. **Formas de pagamento cadastradas** (com taxa e prazo de recebimento): pré-requisito para vários
+   pagamentos na venda, para lucro líquido de taxa de cartão e para previsão de recebimentos.
+5. **Caixa por sessão com fechamento conferido**: só vale se a loja for de fato fechar o caixa; na conta
+   observada ela não fecha. Decisão do PO sobre o processo, antes do sistema.
+6. **Contas bancárias e saldo por conta**: depende do item 4.
+7. **Plano de contas, DRE, competência, conciliação e integração bancária**: alto esforço; o próprio uso
+   na conta observada é baixo. Fora do escopo agora.
+
+---
+
+## Fiscal
+
+Ainda não percorrido — seções a adicionar quando cada módulo for analisado em sessão própria.
 
 ---
 
