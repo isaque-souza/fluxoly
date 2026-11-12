@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Vendas)
+- **docs: análise de Vendas do Mercado Phone** no mesmo documento — PDV multi-item/multi-pagamento,
+  simulador de upgrade (aparelho na troca), trocas e devoluções, histórico por item; lacunas da Fluxoly
+  como candidatos com "Decisão pendente do PO". Sem mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: OS)
 - **docs: análise da OS do Mercado Phone** em `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` —
   listagem, ações, formulário (8 abas), Kanban, garantias e dashboard, observados em modo leitura; lacunas
