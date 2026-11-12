@@ -143,8 +143,15 @@ export default function Dashboard() {
     servicesData.length > 0 ||
     Boolean(data?.faturamento_total) ||
     Boolean(data?.ordens_finalizadas) ||
-    Boolean(data?.ordens_abertas);
+    Boolean(data?.ordens_abertas) ||
+    Boolean(data?.vendas?.quantidade);
   const isEmpty = Boolean(data) && !hasAnyData;
+
+  // Dashboard somando vendas e OS (PLAN-dashboard-vendas-os.md). Backend antigo sem `vendas`
+  // cai no faturamento só de OS, como antes.
+  const vendas = data?.vendas;
+  const faturamentoHero = data?.consolidado?.faturamento ?? data?.faturamento_total;
+  const lucroAparelhos = vendas?.lucro_aparelhos;
 
   return (
     <div className="space-y-6">
@@ -213,8 +220,13 @@ export default function Dashboard() {
                 </PanelHeader>
                 <PanelContent className="pt-0">
                   <p className="text-4xl sm:text-5xl font-bold text-card-foreground tracking-tight">
-                    {formatCurrency(data?.faturamento_total)}
+                    {formatCurrency(faturamentoHero)}
                   </p>
+                  {vendas && (
+                    <p className="text-sm text-muted-foreground mt-1" data-testid="faturamento-composicao">
+                      Assistência {formatCurrency(data?.faturamento_total)} · Vendas {formatCurrency(vendas.faturamento)}
+                    </p>
+                  )}
                 </PanelContent>
               </Panel>
 
@@ -232,6 +244,42 @@ export default function Dashboard() {
                   valueClassName={data?.resultado_liquido >= 0 ? "text-success" : "text-destructive"}
                 />
               </div>
+
+              {vendas && (
+                <div className="space-y-3" data-testid="dashboard-vendas">
+                  <h3 className="text-sm font-medium text-card-foreground">Vendas de aparelhos</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+                    <LooseMetric label="Vendas Realizadas" value={vendas.quantidade ?? "—"} />
+                    <LooseMetric label="Faturamento Vendas" value={formatCurrency(vendas.faturamento)} />
+                    <LooseMetric label="Ticket Médio Vendas" value={formatCurrency(vendas.ticket_medio)} />
+                    {lucroAparelhos && (
+                      <LooseMetric
+                        label="Lucro Aparelhos"
+                        value={formatCurrency(lucroAparelhos.lucro)}
+                        valueClassName={lucroAparelhos.lucro >= 0 ? "text-success" : "text-destructive"}
+                      />
+                    )}
+                  </div>
+                  {vendas.por_vendedor?.length > 0 && (
+                    <ListBlock>
+                      {vendas.por_vendedor.slice(0, 5).map((v) => (
+                        <ListBlockItem key={v.vendedor} data-testid="top-vendedor">
+                          <span className="text-sm text-muted-foreground">
+                            {v.vendedor} · {v.quantidade} venda(s)
+                          </span>
+                          <span className="text-sm font-semibold text-success">{formatCurrency(v.faturamento)}</span>
+                        </ListBlockItem>
+                      ))}
+                    </ListBlock>
+                  )}
+                  {lucroAparelhos && (
+                    <p className="text-xs text-muted-foreground">
+                      Lucro calculado sobre {lucroAparelhos.aparelhos_com_custo} aparelho(s) com compra registrada;
+                      aparelho sem custo conhecido fica fora do lucro.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Charts -- 1 principal (2/3) + 2 de apoio (1/3 cada) */}
               <Suspense fallback={<div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4"><ChartFallback /><ChartFallback /></div>}>

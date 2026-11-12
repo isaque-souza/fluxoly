@@ -6,7 +6,12 @@ dashboard). Extraído de fluxoly_blueprints_api.py (TD-01, Phase 2 -- 10º
 domínio extraído).
 """
 
-from flask import Blueprint, request
+from datetime import date, timedelta
+
+from flask import Blueprint, request, session
+
+import fluxoly_compras_aparelhos_service as compras_aparelhos_service
+import fluxoly_vendas_service as vendas_service
 
 from fluxoly_api_helpers import err, ok, usuario_logado
 from fluxoly_core import TIPO_OS_INTERNA
@@ -199,7 +204,32 @@ def create_api_system_blueprint(deps):
             shopping_pendentes = 0
             shopping_urgentes = 0
 
+        # Dashboard somando vendas e OS (PLAN-dashboard-vendas-os.md). `faturamento_total`,
+        # `lucro_total` e `ticket_medio` continuam sendo só de OS (compatibilidade); vendas e o
+        # consolidado vêm em chaves próprias. Lucro de aparelho (BR-092) só para admin/financeiro.
+        inicio_vendas = f"{start_date} 00:00:00" if start_date else None
+        fim_vendas = None
+        if end_date:
+            try:
+                fim_vendas = f"{date.fromisoformat(end_date) + timedelta(days=1)} 00:00:00"
+            except ValueError:
+                fim_vendas = None
+        resumo_vendas = vendas_service.resumir_vendas_periodo(conectar, inicio_vendas, fim_vendas)
+        if session.get("usuario_perfil") in ("admin", "financeiro"):
+            resumo_vendas["lucro_aparelhos"] = compras_aparelhos_service.resumir_lucro_aparelhos_vendidos(
+                conectar, inicio_vendas or "0000-01-01 00:00:00", fim_vendas or "9999-12-31 23:59:59"
+            )
+        faturamento_consolidado = round(faturamento_total + resumo_vendas["faturamento"], 2)
+        atendimentos = ordens_finalizadas + resumo_vendas["quantidade"]
+
         return ok(
+            vendas=resumo_vendas,
+            consolidado={
+                "faturamento": faturamento_consolidado,
+                "faturamento_os": round(faturamento_total, 2),
+                "faturamento_vendas": resumo_vendas["faturamento"],
+                "ticket_medio": round(faturamento_consolidado / atendimentos, 2) if atendimentos else 0,
+            },
             faturamento_total=round(faturamento_total, 2),
             lucro_total=round(lucro_total, 2),
             custo_consumido_periodo=round(custo_consumido_periodo, 2),

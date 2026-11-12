@@ -9,6 +9,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Dashboard somando vendas e OS)
+- **feat: vendas no dashboard** — o número principal vira o faturamento consolidado (assistência + vendas,
+  com a composição abaixo) e um bloco "Vendas de aparelhos" mostra vendas realizadas, faturamento, ticket
+  médio, top 5 vendedores e, só para admin/financeiro, o lucro dos aparelhos comprados (BR-092).
+  `/api/dashboard` ganha `vendas` e `consolidado`; as chaves antigas seguem só de OS. Plano:
+  `docs/engineering/plans/PLAN-dashboard-vendas-os.md`. Etapa 4 dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Painel de garantias unificado)
 - **feat: garantias de venda na tela Garantias** — abas Assistência e Vendas, com dias restantes e resumo
   ativas/vencendo/vencidas. Novo `GET /api/vendas/garantias` (venda concluída com garantia > 0 meses).

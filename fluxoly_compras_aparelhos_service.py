@@ -384,3 +384,25 @@ def cancelar_compra(conectar, compra_id, usuario_id, motivo):
         conn.close()
 
     return True, None
+
+
+def resumir_lucro_aparelhos_vendidos(conectar, inicio, fim):
+    """Dashboard (PLAN-dashboard-vendas-os.md): lucro dos aparelhos comprados
+    que foram vendidos no período (BR-092 -- mesma conta do relatório mensal
+    BR-093). Aparelho que não veio de compra não tem custo conhecido e fica
+    fora do lucro. Visibilidade (só admin/financeiro) decidida no endpoint."""
+    conn = conectar()
+    try:
+        rows = repo.buscar_vendas_de_aparelhos_comprados(conn.cursor(), inicio, fim)
+    finally:
+        conn.close()
+    valor_vendido = custo_total = 0.0
+    for _venda_id, _vendido_em, _unidade_id, _produto, _imei, valor_venda, valor_pago, custo_pecas in rows:
+        valor_vendido += valor_venda or 0.0
+        custo_total += _custo_para_dict(valor_pago, custo_pecas)["custo_total"]
+    return {
+        "aparelhos_com_custo": len(rows),
+        "valor_vendido": round(valor_vendido, 2),
+        "custo_total": round(custo_total, 2),
+        "lucro": round(valor_vendido - custo_total, 2),
+    }
