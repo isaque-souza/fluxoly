@@ -666,6 +666,14 @@ detalhe da venda).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); conteúdo espelhado do
 comprovante de entrega da OS (BR-097).*
 
+**BR-104 — ✅ Implementado (2026-11-11)**
+Lembretes de pós-venda: a cada dia, a loja vê as vendas concluídas que completam **7 dias**
+(pós-venda), **30 dias** (satisfação) e **1 ano** (upgrade), com botão que abre o WhatsApp do aparelho
+com uma mensagem sugerida. O sistema não envia mensagem e não registra o contato. Acesso: perfis que
+vendem (admin/vendedor).
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); marcos 7/30/365 e textos
+por decisão de engenharia — revisáveis no QA.*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

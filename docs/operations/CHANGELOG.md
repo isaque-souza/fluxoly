@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Lembretes de pós-venda)
+- **feat: lembretes de pós-venda e upgrade** (BR-104) — tela `/lembretes` (menu Vendas) com as vendas que
+  completam 7, 30 e 365 dias no dia escolhido e botão "Abrir WhatsApp" (`wa.me`) com mensagem sugerida.
+  Novo `GET /api/vendas/lembretes`. Plano: `docs/engineering/plans/PLAN-lembretes-pos-venda.md`. Etapa 13
+  (Onda 3) dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Recibo de venda)
 - **feat: recibo de venda em PDF** (BR-103) — o botão "Imprimir" da venda (detalhe e tela de venda
   concluída), que era só um aviso "em breve", passa a baixar o recibo: loja, cliente, item com IMEI e
