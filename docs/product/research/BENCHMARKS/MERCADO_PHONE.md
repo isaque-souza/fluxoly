@@ -15,6 +15,7 @@ em 2026-11-11 (o sistema não exibe número de versão na interface)
 | OS | Concluída — estrutura de telas, campos e menus (somente leitura; nenhuma OS criada ou editada) | 2026-11-11 |
 | Compras / Estoque | Concluída — estoque por unidade, cadastro, busca de IMEI, movimentações, procedência (somente leitura) | 2026-11-11 |
 | Financeiro | Concluída — despesas, despesas fixas, caixas, contas, movimentações, conciliação, DRE (somente leitura) | 2026-11-11 |
+| Garantia, Checklist e Auditoria | Concluída — termos de garantia/compra, monitoramento de garantias, modelos de checklist, log e auditoria, logs de acesso (somente leitura) | 2026-11-11 |
 | Ferramentas e Marketplace | Concluída — automações de WhatsApp, indicação, catálogo, assinatura, loja de apps, serviços por uso (somente leitura) | 2026-11-11 |
 | Tela inicial e Configurações | Concluída — avisos, widgets, parâmetros, gestão de acesso, senhas mestras, situações de OS, notificações (somente leitura) | 2026-11-11 |
 | Clientes e Relatórios | Concluída — cadastro de pessoas, histórico de compras, catálogo de 39 relatórios, alertas, dashboard diário (somente leitura) | 2026-11-11 |
@@ -944,6 +945,76 @@ Candidatos (sugestão, não decisão):
    fornecedor antes (decisão de integração, não de código).
 4. Não implementar agora: catálogo online, score de crédito, assinatura eletrônica, carteira pré-paga,
    gerador por IA — baixo uso observado ou fora do foco da Fase atual.
+
+---
+
+## Garantia, Checklist e Auditoria
+
+*Walkthrough de 2026-11-11, somente leitura: Termos de garantia (um termo aberto e fechado sem salvar),
+Monitoramento de garantias, Modelos de checklist (o modelo da loja aberto e fechado sem salvar), Log e
+auditoria (um registro aberto) e Logs de acesso. Nenhum nome, IP ou valor registrado aqui.*
+
+### Fluxo observado
+- **Termos de garantia**: cadastro de termos com tipo (**Termo de garantia** ou **Termo de compra** — o
+  documento assinado quando a loja compra um usado), nome, **dias de garantia** e texto rico com
+  cabeçalho da loja e pré-visualização. Ao finalizar uma OS ou venda com o termo, o sistema calcula a data
+  de vencimento. Botões para **aplicar o termo retroativamente** a vendas e OS antigas. A loja tem nove
+  termos (assistência 30/90/180 dias, seminovo 180 dias/12 meses, novo, acessórios, upgrade novo/seminovo).
+- **Monitoramento de garantias**: abas Vendas em garantia, OS em garantia, Vendas expiradas, OS
+  expiradas, **Produtos em garantia** e Produtos expirados, com contagem; colunas venda/OS, cliente,
+  finalização, termo, vencimento, **dias restantes** e produto(s). A garantia é acompanhada por item
+  vendido, não só pela venda.
+- **Modelos de checklist**: lista de itens com ordem, descrição, **tipo de resposta** (marcar, sim/não,
+  texto curto, texto longo, seleção, múltipla escolha), obrigatório e opções. A loja usa um modelo com 16
+  itens, todos "marcar" e nenhum obrigatório (Wi-Fi, chip, câmeras, microfones, Face ID, touch, auricular,
+  alto-falante, True Tone, mensagem de peça, botões, flash, carregador, carcaça).
+- **Log e auditoria**: tudo que foi criado, alterado ou excluído, com filtros por ação, módulo,
+  responsável, período, código do registro, **conteúdo alterado** (busca por texto, ex. nome do cliente ou
+  IMEI) e IP. O detalhe mostra **campo, antes e depois**, IP e o JSON gravado. Em uso intenso (vendas e
+  pagamentos alterados no mesmo dia aparecem um a um).
+- **Logs de acesso**: login, data/hora de entrada e saída, IP, com filtro por usuário e período.
+
+### Pontos positivos
+- Termo de garantia com prazo que **calcula o vencimento sozinho** e painel de "dias restantes" por
+  item: responde na hora "esse aparelho ainda está na garantia?".
+- Termo de compra para o usado que a loja adquire (proteção jurídica da origem).
+- Checklist configurável pela loja, sem programação.
+- Auditoria legível (antes/depois por campo) e pesquisável pelo conteúdo, acessível ao dono sem suporte.
+
+### Pontos negativos
+- Aplicação retroativa de termo altera garantias já emitidas — útil, mas arriscado sem confirmação.
+- Checklist sem nenhum item obrigatório na prática: o tipo de resposta rico não é usado.
+- Logout quase nunca registrado (sessões não encerradas), o que reduz o valor do log de acesso.
+
+### Impacto para Fluxoly (Garantia, Checklist e Auditoria)
+
+**A Fluxoly já tem:**
+- `tipos_garantia` (nome + duração em meses, BR-055) compartilhado entre Vendas e Assistência; garantia
+  por item de venda com histórico (`/api/vendas/<id>/itens/<id>/historico-garantia`) e garantia de reparo
+  (90 dias padrão, `GARANTIA_REPARO_DIAS_PADRAO`); página Garantias — **só de OS** (colunas OS, cliente,
+  modelo, reparo, finalização, garantia).
+- `termos_entrada`/`termos_garantia` em dados da loja (texto livre, impresso no comprovante).
+- `os_checklists` com 5 itens fixos (touch, áudio, microfone, câmera, botões) + observações + JSON,
+  acessível por link público.
+- `audit_log` (entidade, usuário, ação, antes/depois em JSON) gravado em OS, caixa, clientes, compras de
+  aparelho, contas a pagar/receber, dados da loja, produtos, unidades e vendas — **sem tela para
+  consultar**; só históricos pontuais (garantia, desconto, comissão, unidade).
+- `login_attempts` (IP + sucesso) para rate limit — não é um log de acesso por usuário.
+
+**Não tem:** painel único de garantias (venda + OS, em garantia × vencidas, dias restantes); termo de
+compra do usado; checklist configurável; tela de auditoria; log de acesso por usuário.
+
+#### Decisão pendente do PO
+Candidatos (sugestão, não decisão):
+1. **Tela de auditoria** sobre o `audit_log` que já é gravado em quase todos os domínios: filtros por
+   entidade, usuário e período, detalhe antes/depois. Esforço baixo (só leitura), alto valor de
+   confiança para o dono. Base também para a "autorização de gerente" (Tela inicial e Configurações).
+2. **Painel de garantias unificado** (vendas + OS, dias restantes, vencidas): os dados existem nos dois
+   domínios; hoje a página Garantias só mostra OS.
+3. **Checklist configurável** (itens e tipo de resposta definidos pela loja) — os 5 itens fixos ficam
+   aquém dos 16 que a loja usa; mexe em schema (`os_checklists`), exige plano aprovado.
+4. **Termo de compra do usado** — avaliar junto com Compras de aparelho (BR-092/093).
+5. Não implementar: aplicação retroativa de termos.
 
 ---
 

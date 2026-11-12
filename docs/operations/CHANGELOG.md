@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — benchmark Mercado Phone: Garantia, Checklist e Auditoria)
+- **docs: análise de Garantia, Checklist e Auditoria do Mercado Phone** — termos de garantia e de compra
+  com cálculo de vencimento, monitoramento de garantias por item, checklist configurável, log de auditoria
+  com antes/depois e logs de acesso. Registra que o `audit_log` da Fluxoly é gravado em quase todos os
+  domínios mas não tem tela de consulta. Sem mudança de código.
+
 ### Documentação (2026-11-11 — benchmark Mercado Phone: Ferramentas e Marketplace)
 - **docs: análise de Ferramentas e Marketplace do Mercado Phone** — automações de pós-venda por WhatsApp,
   programa de indicação, catálogo online, assinatura digital, consulta de score/IMEI, loja de integrações
