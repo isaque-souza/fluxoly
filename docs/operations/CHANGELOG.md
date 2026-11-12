@@ -12,7 +12,8 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Documentação (2026-11-11 — status da Fila Priorizada do backlog)
 - **docs: atualiza a coluna Status do `PRODUCT_BACKLOG.md`** — Vendas (V1.2-V1.5 com tela), Clientes,
   IMEI e Produtos (com tela), Financeiro mínimo e Caixa (entregues em 2026-08-10) estavam desatualizados.
-  Prioridades e notas do PO inalteradas.
+  Prioridades e notas do PO inalteradas. Em seguida, corrigidas as menções "Sem tela" e o
+  rastreamento por unidade de Produtos (entregue na ADR-007) na coluna Fonte / Nota.
 
 ### Documentação (2026-11-11 — proposta de backlog a partir do benchmark Mercado Phone)
 - **docs: proposta de candidatos no `PRODUCT_BACKLOG.md`** — 25 candidatos consolidados de todos os
