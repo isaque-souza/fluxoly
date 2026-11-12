@@ -56,7 +56,7 @@ Este documento tem duas seções com propósitos diferentes:
 | Backup automático | ✅ | ❓ | | |
 | Login / Autenticação | ✅ (básico) | ❓ | | |
 | Permissões granulares | ❌ | ❓ | | |
-| Vendas (peça/acessório/serviço/combo) | ❌ | 🟡 (Mercado Phone) | `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` | Só visão geral de menus até 2026-07-22; walkthrough do fluxo completo ainda pendente — não marcar ✅/❌ até isso acontecer |
+| Vendas (peça/acessório/serviço/combo) | ❌ | 🟡 (Mercado Phone) | `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` | Walkthrough de Vendas e OS feito em 2026-11-11 (somente leitura) — ver seções "Vendas" e "OS" do benchmark |
 | Caixa (abertura/fechamento/sangria) | ❌ | ❓ | | |
 | Financeiro (contas a pagar/receber) | ❌ | ❓ | | |
 | Dashboard com indicadores comerciais | ❌ | ❓ | | |

@@ -9,6 +9,67 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-11 — status da Fila Priorizada do backlog)
+- **docs: atualiza a coluna Status do `PRODUCT_BACKLOG.md`** — Vendas (V1.2-V1.5 com tela), Clientes,
+  IMEI e Produtos (com tela), Financeiro mínimo e Caixa (entregues em 2026-08-10) estavam desatualizados.
+  Prioridades e notas do PO inalteradas. Em seguida, corrigidas as menções "Sem tela" e o
+  rastreamento por unidade de Produtos (entregue na ADR-007) na coluna Fonte / Nota.
+
+### Documentação (2026-11-11 — proposta de backlog a partir do benchmark Mercado Phone)
+- **docs: proposta de candidatos no `PRODUCT_BACKLOG.md`** — 25 candidatos consolidados de todos os
+  módulos do benchmark, em quatro ondas (dados existentes, fundação de pagamentos, relacionamento,
+  decisões antes de código), cada um com prioridade/esforço sugeridos, item da Release 1.0 e evidência.
+  Marcada como pendente do PO; a Fila Priorizada não foi alterada.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Garantia, Checklist e Auditoria)
+- **docs: análise de Garantia, Checklist e Auditoria do Mercado Phone** — termos de garantia e de compra
+  com cálculo de vencimento, monitoramento de garantias por item, checklist configurável, log de auditoria
+  com antes/depois e logs de acesso. Registra que o `audit_log` da Fluxoly é gravado em quase todos os
+  domínios mas não tem tela de consulta. Sem mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Ferramentas e Marketplace)
+- **docs: análise de Ferramentas e Marketplace do Mercado Phone** — automações de pós-venda por WhatsApp,
+  programa de indicação, catálogo online, assinatura digital, consulta de score/IMEI, loja de integrações
+  (API, MCP, webhooks) e carteira pré-paga. Encerra o walkthrough de todos os módulos. Sem mudança de
+  código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Tela inicial e Configurações)
+- **docs: análise de Tela inicial e Configurações do Mercado Phone** — avisos de pendências, widgets,
+  parâmetros gerais, gestão de acesso (visibilidade de vendas, horário), senhas mestras, situações de OS
+  configuráveis, notificações e modelos de documentos. Corrige a seção Clientes e Relatórios: o Dashboard
+  da Fluxoly já tem lucro e ticket médio, mas só de OS. Sem mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Clientes e Relatórios)
+- **docs: análise de Clientes e Relatórios do Mercado Phone** — ficha com histórico de compras, índice de
+  recompra, catálogo de relatórios, dashboard de alertas de dados e dashboard diário. Novo **KI-062**:
+  perfil do cliente e detalhe da unidade ainda mostram "módulo de Vendas em construção". Sem mudança de
+  código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Fiscal)
+- **docs: análise do Fiscal do Mercado Phone** — score fiscal, NF-e de entrada do usado, captura de XML,
+  notas a partir de venda/OS/estoque; recomendações condicionadas a discovery e escolha de provedor. Sem
+  mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Financeiro)
+- **docs: análise do Financeiro do Mercado Phone** — contas a pagar/receber, despesas fixas, caixa por
+  sessão, contas bancárias, formas de pagamento com prazo, conciliação e DRE; lacunas da Fluxoly como
+  candidatos com "Decisão pendente do PO". Sem mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Compras/Estoque)
+- **docs: análise de Compras/Estoque do Mercado Phone** — estoque por unidade com dias em estoque, busca
+  consolidada de IMEI, custos extras, certificado de procedência; seção de Vendas corrigida (a troca já
+  existe em parte via Compra de aparelhos). Sem mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: Vendas)
+- **docs: análise de Vendas do Mercado Phone** no mesmo documento — PDV multi-item/multi-pagamento,
+  simulador de upgrade (aparelho na troca), trocas e devoluções, histórico por item; lacunas da Fluxoly
+  como candidatos com "Decisão pendente do PO". Sem mudança de código.
+
+### Documentação (2026-11-11 — benchmark Mercado Phone: OS)
+- **docs: análise da OS do Mercado Phone** em `docs/product/research/BENCHMARKS/MERCADO_PHONE.md` —
+  listagem, ações, formulário (8 abas), Kanban, garantias e dashboard, observados em modo leitura; lacunas
+  da Fluxoly listadas como candidatos com "Decisão pendente do PO". Sem mudança de código.
+
 ### Alterado (2026-11-10 — PDF da OS no formato de ordem de serviço)
 - **feat: PDF de entrada e de entrega da OS em quadros e tabelas** — cabeçalho com o nome da loja, os dados
   dela no centro e "Ordem de serviço Nº" à direita; quadros "Dados do Cliente" e "Dados da OS" lado a lado;
