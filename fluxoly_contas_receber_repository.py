@@ -91,3 +91,20 @@ def cancelar(cursor, conta_id):
 def deletar(cursor, conta_id):
     cursor.execute("DELETE FROM contas_receber WHERE id = ? AND status = 'pendente'", (conta_id,))
     return cursor.rowcount
+
+
+def resumir_pendentes_por_vencimento(cursor, hoje):
+    """Pendências da tela inicial (PLAN-pendencias-tela-inicial.md): (qtd, total) das contas pendentes
+    vencidas (vencimento < hoje) e (qtd, total) das que vencem hoje. Conta sem vencimento fica fora."""
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(data_vencimento < ?), 0),
+               COALESCE(SUM(CASE WHEN data_vencimento < ? THEN valor END), 0),
+               COALESCE(SUM(data_vencimento = ?), 0),
+               COALESCE(SUM(CASE WHEN data_vencimento = ? THEN valor END), 0)
+        FROM contas_receber
+        WHERE status = 'pendente' AND COALESCE(data_vencimento, '') != ''
+        """,
+        (hoje, hoje, hoje, hoje),
+    )
+    return cursor.fetchone()

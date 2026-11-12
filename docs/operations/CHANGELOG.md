@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Pendências na tela inicial)
+- **feat: pendências de hoje no Dashboard** (admin/financeiro) — contas a pagar e a receber vencidas e que
+  vencem hoje, com quantidade e total, e atalho para o Financeiro. Novo `GET /api/pendencias`. Estoque
+  mínimo (precisa de schema) e IMEI duplicado (já impedido por `UNIQUE`) ficaram fora — ver
+  `docs/engineering/plans/PLAN-pendencias-tela-inicial.md`. Etapa 6 dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Alertas de dados)
 - **feat: alertas de margem no relatório de compra e revenda** (BR-099) — vendas do mês abaixo do custo
   (custo da compra ou, sem compra, `preco_custo` do cadastro) e aparelhos em estoque sem custo conhecido.

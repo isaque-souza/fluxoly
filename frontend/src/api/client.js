@@ -189,6 +189,11 @@ export const alertas = {
   list: () => get("/alertas"),
 };
 
+// Pendências da tela inicial -- contas vencidas/vencendo hoje (admin/financeiro).
+export const pendencias = {
+  get: () => get("/pendencias"),
+};
+
 // ── Dashboard ───────────────────────────────────────────────────────────────
 export const dashboard = {
   get: (params = {}) => {
