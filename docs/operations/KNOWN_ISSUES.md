@@ -1602,6 +1602,10 @@ Aberto — não atende critério objetivo de interrupção do `ENGINEERING_GUIDE
 confirmado). Registrado como frente de trabalho futura de consistência de autorização/UX entre perfis,
 salvo decisão do CTO de alinhar estritamente ao `ADR-012` antes de retomar a homologação.
 
+Atualização (2026-11-11): a observação incidental acima (Dashboard sem a receita de Vendas) é tratada
+pelo PR #90 (`feat/dashboard-vendas-os`, ainda não mergeado). As duas divergências de perfil deste KI
+seguem abertas.
+
 Sprint prevista:
 Não definida — não bloqueia a correção do KI-041 nem a retomada da homologação.
 
@@ -2236,6 +2240,11 @@ Status:
 Aberto (2026-11-10). Precisa de decisão: gravar tudo em UTC e converter só na exibição/filtros, ou gravar
 tudo no horário da loja (incluindo trocar `CURRENT_TIMESTAMP` por `datetime('now','localtime')`). Dados já
 gravados ficam em UTC em qualquer caso. Não definir `TZ` no container antes dessa decisão.
+
+Atualização (2026-11-11): as entregas do benchmark seguem a mesma convenção (comparar datas em UTC,
+sem converter) e ampliam a superfície afetada — dashboard de vendas (período), pendências de contas
+("hoje"), dias em estoque, OS atrasada (BR-101) e lembretes de pós-venda (BR-104). Quando a decisão
+de fuso sair, esses pontos entram na mesma correção. Cada plano cita o KI-061.
 
 Sprint prevista:
 —

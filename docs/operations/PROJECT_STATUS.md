@@ -5,7 +5,19 @@
 **Branch principal:** `main`
 **Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
-**Última revisão:** 2026-11-10 — **Documentos da OS para o cliente implementados** (BR-094 a BR-098,
+**Última revisão:** 2026-11-11 — **Candidatos do benchmark Mercado Phone executados em PRs empilhados**
+(#87 a #100, nenhum mergeado em `main`; ordem de merge = numérica). Entregues: KI-062, tela de auditoria,
+painel de garantias com vendas, dashboard somando vendas e OS, alertas de margem (BR-099), pendências de
+contas no Dashboard, dias em estoque, vendedor sem custo/lucro no Dashboard (BR-100), previsão de entrega e
+OS atrasada (BR-101, **migration `m0005`**), relato/laudo/observação interna (BR-102, **migration `m0006`**),
+recibo de venda em PDF (BR-103) e lembretes de pós-venda com `wa.me` (BR-104). Só plano (decisão do PO):
+formas de pagamento, recebimento da OS, troca completa, lucro líquido, autorização de gerente
+(`PLAN-onda2-pagamentos-caixa.md`); origem da venda e aniversário do cliente não implementados. Suíte backend
+961 passed / 5 failed (KI-030, só Windows local) na branch mais alta com migrations; frontend 211/211; ruff e
+eslint sem erro; CI verde nos PRs conferidos. **Antes do merge de #95/#96:** backup do banco e aplicar
+`m0005`/`m0006` numa cópia. Lista completa e decisões pendentes: `PRODUCT_BACKLOG.md` → "Status da
+execução (2026-11-11, noite)". Antes disso:
+2026-11-10 — **Documentos da OS para o cliente implementados** (BR-094 a BR-098,
 `docs/engineering/plans/PLAN-documentos-os-cliente.md`): PDF de entrada e de entrega na tela da OS, gerado
 no navegador com `jspdf`, e cadastro **Dados da Loja** (migration `m0004`, tabela `dados_loja`). Suíte backend
 907 passed (`tests/test_dados_loja.py` 12 casos, `tests/test_os_documento.py` 17), frontend 176/176, lint 0
