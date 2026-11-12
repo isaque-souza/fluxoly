@@ -648,6 +648,14 @@ próprio dia da previsão ainda não está atrasada. Atraso é calculado, nunca 
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); "vence no fim do dia" por
 decisão de engenharia — revisável no QA.*
 
+**BR-102 — ✅ Implementado (2026-11-11)**
+Além de "Observações", a OS tem três textos livres opcionais: **relato do cliente** (o defeito contado
+por ele), **laudo técnico** (diagnóstico) e **observação interna**. Relato e laudo saem nos documentos
+do cliente (entrada e entrega), como as observações; a observação interna **nunca** sai em documento
+do cliente — complementa a lista do que não sai (BR-097).
+*Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); relato/laudo no documento
+por decisão de engenharia — revisável no QA.*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja

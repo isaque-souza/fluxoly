@@ -98,6 +98,12 @@ def normalizar_data_previsao(valor):
         return None, "Data de previsão inválida (use AAAA-MM-DD)."
 
 
+# BR-102 -- textos livres da OS além de `observacoes`. Os dois primeiros saem no documento do
+# cliente; `observacao_interna` nunca sai da loja.
+CAMPOS_TEXTO_OS = ("relato_cliente", "laudo_tecnico", "observacao_interna")
+CAMPOS_TEXTO_OS_DOCUMENTO = ("relato_cliente", "laudo_tecnico")
+
+
 def os_atrasada(status, data_previsao, hoje=None):
     """BR-101 -- atrasada = ainda aberta (nem finalizada nem cancelada) e previsão já passou.
     Vence no fim do dia da previsão: no próprio dia ainda não está atrasada."""

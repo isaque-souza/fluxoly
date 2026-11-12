@@ -17,10 +17,24 @@ import fluxoly_compras_aparelhos_service as compras_aparelhos_service
 import fluxoly_dados_loja_service as dados_loja_service
 import fluxoly_unidades_serializadas_service as unidades_service
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
-from fluxoly_core import CLIENTE_OS_INTERNA, TIPO_OS_INTERNA, normalizar_data_previsao, os_atrasada
+from fluxoly_core import (
+    CAMPOS_TEXTO_OS,
+    CLIENTE_OS_INTERNA,
+    TIPO_OS_INTERNA,
+    normalizar_data_previsao,
+    os_atrasada,
+)
 from fluxoly_mercadophone import atualizar_runtime_mercadophone, carregar_config_mercadophone
 from fluxoly_os import TIPOS_DOCUMENTO_CLIENTE, buscar_os_para_documento, montar_documento_cliente
 from fluxoly_validation import parse_float, parse_int, safe_json
+
+
+# BR-102 -- SQL literal por coluna (sem montar nome de coluna em tempo de execução).
+_SQL_GRAVAR_TEXTO_OS = {
+    "relato_cliente": "UPDATE os SET relato_cliente=? WHERE id=?",
+    "laudo_tecnico": "UPDATE os SET laudo_tecnico=? WHERE id=?",
+    "observacao_interna": "UPDATE os SET observacao_interna=? WHERE id=?",
+}
 
 
 def create_api_os_blueprint(deps):
@@ -231,6 +245,12 @@ def create_api_os_blueprint(deps):
             "atrasada": os_atrasada(status, row[18] if len(row) > 18 else ""),
         }
 
+    def _gravar_textos_os(cursor, os_id, body):
+        """BR-102 -- grava só os campos de texto presentes no payload (cliente antigo não apaga)."""
+        for campo in CAMPOS_TEXTO_OS:
+            if campo in body:
+                cursor.execute(_SQL_GRAVAR_TEXTO_OS[campo], ((body.get(campo) or "").strip(), os_id))
+
     def _ordem_lista_por_id_desc(item):
         origem = (item.get("origem_integracao") or "").strip().lower()
         externo = (item.get("id_externo_integracao") or "").strip()
@@ -333,7 +353,10 @@ def create_api_os_blueprint(deps):
                 COALESCE(id_externo_integracao, ''),
                 COALESCE(data_finalizado, ''),
                 unidade_serializada_id,
-                COALESCE(data_previsao, '')
+                COALESCE(data_previsao, ''),
+                COALESCE(relato_cliente, ''),
+                COALESCE(laudo_tecnico, ''),
+                COALESCE(observacao_interna, '')
             FROM os
             WHERE id=?
             """,
@@ -397,6 +420,7 @@ def create_api_os_blueprint(deps):
                 "unidade_serializada_id": row[19],
                 "data_previsao": row[20] or "",
                 "atrasada": os_atrasada(status, row[20]),
+                **dict(zip(CAMPOS_TEXTO_OS, (t or "" for t in row[21:24]), strict=True)),  # BR-102
                 "pecas_usadas": pecas_usadas,
             }
         )
@@ -732,6 +756,7 @@ def create_api_os_blueprint(deps):
                 ),
             )
             novo_id = cursor.lastrowid
+            _gravar_textos_os(cursor, novo_id, body)
             salvar_reparos_os(cursor, novo_id, reparo_ids)
 
             custo_total = 0.0
@@ -886,6 +911,7 @@ def create_api_os_blueprint(deps):
             )
             if atualizar_previsao:
                 cursor.execute("UPDATE os SET data_previsao=? WHERE id=?", (data_previsao, os_id))
+            _gravar_textos_os(cursor, os_id, body)
             salvar_reparos_os(cursor, os_id, reparo_ids)
 
             if resolvidos:

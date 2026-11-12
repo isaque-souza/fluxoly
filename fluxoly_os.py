@@ -547,7 +547,8 @@ def buscar_os_para_documento(cursor, os_id):
                COALESCE(imei, ''), COALESCE(tecnico, ''), COALESCE(status, ''),
                COALESCE(data, ''), COALESCE(data_finalizado, ''),
                COALESCE(observacoes, ''), COALESCE(valor_cobrado, 0),
-               COALESCE(valor_descontado, 0)
+               COALESCE(valor_descontado, 0), COALESCE(relato_cliente, ''),
+               COALESCE(laudo_tecnico, '')
         FROM os WHERE id=?
         """,
         (os_id,),
@@ -570,6 +571,7 @@ def buscar_os_para_documento(cursor, os_id):
     chaves = (
         "id", "tipo", "cliente", "cliente_id", "aparelho", "modelo", "cor", "imei", "tecnico",
         "status", "data", "data_finalizado", "observacoes", "valor_cobrado", "valor_descontado",
+        "relato_cliente", "laudo_tecnico",
     )  # fmt: skip
     dados = dict(zip(chaves, row, strict=True))
     dados["servicos"] = [
@@ -640,6 +642,9 @@ def montar_documento_cliente(tipo_documento, os_dados, loja, cliente_cadastro, s
             "imei": os_dados["imei"],
             "tecnico": os_dados["tecnico"],
             "observacoes": os_dados["observacoes"],
+            # BR-102 -- relato e laudo saem para o cliente; observação interna nunca é lida aqui.
+            "relato_cliente": os_dados.get("relato_cliente", ""),
+            "laudo_tecnico": os_dados.get("laudo_tecnico", ""),
             "valor_total": round(valor_total or 0, 2),
             "servicos": servicos,
         },

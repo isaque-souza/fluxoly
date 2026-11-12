@@ -109,6 +109,16 @@ describe("osPdf", () => {
     expect(texto).not.toContain("Observa");
   });
 
+  it("BR-102: relato do cliente e laudo técnico saem quando preenchidos", () => {
+    const texto = conteudo(montarPdfOs(jsPDF, documento("entrada", { relato_cliente: "Apaga sozinho", laudo_tecnico: "Flex rompido" }), "42"));
+    expect(texto).toContain("Relato do cliente");
+    expect(texto).toContain("Apaga sozinho");
+    expect(texto).toContain("Flex rompido");
+
+    const vazio = conteudo(montarPdfOs(jsPDF, documento("entrada", { relato_cliente: "", laudo_tecnico: "" }), "42"));
+    expect(vazio).not.toContain("Relato do cliente");
+  });
+
   it("nomeia o arquivo pelo número da OS e tipo", () => {
     expect(nomeArquivoPdfOs(documento("entrega"), "77")).toBe("os-77-entrega.pdf");
   });

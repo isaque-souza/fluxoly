@@ -6,7 +6,7 @@ import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, o
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import OrderTextosPanel, { CAMPOS_TEXTO_OS_VAZIOS } from "@/components/orders/OrderTextosPanel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Reveal } from "@/components/ui/reveal";
@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   data_os: new Date().toISOString().split("T")[0],
   observacoes: "",
   data_previsao: "",
+  ...CAMPOS_TEXTO_OS_VAZIOS,
 };
 
 export default function NewOrder() {
@@ -434,19 +435,7 @@ export default function NewOrder() {
           </PanelContent>
         </Panel>
 
-        {/* Observações */}
-        <Panel>
-          <PanelHeader>
-            <PanelTitle>Observações</PanelTitle>
-          </PanelHeader>
-          <PanelContent className="space-y-4">
-            <Textarea
-              value={form.observacoes}
-              onChange={(e) => setField("observacoes", e.target.value)}
-              placeholder="Observações adicionais sobre a OS..."
-            />
-          </PanelContent>
-        </Panel>
+        <OrderTextosPanel form={form} setField={setField} idPrefix="order" />
 
         <div className="flex gap-3">
             <Button type="submit" disabled={submitting} data-testid="order-create-button">

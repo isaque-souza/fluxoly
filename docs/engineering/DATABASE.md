@@ -75,6 +75,9 @@ Autenticação e perfis de acesso.
 | `cliente_id` | INTEGER | *(ALTER, Sprint P0.1)* — FK lógica para `clientes.id`, nullable, **sem backfill**: OS existentes continuam só com `cliente` (texto); novas OS podem ser vinculadas a um cliente, mas nada força isso ainda |
 | `unidade_serializada_id` | INTEGER | *(migration `m0003`, 2026-11-08)* — FK lógica para `unidades_serializadas.id`, nullable. Reservada para a OS interna de conserto de aparelho comprado (BR-090): preenchida só quando `tipo='Interna'`, que também grava `cliente='Estoque próprio'`, `vendedor=''`, valores 0 e o IMEI do aparelho. Índice `idx_os_unidade_serializada_id` |
 | `data_previsao` | TEXT | *(migration `m0005`, 2026-11-11)* — previsão de entrega `YYYY-MM-DD`, nullable, sem backfill (OS antigas ficam sem previsão). OS aberta com previsão anterior a hoje é "atrasada" (BR-101, calculado, nunca gravado) |
+| `relato_cliente` | TEXT | *(migration `m0006`, 2026-11-11)* — o que o cliente contou do defeito, nullable. Sai no documento do cliente (BR-102) |
+| `laudo_tecnico` | TEXT | *(migration `m0006`)* — diagnóstico do técnico, nullable. Sai no documento do cliente (BR-102) |
+| `observacao_interna` | TEXT | *(migration `m0006`)* — nota só da equipe, nullable. **Nunca** sai em documento do cliente (BR-102) |
 
 Sem índice declarado explicitamente (candidato a `idx_os_status_data_tecnico` — ver KI-005/Sprint 5).
 
