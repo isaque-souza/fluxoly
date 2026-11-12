@@ -1663,3 +1663,53 @@ class TestGarantiaDeVenda:
         login_como(client, usuario_vendedor)
         resp = client.get(f"/api/vendas/{venda_id}/itens/{item_id}/historico-garantia")
         assert resp.status_code == 200
+
+
+class TestPainelGarantiasVenda:
+    """Painel de garantias unificado (PLAN-painel-garantias-unificado.md)."""
+
+    def _imei(self, cenario):
+        conn = _app.conectar()
+        try:
+            return conn.execute(
+                "SELECT imei FROM unidades_serializadas WHERE id=?", (cenario["unidade_id"],)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+    def test_anonimo_recebe_401(self, client):
+        assert client.get("/api/vendas/garantias").status_code == 401
+
+    def test_lista_garantia_ativa_e_some_quando_venda_cancela(
+        self, client, login_como, usuario_admin, cenario_venda
+    ):
+        login_como(client, usuario_admin)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+        imei = self._imei(cenario_venda)
+
+        resp = client.get(f"/api/vendas/garantias?q={imei}").get_json()
+        assert resp["ok"] is True
+        itens = [i for i in resp["items"] if i["venda_id"] == venda_id]
+        assert len(itens) == 1
+        assert itens[0]["status_garantia"] == "ativa"
+        assert itens[0]["garantia_nome"] == "Garantia Teste Padrão"
+        assert 360 <= itens[0]["dias_restantes"] <= 366
+        assert resp["ativa"] >= 1
+
+        client.post(f"/api/vendas/{venda_id}/cancelar", json={"motivo": "cliente_desistiu"})
+        resp = client.get(f"/api/vendas/garantias?q={imei}").get_json()
+        assert [i for i in resp["items"] if i["venda_id"] == venda_id] == []
+
+    def test_vendedor_tambem_consulta(self, client, login_como, usuario_vendedor):
+        login_como(client, usuario_vendedor)
+        assert client.get("/api/vendas/garantias").status_code == 200
+
+
+def test_classificar_garantia_usa_mesmo_limiar_da_os():
+    from fluxoly_vendas_service import classificar_garantia
+
+    assert classificar_garantia(None) == "desconhecida"
+    assert classificar_garantia(-1) == "vencida"
+    assert classificar_garantia(0) == "vencendo"
+    assert classificar_garantia(7) == "vencendo"
+    assert classificar_garantia(8) == "ativa"

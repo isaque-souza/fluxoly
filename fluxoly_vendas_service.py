@@ -690,3 +690,58 @@ def obter_historico_garantia_item(conectar, item_id):
     finally:
         conn.close()
     return [_evento_historico_item_para_dict(r) for r in rows]
+
+
+# Mesmo limiar de "vencendo" da garantia de reparo (`api_garantias.py::_classificar_garantia`),
+# para o painel unificado não classificar venda e OS com réguas diferentes.
+DIAS_GARANTIA_VENCENDO = 7
+
+
+def classificar_garantia(dias_restantes):
+    if dias_restantes is None:
+        return "desconhecida"
+    if dias_restantes < 0:
+        return "vencida"
+    if dias_restantes <= DIAS_GARANTIA_VENCENDO:
+        return "vencendo"
+    return "ativa"
+
+
+def listar_garantias_venda(conectar, termo="", hoje=None):
+    """Painel de garantias unificado -- garantias de venda (BR-056/BR-057) com
+    dias restantes e status, mais a contagem por status. Leitura pura do
+    snapshot gravado em `vendas_itens` (nunca recalcula pelo tipo de garantia
+    atual, BR-057)."""
+    hoje = hoje or date.today()
+    conn = conectar()
+    try:
+        rows = repo.buscar_garantias_venda(conn.cursor(), termo)
+    finally:
+        conn.close()
+
+    items = []
+    for row in rows:
+        (item_id, venda_id, venda_criado_em, cliente_id, cliente_nome, produto_nome, imei,
+         garantia_nome, garantia_data_inicio, garantia_data_fim) = row
+        try:
+            fim = date.fromisoformat(str(garantia_data_fim)[:10])
+            dias = (fim - hoje).days
+        except ValueError:
+            dias = None
+        items.append({
+            "item_id": item_id,
+            "venda_id": venda_id,
+            "venda_criado_em": venda_criado_em,
+            "cliente_id": cliente_id,
+            "cliente_nome": cliente_nome or "",
+            "produto_nome": produto_nome or "",
+            "imei": imei or "",
+            "garantia_nome": garantia_nome or "",
+            "garantia_data_inicio": garantia_data_inicio,
+            "garantia_data_fim": garantia_data_fim,
+            "dias_restantes": dias,
+            "status_garantia": classificar_garantia(dias),
+        })
+
+    contagem = {s: sum(1 for i in items if i["status_garantia"] == s) for s in ("ativa", "vencendo", "vencida")}
+    return {"items": items, "total": len(items), **contagem}

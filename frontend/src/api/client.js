@@ -371,6 +371,11 @@ export const vendas = {
   },
   create: (data) => post("/vendas", data),
   get:    (id)   => get(`/vendas/${id}`),
+  // Painel de garantias unificado -- garantias de venda com dias restantes.
+  garantias: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return get(`/vendas/garantias${qs ? "?" + qs : ""}`);
+  },
   cancelar: (id, data) => post(`/vendas/${id}/cancelar`, data),
   // V1.3 -- Descontos e Aprovação (BR-043: Ajuste Comercial Autorizado).
   ajustarDescontoItem: (vendaId, itemId, data) =>

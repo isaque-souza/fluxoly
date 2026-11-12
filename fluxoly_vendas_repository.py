@@ -460,3 +460,38 @@ def buscar_unidades_da_venda(cursor, venda_id):
     `buscar_itens_por_venda`)."""
     cursor.execute("SELECT unidade_serializada_id FROM vendas_itens WHERE venda_id = ?", (venda_id,))
     return [row[0] for row in cursor.fetchall()]
+
+
+def buscar_garantias_venda(cursor, termo=""):
+    """Painel de garantias unificado (PLAN-painel-garantias-unificado.md): uma
+    linha por item de venda concluída com garantia concedida. Itens com
+    `garantia_duracao_meses = 0` ("sem garantia", BR-055) e de venda cancelada
+    ficam de fora -- nunca lista uma garantia que não vale."""
+    condicoes = [
+        "v.status = 'concluida'",
+        "COALESCE(vi.garantia_data_fim, '') != ''",
+        "COALESCE(vi.garantia_duracao_meses, 0) > 0",
+    ]
+    params = []
+    termo = (termo or "").strip()
+    if termo:
+        condicoes.append(
+            "(LOWER(COALESCE(c.nome,'')) LIKE ? OR COALESCE(u.imei,'') LIKE ? "
+            "OR LOWER(COALESCE(vi.produto_nome,'')) LIKE ?)"
+        )
+        like = f"%{termo.lower()}%"
+        params += [like, f"%{termo}%", like]
+    cursor.execute(
+        f"""
+        SELECT vi.id, vi.venda_id, v.criado_em, v.cliente_id, c.nome, vi.produto_nome, u.imei,
+               vi.garantia_nome, vi.garantia_data_inicio, vi.garantia_data_fim
+        FROM vendas_itens vi
+        JOIN vendas v ON vi.venda_id = v.id
+        LEFT JOIN clientes c ON v.cliente_id = c.id
+        LEFT JOIN unidades_serializadas u ON vi.unidade_serializada_id = u.id
+        WHERE {" AND ".join(condicoes)}
+        ORDER BY vi.garantia_data_fim ASC, vi.id ASC
+        """,
+        params,
+    )
+    return cursor.fetchall()

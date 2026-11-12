@@ -9,6 +9,11 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Painel de garantias unificado)
+- **feat: garantias de venda na tela Garantias** — abas Assistência e Vendas, com dias restantes e resumo
+  ativas/vencendo/vencidas. Novo `GET /api/vendas/garantias` (venda concluída com garantia > 0 meses).
+  Plano: `docs/engineering/plans/PLAN-painel-garantias-unificado.md`. Etapa 3 dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Tela de auditoria)
 - **feat: tela de Auditoria** (`/auditoria`, admin/financeiro) — consulta do `audit_log` com filtros por
   módulo, ação, nº do registro e período, paginação e detalhe antes/depois campo a campo. Novo

@@ -102,6 +102,17 @@ def create_vendas_blueprint(deps: dict):
             _ocultar_comissao_se_necessario(venda.get("itens_resumo", []))
         return ok(**resultado)
 
+    @vendas_api.route("/garantias")
+    def listar_garantias_venda():
+        """Painel de garantias unificado (PLAN-painel-garantias-unificado.md) --
+        mesma abertura de `/api/garantias` (garantia de reparo): qualquer
+        usuário autenticado consulta, porque é a pergunta de balcão "esse
+        aparelho ainda está na garantia?"."""
+        if not usuario_logado():
+            return err("Não autenticado.", 401)
+        termo = (request.args.get("q") or "").strip()
+        return ok(**service.listar_garantias_venda(conectar, termo))
+
     @vendas_api.route("", methods=["POST"])
     def criar_venda():
         if not usuario_logado():
