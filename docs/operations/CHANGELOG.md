@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-11 — Alertas de dados)
+- **feat: alertas de margem no relatório de compra e revenda** (BR-099) — vendas do mês abaixo do custo
+  (custo da compra ou, sem compra, `preco_custo` do cadastro) e aparelhos em estoque sem custo conhecido.
+  O relatório (`/api/compras-aparelhos/relatorio`) ganha `alertas`. Plano:
+  `docs/engineering/plans/PLAN-alertas-dados.md`. Etapa 5 dos candidatos do benchmark.
+
 ### Adicionado (2026-11-11 — Dashboard somando vendas e OS)
 - **feat: vendas no dashboard** — o número principal vira o faturamento consolidado (assistência + vendas,
   com a composição abaixo) e um bloco "Vendas de aparelhos" mostra vendas realizadas, faturamento, ticket
