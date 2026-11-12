@@ -495,3 +495,28 @@ def buscar_garantias_venda(cursor, termo=""):
         params,
     )
     return cursor.fetchall()
+
+
+def resumir_vendas_por_vendedor(cursor, inicio=None, fim=None):
+    """Dashboard (PLAN-dashboard-vendas-os.md): quantidade e soma de
+    `valor_total` das vendas concluídas no período, agrupadas por vendedor.
+    `inicio` inclusivo, `fim` exclusivo (timestamps `YYYY-MM-DD HH:MM:SS`)."""
+    condicoes, params = ["v.status = 'concluida'"], []
+    if inicio:
+        condicoes.append("v.criado_em >= ?")
+        params.append(inicio)
+    if fim:
+        condicoes.append("v.criado_em < ?")
+        params.append(fim)
+    cursor.execute(
+        f"""
+        SELECT COALESCE(u.nome, ''), COUNT(*), COALESCE(SUM(v.valor_total), 0)
+        FROM vendas v
+        LEFT JOIN usuarios u ON v.vendedor_id = u.id
+        WHERE {" AND ".join(condicoes)}
+        GROUP BY v.vendedor_id
+        ORDER BY 3 DESC
+        """,
+        params,
+    )
+    return cursor.fetchall()

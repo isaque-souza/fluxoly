@@ -1713,3 +1713,55 @@ def test_classificar_garantia_usa_mesmo_limiar_da_os():
     assert classificar_garantia(0) == "vencendo"
     assert classificar_garantia(7) == "vencendo"
     assert classificar_garantia(8) == "ativa"
+
+
+class TestDashboardVendasOS:
+    """Dashboard somando vendas e OS (PLAN-dashboard-vendas-os.md)."""
+
+    @staticmethod
+    def _hoje():
+        # `vendas.criado_em` é CURRENT_TIMESTAMP (UTC); o filtro do dashboard compara com a data
+        # pedida sem converter fuso -- comportamento atual de todo o sistema (KNOWN_ISSUES, fuso).
+        from datetime import datetime, timezone
+
+        return datetime.now(timezone.utc).date().isoformat()
+
+    def _dashboard(self, client):
+        hoje = self._hoje()
+        return client.get(f"/api/dashboard?start_date={hoje}&end_date={hoje}").get_json()
+
+    def test_venda_concluida_entra_no_faturamento_de_vendas_e_no_consolidado(
+        self, client, login_como, usuario_admin, cenario_venda
+    ):
+        login_como(client, usuario_admin)
+        antes = self._dashboard(client)
+        venda_id = client.post("/api/vendas", json=_payload(cenario_venda)).get_json()["id"]
+        depois = self._dashboard(client)
+
+        assert depois["vendas"]["quantidade"] == antes["vendas"]["quantidade"] + 1
+        assert round(depois["vendas"]["faturamento"] - antes["vendas"]["faturamento"], 2) == 3200.0
+        # Chaves antigas continuam sendo só de OS (compatibilidade).
+        assert depois["faturamento_total"] == antes["faturamento_total"]
+        assert depois["consolidado"]["faturamento"] == round(
+            depois["faturamento_total"] + depois["vendas"]["faturamento"], 2
+        )
+        assert any(v["vendedor"] == "Admin Teste" for v in depois["vendas"]["por_vendedor"])
+
+        client.post(f"/api/vendas/{venda_id}/cancelar", json={"motivo": "erro_lancamento"})
+        cancelada = self._dashboard(client)
+        assert cancelada["vendas"]["quantidade"] == antes["vendas"]["quantidade"]
+
+    def test_lucro_de_aparelho_so_para_admin_e_financeiro(
+        self, client, login_como, usuario_vendedor, usuario_financeiro
+    ):
+        login_como(client, usuario_vendedor)
+        assert "lucro_aparelhos" not in self._dashboard(client)["vendas"]
+        login_como(client, usuario_financeiro)
+        assert "lucro_aparelhos" in self._dashboard(client)["vendas"]
+
+    def test_periodo_fora_nao_conta_venda(self, client, login_como, usuario_admin, cenario_venda):
+        login_como(client, usuario_admin)
+        client.post("/api/vendas", json=_payload(cenario_venda))
+        resp = client.get("/api/dashboard?start_date=2000-01-01&end_date=2000-01-31").get_json()
+        assert resp["vendas"]["quantidade"] == 0
+        assert resp["vendas"]["ticket_medio"] == 0

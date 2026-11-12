@@ -137,3 +137,39 @@ describe("Dashboard — estados loading/success/empty/error", () => {
     expect(faturamentoValor.className).toMatch(/text-(4|5)xl/);
   });
 });
+
+describe("Dashboard — vendas somadas às OS (PLAN-dashboard-vendas-os.md)", () => {
+  it("hero mostra o consolidado, composição e top vendedores", async () => {
+    mockGet.mockResolvedValue({
+      ...dadosComResultado,
+      vendas: {
+        quantidade: 2,
+        faturamento: 5000,
+        ticket_medio: 2500,
+        por_vendedor: [{ vendedor: "Bia", quantidade: 2, faturamento: 5000 }],
+        lucro_aparelhos: { aparelhos_com_custo: 1, valor_vendido: 3000, custo_total: 2000, lucro: 1000 },
+      },
+      consolidado: { faturamento: 6000, faturamento_os: 1000, faturamento_vendas: 5000, ticket_medio: 2000 },
+    });
+    render(<Dashboard />);
+
+    await waitFor(() => expect(screen.getByTestId("dashboard-vendas")).toBeInTheDocument());
+    const hero = screen.getAllByText("R$ 6.000,00").find((el) => /text-(4|5)xl/.test(el.className));
+    expect(hero).toBeInTheDocument();
+    expect(screen.getByTestId("faturamento-composicao")).toHaveTextContent("Vendas R$ 5.000,00");
+    expect(screen.getByTestId("top-vendedor")).toHaveTextContent("Bia · 2 venda(s)");
+    expect(screen.getByText("Lucro Aparelhos")).toBeInTheDocument();
+  });
+
+  it("sem lucro_aparelhos (vendedor) não mostra lucro de aparelho", async () => {
+    mockGet.mockResolvedValue({
+      ...dadosComResultado,
+      vendas: { quantidade: 1, faturamento: 900, ticket_medio: 900, por_vendedor: [] },
+      consolidado: { faturamento: 1900 },
+    });
+    render(<Dashboard />);
+
+    await waitFor(() => expect(screen.getByTestId("dashboard-vendas")).toBeInTheDocument());
+    expect(screen.queryByText("Lucro Aparelhos")).not.toBeInTheDocument();
+  });
+});

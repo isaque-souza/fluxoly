@@ -745,3 +745,25 @@ def listar_garantias_venda(conectar, termo="", hoje=None):
 
     contagem = {s: sum(1 for i in items if i["status_garantia"] == s) for s in ("ativa", "vencendo", "vencida")}
     return {"items": items, "total": len(items), **contagem}
+
+
+def resumir_vendas_periodo(conectar, inicio=None, fim=None):
+    """Dashboard somando vendas e OS (PLAN-dashboard-vendas-os.md): faturamento,
+    quantidade, ticket médio e ranking por vendedor das vendas concluídas no
+    período. Sem lucro -- o custo do aparelho é do domínio Compra de Aparelhos
+    (BR-092) e é composto no endpoint, não aqui (evita import circular)."""
+    conn = conectar()
+    try:
+        rows = repo.resumir_vendas_por_vendedor(conn.cursor(), inicio, fim)
+    finally:
+        conn.close()
+    quantidade = sum(r[1] for r in rows)
+    faturamento = round(sum(r[2] or 0.0 for r in rows), 2)
+    return {
+        "quantidade": quantidade,
+        "faturamento": faturamento,
+        "ticket_medio": round(faturamento / quantidade, 2) if quantidade else 0,
+        "por_vendedor": [
+            {"vendedor": r[0] or "—", "quantidade": r[1], "faturamento": round(r[2] or 0.0, 2)} for r in rows
+        ],
+    }
