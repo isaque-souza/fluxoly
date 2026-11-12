@@ -771,3 +771,35 @@ class TestAtualizarUnidade:
         assert linha is not None
         assert "Laborat" in linha[1]
         _limpar_item_estoque(estoque_id)
+
+
+class TestDiasEmEstoque:
+    """Dias em estoque na listagem de unidades (PLAN-dias-em-estoque.md)."""
+
+    def test_calculo_conta_so_status_em_estoque(self):
+        from datetime import date
+
+        from fluxoly_unidades_serializadas_service import calcular_dias_em_estoque
+
+        hoje = date(2026, 11, 11)
+        assert calcular_dias_em_estoque("2026-11-01 10:00:00", "disponivel", hoje) == 10
+        assert calcular_dias_em_estoque("2026-11-11 23:00:00", "em_reparo", hoje) == 0
+        assert calcular_dias_em_estoque("2026-08-13 08:00:00", "reservado", hoje) == 90
+        assert calcular_dias_em_estoque("2026-11-01 10:00:00", "vendido", hoje) is None
+        assert calcular_dias_em_estoque("2026-11-01 10:00:00", "devolvido", hoje) is None
+        assert calcular_dias_em_estoque("", "disponivel", hoje) is None
+        assert calcular_dias_em_estoque("lixo", "disponivel", hoje) is None
+        # Cadastro "no futuro" (UTC à frente do relógio local) não vira número negativo.
+        assert calcular_dias_em_estoque("2026-11-12 01:00:00", "disponivel", hoje) == 0
+
+    def test_listagem_traz_dias_em_estoque(self, client, login_como, usuario_tecnico):
+        login_como(client, usuario_tecnico)
+        produto_id = _criar_produto(modelo="iPhone 16")
+        criado, _ = _criar_unidade_de_produto(client, produto_id=produto_id)
+        assert criado.status_code == 200
+
+        item = client.get(f"/api/unidades-serializadas?produto_id={produto_id}").get_json()["items"][0]
+
+        assert item["status"] == "disponivel"
+        assert item["dias_em_estoque"] in (0, 1)
+        _limpar_produto(produto_id)
