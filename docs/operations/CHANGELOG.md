@@ -9,6 +9,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Testes (2026-11-13 — E2E Playwright, KI-068)
+- **test: E2E multiplataforma** — `frontend/playwright.config.js` sem PowerShell: backend Flask e `vite
+  preview` do build na raiz (mesma topologia da produção), banco temporário por execução, senha do admin
+  por `E2E_ADMIN_PASSWORD` e trava contra `VITE_API_URL`. Spec abre `/login` e usa o select "Modelo
+  compatível". 4/4 em 5 execuções seguidas no macOS. Sem job no CI por enquanto (PR `chore/` separado).
+  Limitações em `KNOWN_ISSUES.md` (KI-068).
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no
