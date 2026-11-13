@@ -14,8 +14,10 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   checagem de cliente ativo do KI-066 rodava fora da transação que grava; uma inativação ou exclusão
   simultânea gerava venda/troca de cliente inativo ou **venda órfã**. Venda, compra por troca,
   inativação/reativação e exclusão de cliente abrem a transação com `BEGIN IMMEDIATE` e leem o cliente no
-  mesmo cursor que grava. Disputa acima do `busy_timeout` responde 503, sem gravar nada. Sem mudança de
-  schema. 16 testes em `tests/test_clientes_atomicidade.py`, incluindo threads com conexões reais.
+  mesmo cursor que grava. Disputa acima do `busy_timeout` responde 503, sem gravar nada; falha no meio da
+  operação reverte tudo (erro de disco não vira 503). Sem mudança de schema. 26 testes em
+  `tests/test_clientes_atomicidade.py` (cenários reproduzidos, threads com conexões reais, disputa sem
+  patch, 503 e rollback); sem regressão de desempenho relevante. Riscos residuais no KI-067.
 
 ### Corrigido (2026-11-12 — Hotfix P1-3: inativação de clientes)
 - **fix: cliente com venda ou compra por troca não é mais excluído fisicamente** (KI-066, BR-024 revisada,
