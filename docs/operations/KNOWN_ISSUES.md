@@ -2284,3 +2284,48 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-065~~ — RESOLVIDO
+
+Descrição:
+Valores numéricos não finitos eram aceitos em toda a API. `parse_float` (`fluxoly_validation.py:32`) aceitava
+tudo que `float()` aceita: os tokens JSON `Infinity`, `-Infinity` e `NaN` (o `json` do Python os lê), as
+strings "Infinity"/"NaN"/"inf" e `1e400` (vira `inf`). As checagens `> 0` dos serviços deixavam `inf`
+passar. O valor era gravado (estoque, produtos, OS, vendas, caixa, contas, compras de aparelho) e copiado
+para o `audit_log`; toda resposta que o incluía saía com o token `Infinity`, que não é JSON válido, e a
+tela quebrava no navegador. Outros caminhos: `parse_int(1e400)` levantava `OverflowError` (500); o
+checklist público (`POST /api/checklist/<token>`, sem login) gravava o dict `testes` com `json.dumps`
+aceitando `Infinity`; o webhook MercadoPhone convertia valores com `float()` direto. Achado no QA completo
+de 2026-11-12 (P1-1).
+
+Impacto:
+Alto (integridade de dados). Um único valor quebrava Dashboard, Estoque, Vendas, Caixa e Contas; na
+Auditoria a quebra era permanente, porque o registro não pode ser editado.
+
+Status:
+Resolvido em 2026-11-12 (commit `4dd3fe9`, branch `hotfix/rejeitar-valores-nao-finitos`).
+- Entrada: `parse_float`/`parse_int` devolvem `None` para não finito e overflow (`math.isfinite`), e os
+  controllers já transformavam `None` em 400; checklist público com `allow_nan=False` (400); MercadoPhone
+  trata não finito como valor inválido (ignorado, mesmo tratamento que já dava a texto não numérico).
+- Saída: `JSONProviderFinito` (`app.json`) usa `allow_nan=False`; se uma resposta tiver valor não finito
+  (dado gravado antes da correção), ele sai como `null`, sem 500, e o log registra
+  `resposta_com_valor_nao_finito` com a rota. A Auditoria mostra o snapshot original como texto
+  ("Infinity").
+- Nenhum dado existente é alterado. 269 testes em `tests/test_valores_nao_finitos.py`.
+
+Pendências fora do escopo:
+- Dado antigo não finito aparece como R$ 0,00 nas telas (o frontend formata `null` como zero), e totais que
+  o incluem também. Precisa de levantamento e reconciliação em produção antes de qualquer correção de dado.
+  No SQLite, `NaN` gravado em coluna REAL vira `NULL`; só `±Infinity` persiste.
+- OS com `valor_cobrado`/`valor_descontado` negativos continuam aceitas; não há regra de negócio
+  documentada que proíba (decisão de produto).
+- `fluxoly_os.ler_valores_financeiros_form` usa `to_float` sem checagem, mas não tem chamador em produção
+  (formulário legado); não foi removido sem confirmação.
+
+Sprint prevista:
+Hotfix P1-1 da fase de correções pós-QA (2026-11-12).
+
+Responsável:
+—
