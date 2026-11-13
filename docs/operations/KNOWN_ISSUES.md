@@ -2284,3 +2284,42 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-066~~ — RESOLVIDO
+
+Descrição:
+`DELETE /api/clientes/<id>` (`fluxoly_clientes_service.excluir_cliente`) só bloqueava cliente com OS
+vinculada (`os.cliente_id`). Cliente com venda (`vendas.cliente_id`) ou compra por troca
+(`compras_aparelhos.cliente_id`) era excluído fisicamente. Sem `FOREIGN KEY` no schema, a venda, os
+itens, a garantia e a compra continuavam gravados, mas apontando para um id inexistente. As leituras usam
+`LEFT JOIN clientes`, então o titular sumia sem erro do histórico de vendas, do recibo (BR-103), dos
+lembretes pós-venda (BR-104) e da troca. Achado P1-3 do QA pós-benchmark (2026-11-12).
+
+Impacto:
+Alto: perda silenciosa e irreversível pela tela do vínculo entre venda e cliente (dado de negócio real).
+Atende o critério de perda de dado do `ENGINEERING_GUIDE.md` §11, por isso o hotfix.
+
+Status:
+Resolvido em 2026-11-12 (branch `hotfix/inativacao-clientes-historico`, PR aguardando revisão), na
+alternativa B escolhida pelo PO, a inativação:
+- migration `m0007` (`clientes.ativo`);
+- DELETE com qualquer vínculo responde 409;
+- endpoints de inativar e reativar (admin, idempotentes, auditados);
+- venda e troca recusam cliente inativo;
+- listagem com padrão `ativos`;
+- tela com Inativar/Reativar, badge e filtro.
+
+Coberto por `tests/test_clientes_inativacao.py` e `Clientes.test.jsx`. Ver BR-024 a BR-024d e
+`docs/engineering/plans/PLAN-inativacao-clientes.md`.
+
+**Não corrigido aqui (registro):** clientes já excluídos antes do hotfix deixaram vendas e compras órfãs.
+O plano traz a consulta somente leitura para identificá-las numa cópia da produção; qualquer
+reconciliação depende de decisão do PO.
+
+Sprint prevista:
+Hotfix pós-QA (P1-3).
+
+Responsável:
+—
