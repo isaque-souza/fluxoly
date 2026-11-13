@@ -167,9 +167,10 @@ def iniciar_venda(
     if not tipo_garantia or not tipo_garantia["ativo"]:
         return None, "Tipo de Garantia inválido ou inativo."
 
-    cliente = clientes_service.obter_cliente(conectar, cliente_id)
-    if not cliente:
-        return None, "Cliente não encontrado."
+    # BR-024b / KI-066: cliente inativo não entra em venda nova.
+    _cliente, erro_cliente = clientes_service.validar_cliente_para_nova_operacao(conectar, cliente_id)
+    if erro_cliente:
+        return None, erro_cliente
 
     unidade = unidades_service.obter_unidade(conectar, unidade_serializada_id)
     if not unidade:

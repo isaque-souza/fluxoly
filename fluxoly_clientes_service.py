@@ -8,10 +8,11 @@ projeto.
 
 Responsabilidade: entidade Cliente — cadastro mínimo viável (nome +
 telefone ou e-mail), busca/paginação, e a regra de que um cliente com
-histórico (OS vinculada) não pode ser excluído.
+histórico (OS, venda ou compra por troca vinculada) não pode ser excluído --
+é inativado (BR-024, KI-066).
 
 Tabelas usadas: `clientes` (via `fluxoly_clientes_repository.py`), leitura
-de `os.cliente_id` para checar histórico antes de excluir.
+de `os`/`vendas`/`compras_aparelhos.cliente_id` para checar histórico antes de excluir.
 
 Depende de: `fluxoly_clientes_repository.py` (SQL), `fluxoly_audit.py`
 (auditoria — create/update/delete).
@@ -22,6 +23,13 @@ from fluxoly_audit import registrar_log_auditoria
 
 PAGINA_PADRAO = 1
 POR_PAGINA_PADRAO = 20
+
+# KI-066: situação na listagem. O padrão é "ativos" porque os seletores de nova operação (venda,
+# compra por troca) chamam a listagem sem filtro -- a tela de Clientes pede "todos"/"inativos".
+STATUS_VALIDOS = ("ativos", "inativos", "todos")
+STATUS_PADRAO = "ativos"
+
+MSG_CLIENTE_INATIVO = "Cliente inativo — reative o cadastro para usá-lo em uma nova operação."
 
 # KI-045: sentinel distinto de "" -- quem não pode ver o CPF/CNPJ atual (session sem admin/financeiro)
 # não recebe o valor do GET, então "campo ausente na requisição de PUT" precisa significar "preservar o
@@ -42,10 +50,20 @@ def _cliente_para_dict(row):
         "observacoes": row[5] or "",
         "criado_em": row[6],
         "atualizado_em": row[7],
+        "ativo": bool(row[8]),
     }
 
 
-def listar_clientes(conectar, termo="", page=None, per_page=None):
+def _snapshot_auditoria(row):
+    """Snapshot de cadastro para o audit_log -- sem `ativo`, que tem trilha própria (`status_change`)
+    e, se entrasse aqui, apareceria como campo alterado em todo `update` (o `depois` não o carrega)."""
+    dados = _cliente_para_dict(row)
+    dados.pop("ativo", None)
+    return dados
+
+
+def listar_clientes(conectar, termo="", page=None, per_page=None, status=STATUS_PADRAO):
+    """Retorna o dict paginado. `status` precisa estar em STATUS_VALIDOS (o controller valida)."""
     page = page or PAGINA_PADRAO
     per_page = per_page or POR_PAGINA_PADRAO
     offset = (max(1, page) - 1) * per_page
@@ -53,8 +71,8 @@ def listar_clientes(conectar, termo="", page=None, per_page=None):
     conn = conectar()
     try:
         cursor = conn.cursor()
-        total = repo.contar(cursor, termo)
-        rows = repo.buscar_paginado(cursor, termo, per_page, offset)
+        total = repo.contar(cursor, termo, status)
+        rows = repo.buscar_paginado(cursor, termo, per_page, offset, status)
     finally:
         conn.close()
 
@@ -144,7 +162,7 @@ def atualizar_cliente(
             cliente_id,
             usuario_id,
             "update",
-            antes=_cliente_para_dict(antes),
+            antes=_snapshot_auditoria(antes),
             depois={"nome": nome, "telefone": telefone, "email": email, "cpf_cnpj": cpf_cnpj},
         )
         conn.commit()
@@ -155,26 +173,84 @@ def atualizar_cliente(
 
 
 def excluir_cliente(conectar, usuario_id, cliente_id):
-    """Retorna (sucesso, erro). `erro` é None em caso de sucesso."""
+    """Retorna (sucesso, erro, vinculos). `erro` é None em caso de sucesso; `vinculos` é a contagem
+    de OS/vendas/compras quando a exclusão foi recusada por histórico (senão None).
+
+    BR-024 / KI-066: exclusão física só para cliente sem nenhum vínculo -- o schema não declara
+    FOREIGN KEY, então apagar quem tem venda ou compra por troca deixaria o histórico sem titular
+    (as leituras usam LEFT JOIN). Cliente com histórico é inativado (`inativar_cliente`)."""
     conn = conectar()
     try:
         cursor = conn.cursor()
         antes = repo.buscar_por_id(cursor, cliente_id)
         if not antes:
-            return False, "Cliente não encontrado."
+            return False, "Cliente não encontrado.", None
 
-        if repo.possui_os_vinculada(cursor, cliente_id):
-            return False, "Cliente possui OS vinculada e não pode ser excluído."
+        vinculos = repo.contar_vinculos(cursor, cliente_id)
+        if any(vinculos.values()):
+            return (
+                False,
+                "Cliente possui histórico (OS, vendas ou compras) e não pode ser excluído. Inative o cliente.",
+                vinculos,
+            )
 
         repo.deletar(cursor, cliente_id)
-        registrar_log_auditoria(
-            cursor, "cliente", cliente_id, usuario_id, "delete", antes=_cliente_para_dict(antes)
-        )
+        registrar_log_auditoria(cursor, "cliente", cliente_id, usuario_id, "delete", antes=_snapshot_auditoria(antes))
         conn.commit()
     finally:
         conn.close()
 
+    return True, None, None
+
+
+def _definir_situacao(conectar, usuario_id, cliente_id, ativo):
+    """Retorna (alterado, erro). Idempotente: se o cliente já está na situação pedida, não grava nada
+    (nem auditoria) e devolve alterado=False. Só toca `clientes.ativo` -- vendas, OS, compras,
+    garantias e recibos ficam exatamente como estavam (BR-024b)."""
+    conn = conectar()
+    try:
+        cursor = conn.cursor()
+        row = repo.buscar_por_id(cursor, cliente_id)
+        if not row:
+            return False, "Cliente não encontrado."
+        atual = bool(row[8])
+        if atual == ativo:
+            return False, None
+
+        repo.definir_ativo(cursor, cliente_id, ativo)
+        registrar_log_auditoria(
+            cursor,
+            "cliente",
+            cliente_id,
+            usuario_id,
+            "status_change",
+            antes={"ativo": atual},
+            depois={"ativo": ativo},
+        )
+        conn.commit()
+    finally:
+        conn.close()
     return True, None
+
+
+def inativar_cliente(conectar, usuario_id, cliente_id):
+    """BR-024a: tira o cliente das novas operações sem apagar nada. Retorna (alterado, erro)."""
+    return _definir_situacao(conectar, usuario_id, cliente_id, False)
+
+
+def reativar_cliente(conectar, usuario_id, cliente_id):
+    """BR-024c: devolve o cliente às novas operações, sem alterar o histórico. Retorna (alterado, erro)."""
+    return _definir_situacao(conectar, usuario_id, cliente_id, True)
+
+
+def validar_cliente_para_nova_operacao(conectar, cliente_id):
+    """BR-024b: usado por quem cria venda/compra por troca. Retorna (cliente, erro)."""
+    cliente = obter_cliente(conectar, cliente_id)
+    if not cliente:
+        return None, "Cliente não encontrado."
+    if not cliente["ativo"]:
+        return None, MSG_CLIENTE_INATIVO
+    return cliente, None
 
 
 def anonimizar_cliente(conectar, usuario_id, cliente_id):
@@ -196,7 +272,7 @@ def anonimizar_cliente(conectar, usuario_id, cliente_id):
             cliente_id,
             usuario_id,
             "anonymize",
-            antes=_cliente_para_dict(antes),
+            antes=_snapshot_auditoria(antes),
             depois={"nome": nome_placeholder, "telefone": "", "email": "", "cpf_cnpj": "", "observacoes": ""},
         )
         conn.commit()

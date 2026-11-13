@@ -121,8 +121,10 @@ def registrar_compra(
     if origem == "troca":
         if not cliente_id:
             return None, "Na troca, informe o cliente que entregou o aparelho."
-        if not clientes_service.obter_cliente(conectar, cliente_id):
-            return None, "Cliente não encontrado."
+        # BR-024b / KI-066: cliente inativo não entra em compra por troca nova.
+        _cliente, erro_cliente = clientes_service.validar_cliente_para_nova_operacao(conectar, cliente_id)
+        if erro_cliente:
+            return None, erro_cliente
         if venda_id:
             venda, _itens = vendas_service.obter_venda_com_itens(conectar, venda_id)
             if not venda:
