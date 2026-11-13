@@ -371,9 +371,7 @@ class TestOrdemFixadaComConexoesReais:
         assert _compras_do_cliente(cliente) == []
         _assert_banco_integro()
 
-    def test_troca_primeiro_inativacao_depois_preserva_historico(
-        self, monkeypatch, admin_id, novo_cliente, produto_id
-    ):
+    def test_troca_primeiro_inativacao_depois_preserva_historico(self, monkeypatch, admin_id, novo_cliente, produto_id):
         cliente = novo_cliente()
 
         (compra_id, erro), inativacao, bloqueada = _primeiro_segura_segundo_espera(
@@ -420,9 +418,7 @@ def _disputar(a, b, a_primeiro):
 
 class TestDisputaReal:
     @pytest.mark.parametrize("venda_primeiro", [True, False], ids=["venda-primeiro", "inativacao-primeiro"])
-    def test_venda_x_inativacao(
-        self, admin_id, novo_cliente, nova_unidade, tipo_garantia_padrao_id, venda_primeiro
-    ):
+    def test_venda_x_inativacao(self, admin_id, novo_cliente, nova_unidade, tipo_garantia_padrao_id, venda_primeiro):
         resultados = {"venda": 0, "recusada": 0}
         for _ in range(REPETICOES):
             cliente, unidade = novo_cliente(), nova_unidade()
@@ -513,13 +509,23 @@ class TestEscritaOcupada:
         trava.execute("BEGIN IMMEDIATE")
 
     def test_rotas_respondem_503_sem_gravar(
-        self, app, login_como, usuario_admin, novo_cliente, nova_unidade, produto_id, tipo_garantia_padrao_id,
+        self,
+        app,
+        login_como,
+        usuario_admin,
+        novo_cliente,
+        nova_unidade,
+        produto_id,
+        tipo_garantia_padrao_id,
         banco_travado,
     ):
         cliente, unidade = novo_cliente(), nova_unidade()
         http = app.test_client()
         assert login_como(http, usuario_admin).status_code == 200
-        contagens = lambda: [_q(f"SELECT COUNT(*) FROM {t}")[0][0] for t in ("vendas", "compras_aparelhos", "audit_log")]  # noqa: E731
+
+        def contagens():
+            return [_q(f"SELECT COUNT(*) FROM {t}")[0][0] for t in ("vendas", "compras_aparelhos", "audit_log")]
+
         antes = contagens()
 
         self._travar(banco_travado)
@@ -558,4 +564,122 @@ class TestEscritaOcupada:
             assert resp.get_json()["erro"] == clientes_service.MSG_ESCRITA_OCUPADA
         assert contagens() == antes
         assert _ativo(cliente) == 1
+        _assert_banco_integro()
+
+
+# ---------------------------------------------------------------------------
+# E -- falha no meio da transação: tudo é revertido, a trava é liberada e a nova tentativa grava uma vez
+# ---------------------------------------------------------------------------
+class FalhaInjetada(Exception):
+    pass
+
+
+def _foto_do_banco():
+    """Conteúdo de todas as tabelas (inclusive sqlite_sequence), na ordem do rowid."""
+    tabelas = [r[0] for r in _q("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+    return {t: _q(f'SELECT * FROM "{t}" ORDER BY rowid') for t in tabelas}
+
+
+def _falhar_depois_de(monkeypatch, alvo, nome, erro=None):
+    """`alvo.nome` roda de verdade (grava no cursor da transação) e em seguida levanta `erro`."""
+    original = getattr(alvo, nome)
+    chamadas = []
+
+    def _grava_e_falha(*a, **kw):
+        original(*a, **kw)
+        chamadas.append(nome)
+        raise erro or FalhaInjetada(f"falha injetada depois de {nome}")
+
+    monkeypatch.setattr(alvo, nome, _grava_e_falha)
+    return chamadas
+
+
+class TestRollbackEmFalhaIntermediaria:
+    def test_venda_falha_no_caixa(self, monkeypatch, admin_id, novo_cliente, nova_unidade, tipo_garantia_padrao_id):
+        cliente, unidade = novo_cliente(), nova_unidade()
+        antes = _foto_do_banco()
+        chamadas = _falhar_depois_de(monkeypatch, caixa_service, "registrar_entrada_de_venda")
+
+        venda_id, erro = _vender(admin_id, cliente, unidade, tipo_garantia_padrao_id)
+
+        assert chamadas and venda_id is None and "falha injetada" in erro
+        assert _foto_do_banco() == antes  # venda, item, unidade, auditoria e caixa revertidos
+        monkeypatch.undo()
+        venda_id, erro = _vender(admin_id, cliente, unidade, tipo_garantia_padrao_id)
+        assert erro is None and _vendas_do_cliente(cliente) == [venda_id]
+        assert (
+            _q("SELECT COUNT(*) FROM movimentacoes_caixa WHERE origem='venda' AND origem_id=?", (venda_id,))[0][0] == 1
+        )
+        _assert_banco_integro()
+
+    @pytest.mark.parametrize(
+        "modulo, nome",
+        [
+            ("fluxoly_unidades_serializadas_service", "criar_unidade_de_compra"),
+            ("fluxoly_compras_aparelhos_service", "registrar_log_auditoria"),
+            ("fluxoly_caixa_service", "registrar_saida_de_compra_aparelho"),
+        ],
+    )
+    def test_troca_falha_depois_de_iniciar_a_gravacao(
+        self, monkeypatch, admin_id, novo_cliente, produto_id, modulo, nome
+    ):
+        cliente = novo_cliente()
+        antes = _foto_do_banco()
+        chamadas = _falhar_depois_de(monkeypatch, __import__(modulo), nome)
+
+        with pytest.raises(FalhaInjetada):
+            _trocar(admin_id, cliente, produto_id)
+
+        assert chamadas
+        assert _foto_do_banco() == antes  # unidade, compra, auditoria e caixa revertidos
+        monkeypatch.undo()
+        compra_id, erro = _trocar(admin_id, cliente, produto_id)
+        assert erro is None and _compras_do_cliente(cliente) == [compra_id]
+        _assert_banco_integro()
+
+    def test_troca_erro_de_disco_nao_vira_ocupado(self, monkeypatch, admin_id, novo_cliente, produto_id):
+        cliente = novo_cliente()
+        antes = _foto_do_banco()
+        _falhar_depois_de(
+            monkeypatch, compras_service, "registrar_log_auditoria", sqlite3.OperationalError("disk I/O error")
+        )
+
+        with pytest.raises(sqlite3.OperationalError, match="disk I/O"):
+            _trocar(admin_id, cliente, produto_id)
+
+        assert _foto_do_banco() == antes
+
+    @pytest.mark.parametrize("acao", ["inativar", "reativar"])
+    def test_situacao_falha_na_auditoria(self, monkeypatch, admin_id, novo_cliente, acao):
+        cliente = novo_cliente()
+        if acao == "reativar":
+            assert _inativar(admin_id, cliente) == (True, None)
+        funcao = getattr(clientes_service, f"{acao}_cliente")
+        antes = _foto_do_banco()
+        chamadas = _falhar_depois_de(monkeypatch, clientes_service, "registrar_log_auditoria")
+
+        with pytest.raises(FalhaInjetada):
+            funcao(_app.conectar, admin_id, cliente)
+
+        assert chamadas
+        assert _foto_do_banco() == antes  # UPDATE de clientes.ativo e auditoria revertidos
+        monkeypatch.undo()
+        assert funcao(_app.conectar, admin_id, cliente) == (True, None)
+        assert _ativo(cliente) == (1 if acao == "reativar" else 0)
+        _assert_banco_integro()
+
+    def test_exclusao_falha_na_auditoria(self, monkeypatch, admin_id, novo_cliente):
+        cliente = novo_cliente()
+        antes = _foto_do_banco()
+        chamadas = _falhar_depois_de(monkeypatch, clientes_service, "registrar_log_auditoria")
+
+        with pytest.raises(FalhaInjetada):
+            _excluir(admin_id, cliente)
+
+        assert chamadas
+        assert _foto_do_banco() == antes  # DELETE e auditoria revertidos: o cliente continua lá
+        monkeypatch.undo()
+        assert _excluir(admin_id, cliente) == (True, None, None)
+        assert _ativo(cliente) is None
+        assert _audit_id("cliente", cliente, "delete")
         _assert_banco_integro()
