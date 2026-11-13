@@ -138,6 +138,8 @@ def create_clientes_blueprint(deps: dict):
         if not sucesso:
             if erro == "Cliente não encontrado.":
                 return err(erro, 404)
+            if erro == service.MSG_ESCRITA_OCUPADA:
+                return err(erro, 503)  # KI-067: fila de escrita passou do busy_timeout.
             # BR-024 / KI-066: com histórico, a exclusão física é recusada -- a resposta diz o porquê.
             return jsonify({"ok": False, "erro": erro, "vinculos": vinculos}), 409
         return ok()
@@ -149,6 +151,8 @@ def create_clientes_blueprint(deps: dict):
 
         alterado, erro = acao(conectar, session.get("usuario_id"), cliente_id)
         if erro:
+            if erro == service.MSG_ESCRITA_OCUPADA:
+                return err(erro, 503)  # KI-067: fila de escrita passou do busy_timeout.
             return err(erro, 404 if erro == "Cliente não encontrado." else 400)
         cliente = service.obter_cliente(conectar, cliente_id)
         return ok(alterado=alterado, ativo=cliente["ativo"])

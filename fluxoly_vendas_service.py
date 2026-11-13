@@ -23,7 +23,9 @@ não uma feature de desconto com aprovação -- essa é a V1.4 do roadmap.
 
 Sequência transacional de `iniciar_venda` (única transação, cliente -> venda
 -> item -> unidade -> auditoria -> commit): validações de leitura (cliente,
-unidade) rodam antes, em conexões próprias e curtas; a escrita real
+unidade) rodam antes, em conexões próprias e curtas, como pré-checagem; a
+transação de escrita abre com BEGIN IMMEDIATE e confere o cliente de novo no
+mesmo cursor antes de gravar (KI-067); a escrita real
 (inserir_venda, inserir_item, marcar_como_vendida) roda inteira dentro de uma
 única conexão/transação -- qualquer falha no meio reverte tudo, a unidade
 nunca fica "vendida" sem uma `venda`/`vendas_itens` real por trás, nem uma
@@ -189,6 +191,13 @@ def iniciar_venda(
     conn = conectar()
     try:
         cursor = conn.cursor()
+        # KI-067: a checagem acima é só pré-checagem. Esta, na mesma transação de escrita, é a que vale --
+        # inativação ou exclusão concorrente do cliente espera este commit ou já terminou antes dele.
+        clientes_service.iniciar_transacao_de_escrita(cursor)
+        _cliente_row, erro_cliente = clientes_service.validar_cliente_na_transacao(cursor, cliente_id)
+        if erro_cliente:
+            raise VendaConflitoError(erro_cliente)
+
         venda_id = repo.inserir_venda(cursor, cliente_id, usuario_id, forma_pagamento, valor_unitario, observacoes)
         item_id = repo.inserir_item(
             cursor,
@@ -264,6 +273,8 @@ def iniciar_venda(
         return None, "Unidade não está mais disponível."
     except Exception as exc:
         conn.rollback()
+        if clientes_service.escrita_ocupada(exc):
+            return None, clientes_service.MSG_ESCRITA_OCUPADA
         return None, str(exc)
     finally:
         conn.close()
