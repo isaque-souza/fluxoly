@@ -111,7 +111,7 @@ function NovaCompra() {
     }
     let ativo = true;
     setBuscandoCliente(true);
-    clientesApi.list({ q: clienteQueryDebounced }).then((res) => {
+    clientesApi.list({ q: clienteQueryDebounced, status: "ativos" }).then((res) => {
       if (ativo) setClienteResultados(res?.ok ? res.items || [] : []);
     }).catch(() => {
       if (ativo) setClienteResultados([]);

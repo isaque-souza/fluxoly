@@ -9,6 +9,29 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-13 — Hotfix KI-067: atomicidade cliente × venda/troca)
+- **fix: checagem do cliente e gravação de venda/troca na mesma transação** (KI-067, BR-024b) — a
+  checagem de cliente ativo do KI-066 rodava fora da transação que grava; uma inativação ou exclusão
+  simultânea gerava venda/troca de cliente inativo ou **venda órfã**. Venda, compra por troca,
+  inativação/reativação e exclusão de cliente abrem a transação com `BEGIN IMMEDIATE` e leem o cliente no
+  mesmo cursor que grava. Disputa acima do `busy_timeout` responde 503, sem gravar nada; falha no meio da
+  operação reverte tudo (erro de disco não vira 503). Sem mudança de schema. 26 testes em
+  `tests/test_clientes_atomicidade.py` (cenários reproduzidos, threads com conexões reais, disputa sem
+  patch, 503 e rollback); sem regressão de desempenho relevante. Riscos residuais no KI-067.
+
+### Corrigido (2026-11-12 — Hotfix P1-3: inativação de clientes)
+- **fix: cliente com venda ou compra por troca não é mais excluído fisicamente** (KI-066, BR-024 revisada,
+  BR-024a a BR-024d). O DELETE verificava só OS, e a venda, o recibo e a troca perdiam o titular. Agora:
+  - o `DELETE` responde 409 com a contagem de vínculos;
+  - o cliente com histórico é **inativado** (`POST /api/clientes/<id>/inativar` e `/reativar`, só admin,
+    idempotentes, auditados como `status_change`);
+  - venda nova e compra por troca recusam cliente inativo;
+  - `GET /api/clientes` aceita `status=ativos|inativos|todos`, com padrão `ativos`.
+
+  Na tela de Clientes, o botão Excluir virou Inativar/Reativar, com badge "Inativo" e filtro de situação.
+  **Migration `m0007`** (`clientes.ativo INTEGER NOT NULL DEFAULT 1`, aditiva, todo cliente existente
+  fica ativo). Plano: `docs/engineering/plans/PLAN-inativacao-clientes.md`.
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no

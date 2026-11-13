@@ -366,6 +366,9 @@ export const clientes = {
   update: (id, data)   => put(`/clientes/${id}`, data),
   delete: (id)         => del(`/clientes/${id}`),
   anonymize: (id)      => post(`/clientes/${id}/anonimizar`),
+  // KI-066 / BR-024 -- inativação no lugar da exclusão física (admin).
+  inativar: (id)       => post(`/clientes/${id}/inativar`),
+  reativar: (id)       => post(`/clientes/${id}/reativar`),
 };
 
 // ── Vendas ───────────────────────────────────────────────────────────────────

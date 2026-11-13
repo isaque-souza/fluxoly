@@ -268,6 +268,14 @@ Entidade Cliente (Sprint P0.1) — primeiro domínio a seguir a convenção cont
 | `observacoes` | TEXT NOT NULL | `''` |
 | `criado_em` | TEXT NOT NULL | `datetime('now')` |
 | `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
+| `ativo` | INTEGER NOT NULL | `1` — *(migration `m0007`, 2026-11-12)*. `0` = inativo: fora das novas operações, mantido no histórico (BR-024 a BR-024d, KI-066). Toda linha anterior à migration ficou `1` |
+
+**Exclusão (service, não schema):** sem `FOREIGN KEY` declarada, a exclusão física só acontece quando
+`os`, `vendas` e `compras_aparelhos` não têm nenhuma linha com aquele `cliente_id`
+(`fluxoly_clientes_repository.py::contar_vinculos`). Com histórico, o caminho é a inativação.
+Rollback da `m0007`: `ALTER TABLE clientes DROP COLUMN ativo` (SQLite ≥ 3.35) +
+`DELETE FROM schema_migrations WHERE id = '0007'`, com backup; isso perde quem estava inativo
+(registrado no `audit_log`). O rollback só do código dispensa isso (`docs/engineering/plans/PLAN-inativacao-clientes.md`).
 
 **Regra de cadastro (service, não schema):** nome obrigatório + ao menos um contato (telefone OU
 e-mail) — sem `UNIQUE`/`NOT NULL` em `telefone`/`email`/`cpf_cnpj` porque a deduplicação (por qual campo,

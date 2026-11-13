@@ -132,11 +132,42 @@ ser reencontrado depois.
 *Fonte: `irflow_clientes_service.py::criar_cliente`/`atualizar_cliente`; `docs/product/features/CLIENTES.md`
 "Decisões estruturais".*
 
-**BR-024 — ✅ Implementado**
-Cliente com OS vinculada (`os.cliente_id`) não pode ser excluído — mesmo padrão de BR-005 (item de
-estoque em uso não pode ser excluído).
-*Fonte: `irflow_clientes_service.py::excluir_cliente`, `irflow_clientes_repository.py::possui_os_vinculada`;
-`docs/product/features/CLIENTES.md` "Casos de erro".*
+**BR-024 — ✅ Implementado** *(revisada em 2026-11-12, hotfix P1-3 / KI-066)*
+Cliente com histórico (OS, venda ou compra por troca vinculada: `os`, `vendas` ou
+`compras_aparelhos.cliente_id`) não pode ser excluído fisicamente, nem por chamada direta à API
+(`DELETE` → 409 com a contagem de vínculos). No lugar da exclusão, o cliente é **inativado**: id e vínculos
+ficam intactos. Sem cascata. Cliente **sem nenhum vínculo** continua podendo ser excluído. Antes da
+revisão, só a OS era verificada, e cliente com venda era apagado, deixando a venda sem titular.
+*Fonte: `fluxoly_clientes_service.py::excluir_cliente`, `fluxoly_clientes_repository.py::contar_vinculos`;
+`docs/engineering/plans/PLAN-inativacao-clientes.md`.*
+
+**BR-024a — ✅ Implementado** *(2026-11-12)*
+Inativar um cliente não altera nem apaga nada além de `clientes.ativo`: OS, vendas, itens, garantias,
+recibos e compras continuam como estavam. A inativação é idempotente: repetir a ação não grava nada.
+*Fonte: `fluxoly_clientes_service.py::inativar_cliente`.*
+
+**BR-024b — ✅ Implementado** *(2026-11-12)*
+Cliente inativo não aparece nas seleções de novas operações (Nova Venda, Compra por troca) e a API recusa
+a operação mesmo quando chamada diretamente (`POST /api/vendas` e `POST /api/compras-aparelhos` com
+origem troca → 400). O cliente segue disponível para consulta (`GET /api/clientes/<id>`, filtro
+"Inativos"), documentos (recibo, documento da OS) e relatórios históricos. Quando a OS passar a gravar
+`os.cliente_id` pela tela (hoje não grava), a mesma validação
+(`validar_cliente_para_nova_operacao`) deve ser aplicada.
+Atomicidade (KI-067, 2026-11-13): a checagem que vale é a feita dentro da transação de escrita
+(`validar_cliente_na_transacao`, aberta com `BEGIN IMMEDIATE`) -- venda, troca, inativação e exclusão do
+mesmo cliente ficam em fila, e quem entra depois respeita o que o primeiro gravou. Fila acima do
+`busy_timeout` → 503, sem gravar nada. Uma nova operação que vincule cliente deve seguir o mesmo padrão.
+*Fonte: `fluxoly_clientes_service.py::validar_cliente_para_nova_operacao`.*
+
+**BR-024c — ✅ Implementado** *(2026-11-12)*
+A reativação devolve o cliente às novas operações sem alterar o histórico. Inativação e reativação ficam
+na auditoria como `status_change` (`{"ativo": true}` → `{"ativo": false}` e o inverso), com usuário e data.
+*Fonte: `fluxoly_clientes_service.py::reativar_cliente`.*
+
+**BR-024d — ✅ Implementado** *(2026-11-12)*
+Só **admin** inativa ou reativa um cliente, a mesma matriz já usada para excluir e anonimizar. A
+validação é feita no servidor (403 para os demais perfis).
+*Fonte: `fluxoly_clientes_controller.py::_mudar_situacao`.*
 
 ---
 
