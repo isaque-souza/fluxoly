@@ -9,6 +9,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-13 — Hotfix KI-067: atomicidade cliente × venda/troca)
+- **fix: checagem do cliente e gravação de venda/troca na mesma transação** (KI-067, BR-024b) — a
+  checagem de cliente ativo do KI-066 rodava fora da transação que grava; uma inativação ou exclusão
+  simultânea gerava venda/troca de cliente inativo ou **venda órfã**. Venda, compra por troca,
+  inativação/reativação e exclusão de cliente abrem a transação com `BEGIN IMMEDIATE` e leem o cliente no
+  mesmo cursor que grava. Disputa acima do `busy_timeout` responde 503, sem gravar nada. Sem mudança de
+  schema. 16 testes em `tests/test_clientes_atomicidade.py`, incluindo threads com conexões reais.
+
 ### Corrigido (2026-11-12 — Hotfix P1-3: inativação de clientes)
 - **fix: cliente com venda ou compra por troca não é mais excluído fisicamente** (KI-066, BR-024 revisada,
   BR-024a a BR-024d). O DELETE verificava só OS, e a venda, o recibo e a troca perdiam o titular. Agora:

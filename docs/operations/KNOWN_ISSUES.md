@@ -2323,3 +2323,44 @@ Hotfix pós-QA (P1-3).
 
 Responsável:
 —
+
+---
+
+## ~~KI-067~~ — RESOLVIDO
+
+Descrição:
+Corrida entre a checagem do cliente e a gravação de venda/compra por troca, introduzida junto com o
+KI-066 (PR #104). `iniciar_venda` e `registrar_compra` conferiam o cliente
+(`validar_cliente_para_nova_operacao`) numa conexão própria e gravavam em outra; `_definir_situacao`
+(inativar/reativar) e `excluir_cliente` (contagem de vínculos + `DELETE`) liam sem trava (`sqlite3` abre
+transação `DEFERRED` só no primeiro DML). Reproduzido em 2026-11-13 durante a revisão integrada dos
+hotfixes pós-QA: venda e troca gravadas para cliente inativado no intervalo, e **venda órfã** quando o
+cliente sem vínculo era excluído no intervalo. A análise completa (sequências, alternativas, evidências)
+está registrada na branch `docs/ki-067-ki-068-e2e`.
+
+Impacto:
+Alto no cenário de exclusão (titular da venda perdido sem erro, `ENGINEERING_GUIDE.md` §11 C-01, C-02,
+C-04); médio nos de inativação (operação nova para cliente inativo, reversível). Não observado em
+produção; nenhuma consulta foi feita lá.
+
+Status:
+Resolvido em 2026-11-13 (commit `cf2be1d`, branch `hotfix/atomicidade-venda-cliente`, base `1794763` do
+PR #104; alternativa A aprovada pelo PO). As quatro operações abrem a transação com `BEGIN IMMEDIATE`
+(`clientes_service.iniciar_transacao_de_escrita`) e leem o cliente no mesmo cursor que grava
+(`validar_cliente_na_transacao`); a pré-checagem em conexão própria continua só para manter a ordem das
+mensagens de erro. As operações do mesmo cliente ficam em fila no `busy_timeout` (30 s, abaixo do
+`timeout = 60` do Gunicorn); fila acima disso responde 503 com `MSG_ESCRITA_OCUPADA` em vez de 500.
+Sem mudança de schema. Coberto por 16 testes em `tests/test_clientes_atomicidade.py`: os três cenários da
+análise invertidos, seis ordens fixadas com threads e conexões reais (a segunda operação comprovadamente
+bloqueada no `BEGIN IMMEDIATE`), disputa sem patch com `Barrier` nas duas ordens (25 repetições cada) e o
+503. Contra o código anterior, 9 dos 16 falham, inclusive uma disputa real sem patch (venda e exclusão
+vencendo juntas = venda órfã).
+Limitações: vendas/trocas órfãs ou de cliente inativo gravadas antes da correção não são corrigidas
+retroativamente (diagnóstico depende de autorização do PO). Outros fluxos de escrita do sistema
+continuam com transação `DEFERRED`; só os quatro ligados à regra do cliente mudaram.
+
+Sprint prevista:
+Hotfix complementar ao P1-3 (fase de correções pós-QA, 2026-11-13).
+
+Responsável:
+—
