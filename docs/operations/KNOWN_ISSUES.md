@@ -2284,3 +2284,36 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-063~~ — RESOLVIDO
+
+Descrição:
+Reativar uma OS cancelada não consumia de novo as peças do estoque. Cancelar devolve as peças (BR-010),
+mas `PATCH /api/ordens/<id>/status` (`api_os.py::atualizar_status_os`) só tratava a entrada em
+`Cancelado`, não a saída. A OS voltava a "Em andamento" (ou "Finalizado") com as peças em `os_pecas` e o
+estoque já devolvido, e outra OS podia consumir a mesma unidade: duas OS ativas com uma única peça física
+(estoque fantasma). Afeta o Kanban (arrastar para fora de "Cancelado") e o botão "Finalizar OS" da tela de
+edição, que usam o mesmo PATCH. Achado no QA completo de 2026-11-12 (P0-1), reproduzido com banco isolado.
+
+Impacto:
+Crítico. Corrompe o estoque e o custo das OS sem nenhum aviso. Atende ao critério de interrupção do
+`ENGINEERING_GUIDE.md` §11 (integridade de dado de negócio).
+
+Status:
+Resolvido em 2026-11-12 (commit `61467a0`, branch `hotfix/reativacao-os-cancelada-estoque`). Ao sair de
+`Cancelado`, o PATCH reconsome as peças da OS com `consumir_peca_da_os` (mesma rotina da criação/edição:
+FIFO de lotes e movimentação `saida`). Sem estoque para alguma, faz rollback e responde 400 ("Não é
+possível reativar a OS: ..."); a OS continua Cancelada e nada é alterado. O Kanban já desfazia o movimento
+otimista e mostrava o erro, então o frontend não mudou. Coberto por 5 testes em
+`tests/test_os_update_status.py` (substituem o teste de caracterização que travava o comportamento antigo).
+Limitações: o custo reconsumido é o valor atual da peça (igual ao `PUT`), e se a peça foi excluída do
+estoque depois do cancelamento a reativação é recusada. OS já reativadas antes da correção não são
+corrigidas retroativamente; ver consulta de verificação no relatório do hotfix.
+
+Sprint prevista:
+Hotfix P0-1 da fase de correções pós-QA (2026-11-12).
+
+Responsável:
+—
