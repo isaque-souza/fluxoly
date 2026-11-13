@@ -19,7 +19,9 @@ def _parse_json(valor):
     if valor in (None, ""):
         return None
     try:
-        return json.loads(valor)
+        # P1-1: snapshot gravado com Infinity/NaN (antes da validação) aparece como o texto
+        # original -- a tela de Auditoria mostra o que foi gravado, sem quebrar a resposta.
+        return json.loads(valor, parse_constant=str)
     except (TypeError, ValueError):
         return valor
 
