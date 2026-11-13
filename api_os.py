@@ -1100,6 +1100,18 @@ def create_api_os_blueprint(deps):
                     conn.rollback()
                     return err(erro_garantia)
 
+            # KI-063 -- sair de Cancelado volta a consumir as peças da OS (o cancelamento
+            # as devolveu, BR-010). Sem estoque para alguma, nada muda e a OS segue Cancelada.
+            if status_cancelado(status_atual) and not status_cancelado(status):
+                cursor.execute("SELECT estoque_id FROM os_pecas WHERE os_id=? ORDER BY id", (os_id,))
+                estoque_ids = [r[0] for r in cursor.fetchall()]
+                cursor.execute("DELETE FROM os_pecas WHERE os_id=?", (os_id,))
+                for estoque_id in estoque_ids:
+                    ok_peca, erro_peca = consumir_peca_da_os(cursor, os_id, estoque_id)
+                    if not ok_peca:
+                        conn.rollback()
+                        return err(f"Não é possível reativar a OS: {erro_peca}")
+
             cursor.execute(
                 "UPDATE os SET status=?, data_finalizado=? WHERE id=?",
                 (status, data_finalizado_valor, os_id),
