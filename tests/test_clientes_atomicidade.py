@@ -649,6 +649,19 @@ class TestRollbackEmFalhaIntermediaria:
 
         assert _foto_do_banco() == antes
 
+    @pytest.mark.parametrize("acao", ["inativar", "excluir"])
+    def test_cliente_erro_de_disco_nao_vira_ocupado(self, monkeypatch, admin_id, novo_cliente, acao):
+        cliente = novo_cliente()
+        antes = _foto_do_banco()
+        _falhar_depois_de(
+            monkeypatch, clientes_service, "registrar_log_auditoria", sqlite3.OperationalError("disk I/O error")
+        )
+
+        with pytest.raises(sqlite3.OperationalError, match="disk I/O"):
+            (_inativar if acao == "inativar" else _excluir)(admin_id, cliente)
+
+        assert _foto_do_banco() == antes
+
     @pytest.mark.parametrize("acao", ["inativar", "reativar"])
     def test_situacao_falha_na_auditoria(self, monkeypatch, admin_id, novo_cliente, acao):
         cliente = novo_cliente()
