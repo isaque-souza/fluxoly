@@ -1,14 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "irflow@2024";
+// Definida pelo playwright.config.js (E2E_ADMIN_PASSWORD), a mesma usada para criar o admin do banco de teste.
+const ADMIN_PASS = process.env.E2E_ADMIN_PASSWORD;
 
 function uniqueName(prefix) {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
 async function login(page) {
-  await page.goto("/app/login");
+  await page.goto("/login");
   await page.getByLabel("Usuário").fill(ADMIN_USER);
   await page.getByLabel("Senha").fill(ADMIN_PASS);
   await page.getByRole("button", { name: "Entrar" }).click();
@@ -40,7 +41,7 @@ test("gerencia item de estoque pela interface", async ({ page }) => {
   await page.getByRole("link", { name: "Estoque" }).click();
   await page.getByRole("button", { name: /Nova Peça/i }).click();
   await page.getByLabel("Descrição *").fill(descricao);
-  await page.getByLabel("Modelo").fill("iPhone 11");
+  await selectOption(page, "Modelo compatível", "Universal (serve para qualquer modelo)");
   await page.getByLabel("Fornecedor").fill("Fornecedor E2E");
   await page.getByLabel("Valor (R$)").fill("12.34");
   await page.getByLabel("Quantidade").fill("2");

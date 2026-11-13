@@ -2284,3 +2284,83 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-068~~ — RESOLVIDO
+
+Descrição:
+Não existia execução E2E funcional. Os 4 testes de `frontend/tests/e2e/app.spec.js` falhavam por causa da
+infraestrutura do teste, não da aplicação:
+
+1. **Inicialização dependente de Windows.** `frontend/playwright.config.js` subia o backend com
+   `powershell -NoProfile -Command "...; python app.py"`. Em macOS/Linux (inclusive o runner `ubuntu-latest`
+   do CI) o Playwright abortava antes do primeiro teste: `/bin/sh: powershell: command not found` /
+   `Process from config.webServer was not able to start. Exit code: 127`.
+2. **URL desatualizada em relação à arquitetura atual.** Os testes abriam `/app/login` no Flask (porta
+   5080), mas o frontend de produção roda na raiz, na Vercel (`vite.config.js` `base: '/'`, `BrowserRouter`
+   sem `basename`, rota `/login`). Servido pelo Flask em `/app/`, o `index.html` pedia `/assets/*` e recebia
+   404; com um build de base `/app/`, o roteador redirecionava para `/`, onde o Flask não serve o SPA. Nos
+   dois casos o formulário de login nunca aparecia: `locator.fill: Test timeout of 60000ms exceeded —
+   waiting for getByLabel('Usuário')`.
+3. Senha do admin fixa no spec (`irflow@2024`) e servidor usando o banco padrão, sem diretório de dados
+   isolado.
+4. O E2E não roda no CI (`.github/workflows/ci.yml` não tem job de Playwright), então a quebra não aparecia.
+
+Reproduzido em 2026-11-13 na `main` (`1e9c265`) e na branch de integração dos hotfixes #101–#104
+(`cd36bab`), com o mesmo resultado nos três cenários: config oficial → falha do `webServer` (PowerShell);
+backend iniciado à mão com banco temporário → 4/4 falhas, mesmos 404 em `/assets/*`; build com base `/app/`
+→ 4/4 falhas, redirecionamento para `/`. O QA de 2026-11-12 (Windows) também registrou 4/4 por timeout.
+Logs em `fluxoly-qa-evidencias/2026-11-13-integracao-hotfixes/logs/` (`e2e_main*.log`, `e2e*.log`).
+
+Impacto:
+Médio. Nenhum fluxo completo (login → tela → API → banco) era validado automaticamente; regressões de
+integração entre frontend e backend só apareciam em QA manual. Não é regressão dos hotfixes nem afeta
+produção.
+
+Status:
+Resolvido em 2026-11-13 (commit `b635aa4`, branch `test/e2e-playwright-multiplataforma`). Só infraestrutura
+de teste; nenhum código da aplicação, nenhum `package.json` alterado.
+
+Correção (`frontend/playwright.config.js`):
+- Dois `webServer` sem shell específico, na mesma topologia da produção: backend `python app.py`
+  (`python3` fora do Windows; `E2E_PYTHON` aponta outro executável) e `vite preview` do build na raiz
+  (`127.0.0.1:4173`, `E2E_FRONTEND_PORT`), que alcança a API pelo proxy `/api` → `localhost:5080` já
+  existente no `vite.config.js`.
+- Banco descartável por execução: `IR_FLOW_DATA_DIR` num diretório temporário novo (`fluxoly-e2e-*` no
+  temporário do sistema), com `IR_FLOW_ENABLE_BACKGROUND_JOBS=0`, `MERCADO_PHONE_INTEGRATION_ENABLED=0` e
+  backend preso a `127.0.0.1`.
+- Senha do admin via `E2E_ADMIN_PASSWORD` (valor de teste padrão no config), repassada ao backend como
+  `IR_FLOW_ADMIN_PASSWORD` para criar o admin do banco de teste; o spec só lê a variável.
+- Aborta antes de subir qualquer servidor se `VITE_API_URL` estiver definido no ambiente ou em
+  `frontend/.env*`, para o build testado nunca apontar para outra API (inclusive a de produção).
+
+Spec (`frontend/tests/e2e/app.spec.js`): `/app/login` → `/login`, senha da variável de ambiente e um seletor
+atualizado (o campo "Modelo" do estoque virou o select "Modelo compatível"; o teste escolhe "Universal",
+que existe com o banco vazio). Os demais seletores continuavam válidos.
+
+Validação (macOS, Chromium do Playwright 1.59.1): 4/4 aprovados em 5 execuções seguidas (4 com `npx
+playwright test`, a última com `npm run test:e2e`, que também faz o build), cada uma com banco novo; nenhum
+`database.db` criado no repositório; portas 5080 e 4173 liberadas ao final. `npm run lint` sem erro (2
+warnings já existentes em `ShoppingList.jsx` e `Stock.jsx`), Vitest 211/211, build ok.
+
+Limitações (não bloqueiam; registradas para o PR `chore/` do CI):
+- **Sem job no CI.** Adiado por decisão do PO até a execução local se mostrar estável; quando entrar, não
+  bloqueante no início (`ubuntu-latest`, `npx playwright install --with-deps chromium`).
+- **Validado só no macOS.** Linux (CI) e Windows não foram executados nesta correção.
+- **Cookie de sessão `Secure` em HTTP.** Com `IR_FLOW_DATA_DIR` definido o backend se comporta como servidor
+  (cookie `SameSite=None; Secure; Partitioned`, como em produção). Funciona porque o Chromium trata
+  `127.0.0.1` como contexto seguro; outro navegador ou host pode exigir ajuste.
+- **Limite de login.** O rate limit (5 tentativas/minuto por IP, contando sucessos) comporta os 4 logins
+  atuais; um 5º teste com login próprio na mesma execução precisa reaproveitar a sessão
+  (`storageState`).
+- **Diretórios temporários não são apagados.** Cada execução deixa um `fluxoly-e2e-*` (só dados de teste) no
+  temporário do sistema.
+- **A rota `/app/*` do Flask** (servir o SPA no modo processo único/desktop) deixou de ser exercitada por
+  este spec; se ainda tiver uso, merece teste próprio.
+
+Sprint prevista:
+Fase de correções pós-QA (2026-11-13), depois dos hotfixes.
+
+Responsável:
+—

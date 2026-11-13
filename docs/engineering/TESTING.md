@@ -183,9 +183,15 @@ npx playwright test tests/e2e/app.spec.js
 
 ### Observações
 
-- Os testes E2E iniciam o servidor Flask localmente — requerem Python no PATH
-- Credenciais de teste: `admin / irflow@2024` (não altere sem atualizar os testes)
-- No CI, os testes E2E são `continue-on-error: true` até Sprint 3 (risco de flakiness)
+- O `playwright.config.js` sobe dois servidores, na mesma topologia da produção (KI-068): o backend
+  Flask (`python app.py`; `python3` fora do Windows, ou o executável em `E2E_PYTHON`, com as dependências do
+  `requirements.txt`) e o `vite preview` do build na raiz, que chega à API pelo proxy `/api`
+- Cada execução usa um banco novo num diretório temporário (`IR_FLOW_DATA_DIR`), com jobs em background e
+  MercadoPhone desligados — nunca o `database.db`
+- Senha do admin de teste: variável `E2E_ADMIN_PASSWORD` (o config define um valor de teste quando ausente)
+- A execução aborta se `VITE_API_URL` estiver definido (ambiente ou `frontend/.env*`)
+- Ainda não roda no CI (decisão do PO, 2026-11-13: primeiro comprovar estabilidade local; o job entra num
+  PR `chore/` separado, inicialmente não bloqueante)
 
 ---
 
