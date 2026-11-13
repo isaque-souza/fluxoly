@@ -208,6 +208,13 @@ return jsonify({"error": "Erro interno"}), 500
 
 **Nunca retornar stack traces em produção.** Sempre logar o erro e retornar mensagem genérica.
 
+**Entrada numérica sempre por `fluxoly_validation.parse_float` / `parse_int`** — nunca `float()`/`int()`
+direto no valor do request. Os dois devolvem `None` para entrada inválida, inclusive `Infinity`, `NaN` e
+números que estouram o float (`1e400`), e o controller transforma `None` em 400. Campo opcional precisa
+distinguir "ausente" de "inválido" (ver `fluxoly_produtos_controller.py`, `preco_custo`). Na saída,
+`JSONProviderFinito` (`app.json`) garante que nenhuma resposta saia com `Infinity`/`NaN` — é rede de
+segurança para dado antigo, não substitui a validação de entrada (P1-1/KI-065).
+
 ### Acesso ao banco
 
 ```python

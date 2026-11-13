@@ -620,7 +620,11 @@ def create_api_os_blueprint(deps):
         observacoes = (body.get("observacoes") or "").strip()
         origem = (body.get("origem") or "qr_publico").strip() or "qr_publico"
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        resultado_json = json.dumps({"testes": testes}, ensure_ascii=True)
+        try:
+            # P1-1: rota pública -- Infinity/NaN em qualquer nível do checklist é recusado.
+            resultado_json = json.dumps({"testes": testes}, ensure_ascii=True, allow_nan=False)
+        except ValueError:
+            return err("Formato do checklist inválido.")
 
         # INC-001: conexão sem try/except/finally — mesmo padrão do hotfix de auth_login.
         # Rota pública, sem login, escreve dado enviado por cliente final — maior risco

@@ -74,6 +74,7 @@ em andamento no momento do deploy.
 | Item | Status | Observação |
 |------|--------|-----------|
 | Queries usam parâmetros `?` (nunca f-strings ou concatenação) | ✅ | Auditado 2026-07-25 — ver `docs/security/SECURITY_AUDIT_2026-07.md` |
+| Números não finitos (`Infinity`, `NaN`, `1e400`) recusados na entrada e nunca serializados na saída | ✅ | P1-1/KI-065 (2026-11-12). `parse_float`/`parse_int` (`fluxoly_validation.py`) devolvem `None` → 400; checklist público recusa com `allow_nan=False`; `JSONProviderFinito` troca valor antigo não finito por `null` e loga `resposta_com_valor_nao_finito` |
 | Nenhum input do usuário é interpolado diretamente em SQL | ✅ | Todas as 11 ocorrências de f-string em `.execute()` do backend inteiro (incluindo `irflow_blueprints_api.py`) verificadas linha a linha — só fragmentos fixos/whitelists são interpolados, valores do usuário sempre via `?` |
 
 **Regra obrigatória:**

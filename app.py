@@ -120,6 +120,7 @@ from fluxoly_reference_data import (
 from fluxoly_audit import iniciar_thread_manutencao_audit_log
 from fluxoly_storage import carregar_configuracoes_integracoes, iniciar_thread_backup_automatico
 from fluxoly_web import anexar_query_string
+from fluxoly_validation import JSONProviderFinito
 
 # ============================================================================
 # IMPORTS DE MÓDULOS INTERNOS - MIGRATIONS (TD-03 Fatia 2)
@@ -192,6 +193,8 @@ if _sentry_dsn:
     logger.info("sentry_inicializado", extra={"environment": _sentry_environment})
 
 app = Flask(__name__, template_folder=os.path.join(RESOURCE_DIR, "templates"))
+# P1-1: nenhuma resposta JSON sai com Infinity/NaN (ver fluxoly_validation.JSONProviderFinito).
+app.json = JSONProviderFinito(app)
 
 # SECURITY_AUDIT_2026-07.md item 3: antes, um deploy sem FLASK_SECRET_KEY configurada
 # iniciava silenciosamente com um valor hardcoded e publico ("ir-flow-dev-key"),

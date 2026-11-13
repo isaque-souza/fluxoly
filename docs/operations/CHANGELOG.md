@@ -9,6 +9,15 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-12 — Hotfix P1-1)
+- **fix: Infinity, NaN e 1e400 deixam de ser aceitos como número** (KI-065) — `parse_float` aceitava tudo
+  que `float()` aceita; o valor ia para o banco e para a auditoria, e as telas de Dashboard, Estoque, Vendas,
+  Caixa, Contas e Auditoria quebravam (resposta com `Infinity` não é JSON válido). Agora a entrada é recusada
+  com 400 em todos os endpoints numéricos, inclusive o checklist público e o webhook MercadoPhone (que ignora
+  o valor, como já fazia com texto inválido); `parse_int` não dá mais 500 com `1e400`. Na saída,
+  `JSONProviderFinito` serializa dado antigo não finito como `null` e registra aviso no log; a Auditoria mostra
+  o valor gravado como texto. Nenhum dado existente é alterado.
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no
