@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Segurança (2026-11-12 — Hotfix P1-2)
+- **fix: sessão passa a refletir desativação, exclusão e troca de perfil** (KI-064) — o perfil ficava
+  gravado no cookie desde o login e nunca era conferido: usuário desativado continuava usando o sistema e
+  admin rebaixado mantinha o acesso de admin até a sessão expirar. Cada requisição autenticada agora relê
+  o usuário no banco; inativo ou excluído recebe 401, perfil novo vale na hora, sem logout.
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no
