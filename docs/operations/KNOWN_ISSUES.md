@@ -2284,3 +2284,36 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-064~~ — RESOLVIDO
+
+Descrição:
+A sessão não refletia mudanças no cadastro do usuário. O login (`api_auth.py` e `fluxoly_blueprints_auth.py`)
+grava `usuario_id`, `usuario_nome` e `usuario_perfil` no cookie assinado, e nada mais os conferia com o
+banco: `usuario_logado()` (`fluxoly_api_helpers.py:13`) só olha se há `usuario_id`, e as mais de 40
+checagens de perfil leem `session["usuario_perfil"]`. Consequência: usuário desativado ou excluído
+continuava usando o sistema, e admin rebaixado mantinha o acesso de admin (criar e excluir usuários,
+auditoria, financeiro) até a sessão expirar (30 min de inatividade ou 31 dias). Achado no QA completo de
+2026-11-12 (P1-2).
+
+Impacto:
+Alto (segurança/autorização). Desligar um funcionário pela tela de Usuários não tirava o acesso dele.
+
+Status:
+Resolvido em 2026-11-12 (commit `3fc565f`, branch `hotfix/invalidar-sessao-usuario-alterado`).
+`verificar_autenticacao()` (`app.py`, `before_request` global) chama `revalidar_usuario_da_sessao()` em
+toda requisição com sessão: relê `nome`, `perfil` e `ativo`; inativo ou excluído tem a sessão limpa (401
+na API, login na tela) e perfil e nome são atualizados antes da view rodar. Custo: uma consulta por
+chave primária em `usuarios` por requisição autenticada. Reativar o usuário não revive a sessão derrubada
+(exige novo login). Coberto por 13 testes em `tests/test_sessao_revalidacao.py` e validado no navegador.
+Pendência fora do escopo: o frontend só lê o perfil no carregamento (`AuthContext`), então uma tela já
+aberta mostra o menu antigo até recarregar; as ações recebem 403/401 do servidor. Trocar a senha não
+derruba sessões abertas do próprio usuário (não fazia parte do achado).
+
+Sprint prevista:
+Hotfix P1-2 da fase de correções pós-QA (2026-11-12).
+
+Responsável:
+—
