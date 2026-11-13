@@ -153,6 +153,10 @@ origem troca → 400). O cliente segue disponível para consulta (`GET /api/clie
 "Inativos"), documentos (recibo, documento da OS) e relatórios históricos. Quando a OS passar a gravar
 `os.cliente_id` pela tela (hoje não grava), a mesma validação
 (`validar_cliente_para_nova_operacao`) deve ser aplicada.
+Atomicidade (KI-067, 2026-11-13): a checagem que vale é a feita dentro da transação de escrita
+(`validar_cliente_na_transacao`, aberta com `BEGIN IMMEDIATE`) -- venda, troca, inativação e exclusão do
+mesmo cliente ficam em fila, e quem entra depois respeita o que o primeiro gravou. Fila acima do
+`busy_timeout` → 503, sem gravar nada. Uma nova operação que vincule cliente deve seguir o mesmo padrão.
 *Fonte: `fluxoly_clientes_service.py::validar_cliente_para_nova_operacao`.*
 
 **BR-024c — ✅ Implementado** *(2026-11-12)*

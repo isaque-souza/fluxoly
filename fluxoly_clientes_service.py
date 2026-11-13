@@ -18,6 +18,8 @@ Depende de: `fluxoly_clientes_repository.py` (SQL), `fluxoly_audit.py`
 (auditoria — create/update/delete).
 """
 
+import sqlite3
+
 import fluxoly_clientes_repository as repo
 from fluxoly_audit import registrar_log_auditoria
 
@@ -30,6 +32,13 @@ STATUS_VALIDOS = ("ativos", "inativos", "todos")
 STATUS_PADRAO = "ativos"
 
 MSG_CLIENTE_INATIVO = "Cliente inativo — reative o cadastro para usá-lo em uma nova operação."
+
+# KI-067: venda, compra por troca, inativação/reativação e exclusão disputam a mesma regra (BR-024b).
+# Cada uma abre a transação com BEGIN IMMEDIATE, que pega a trava de escrita do SQLite antes da primeira
+# leitura: a checagem do cliente e a gravação que depende dela ficam na mesma conexão e transação, e as
+# operações concorrentes entram em fila (busy_timeout de app.py). Quem entra depois lê o que o primeiro
+# gravou. Se a fila passar do busy_timeout, a operação é recusada com esta mensagem (503), nunca 500.
+MSG_ESCRITA_OCUPADA = "O sistema está ocupado com outra operação. Tente novamente em instantes."
 
 # KI-045: sentinel distinto de "" -- quem não pode ver o CPF/CNPJ atual (session sem admin/financeiro)
 # não recebe o valor do GET, então "campo ausente na requisição de PUT" precisa significar "preservar o
@@ -82,6 +91,27 @@ def listar_clientes(conectar, termo="", page=None, per_page=None, status=STATUS_
         "page": page,
         "per_page": per_page,
     }
+
+
+def iniciar_transacao_de_escrita(cursor):
+    """KI-067: abre a transação já com a trava de escrita -- precisa ser o primeiro comando da conexão."""
+    cursor.execute("BEGIN IMMEDIATE")
+
+
+def escrita_ocupada(exc):
+    """KI-067: o SQLITE_BUSY que sobra depois do busy_timeout ("database is locked")."""
+    return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower()
+
+
+def validar_cliente_na_transacao(cursor, cliente_id):
+    """BR-024b / KI-067: o cliente existe e está ativo, lido no cursor da transação que vai gravar a
+    venda ou a compra por troca. Retorna (row, erro)."""
+    row = repo.buscar_por_id(cursor, cliente_id)
+    if not row:
+        return None, "Cliente não encontrado."
+    if not row[8]:
+        return row, MSG_CLIENTE_INATIVO
+    return row, None
 
 
 def obter_cliente(conectar, cliente_id):
@@ -182,6 +212,9 @@ def excluir_cliente(conectar, usuario_id, cliente_id):
     conn = conectar()
     try:
         cursor = conn.cursor()
+        # KI-067: contagem de vínculos e DELETE na mesma transação de escrita -- uma venda ou compra
+        # concorrente espera este commit (e é recusada) ou termina antes (e a contagem a enxerga: 409).
+        iniciar_transacao_de_escrita(cursor)
         antes = repo.buscar_por_id(cursor, cliente_id)
         if not antes:
             return False, "Cliente não encontrado.", None
@@ -197,6 +230,11 @@ def excluir_cliente(conectar, usuario_id, cliente_id):
         repo.deletar(cursor, cliente_id)
         registrar_log_auditoria(cursor, "cliente", cliente_id, usuario_id, "delete", antes=_snapshot_auditoria(antes))
         conn.commit()
+    except sqlite3.OperationalError as exc:
+        conn.rollback()
+        if not escrita_ocupada(exc):
+            raise
+        return False, MSG_ESCRITA_OCUPADA, None
     finally:
         conn.close()
 
@@ -210,6 +248,8 @@ def _definir_situacao(conectar, usuario_id, cliente_id, ativo):
     conn = conectar()
     try:
         cursor = conn.cursor()
+        # KI-067: leitura da situação atual e UPDATE na mesma transação de escrita.
+        iniciar_transacao_de_escrita(cursor)
         row = repo.buscar_por_id(cursor, cliente_id)
         if not row:
             return False, "Cliente não encontrado."
@@ -228,6 +268,11 @@ def _definir_situacao(conectar, usuario_id, cliente_id, ativo):
             depois={"ativo": ativo},
         )
         conn.commit()
+    except sqlite3.OperationalError as exc:
+        conn.rollback()
+        if not escrita_ocupada(exc):
+            raise
+        return False, MSG_ESCRITA_OCUPADA
     finally:
         conn.close()
     return True, None
@@ -244,13 +289,17 @@ def reativar_cliente(conectar, usuario_id, cliente_id):
 
 
 def validar_cliente_para_nova_operacao(conectar, cliente_id):
-    """BR-024b: usado por quem cria venda/compra por troca. Retorna (cliente, erro)."""
-    cliente = obter_cliente(conectar, cliente_id)
-    if not cliente:
-        return None, "Cliente não encontrado."
-    if not cliente["ativo"]:
-        return None, MSG_CLIENTE_INATIVO
-    return cliente, None
+    """BR-024b: pré-checagem rápida (conexão própria) de quem cria venda/compra por troca, antes das
+    demais validações. A checagem que vale é `validar_cliente_na_transacao`, repetida dentro da
+    transação de escrita (KI-067). Retorna (cliente, erro)."""
+    conn = conectar()
+    try:
+        row, erro = validar_cliente_na_transacao(conn.cursor(), cliente_id)
+    finally:
+        conn.close()
+    if erro:
+        return None, erro
+    return _cliente_para_dict(row), None
 
 
 def anonimizar_cliente(conectar, usuario_id, cliente_id):

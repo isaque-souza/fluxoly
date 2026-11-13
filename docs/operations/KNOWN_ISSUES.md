@@ -2323,3 +2323,131 @@ Hotfix pós-QA (P1-3).
 
 Responsável:
 —
+
+---
+
+## ~~KI-067~~ — RESOLVIDO
+
+Descrição:
+Corrida entre a checagem do cliente e a gravação da operação comercial (venda e compra por troca),
+introduzida junto com o KI-066 (PR #104). O hotfix P1-3 validava o cliente **antes** e **fora** da
+transação que grava:
+
+- `fluxoly_vendas_service.iniciar_venda` chamava `clientes_service.validar_cliente_para_nova_operacao`
+  (conexão própria, lê `clientes.ativo` e fecha), depois `tipos_garantia`/`unidades_service.obter_unidade`,
+  e só então abria outra conexão e gravava (`repo.inserir_venda`, `inserir_item`, `marcar_como_vendida`).
+- `fluxoly_compras_aparelhos_service.registrar_compra` (origem `troca`): mesma sequência, checagem antes
+  de `criar_unidade_de_compra` + `repo.inserir`.
+- Do outro lado, `fluxoly_clientes_service._definir_situacao` (inativar/reativar) e `excluir_cliente`
+  (`contar_vinculos` + `DELETE`) usavam conexões próprias.
+
+Causa raiz:
+o `sqlite3` do Python abre transação `DEFERRED` só no primeiro DML, então nem a leitura do `ativo` nem a
+contagem de vínculos seguravam trava, e a checagem e a gravação estavam em conexões diferentes. Não há
+`FOREIGN KEY` (`DATABASE.md` §3) nem `INSERT` condicional que barre a gravação. O mesmo padrão (checar
+fora, gravar depois) já existia antes do #104 para tipo de garantia e unidade; a unidade é protegida por
+`UPDATE ... WHERE status = 'disponivel'` com checagem de `rowcount` (`marcar_vendida`).
+
+Sequências reproduzidas em 2026-11-13, durante a revisão integrada dos hotfixes pós-QA (banco temporário,
+ação do admin injetada no intervalo, outra conexão):
+
+1. Venda lê `ativo = 1` → admin **inativa** o cliente (commit) → venda grava. Resultado: venda nova
+   de cliente inativo, sem erro (viola BR-024b).
+2. Venda lê o cliente → admin **exclui** o cliente, que ainda tem zero vínculos (commit) → venda grava.
+   Resultado: **venda órfã**, `vendas.cliente_id` aponta para id inexistente, sem erro. É exatamente o
+   dano que o KI-066 corrige, por outro caminho.
+3. Compra por troca: mesma sequência do item 1, compra gravada para cliente inativo.
+
+Reprodução determinística: `monkeypatch` no primeiro passo após a checagem
+(`unidades_service.obter_unidade` / `criar_unidade_de_compra`) executa a ação do admin (evidência:
+`fluxoly-qa-evidencias/2026-11-13-integracao-hotfixes/`, `test_zz_repro_ki067.py` e
+`logs/repro_ki067.log`). Em produção depende de duas requisições simultâneas em workers diferentes
+(Gunicorn `workers = 2`, `gunicorn.conf.py`), com janela de poucos milissegundos. Não observado em
+produção; nenhuma consulta foi feita lá.
+
+Impacto:
+Cenários 1 e 3: médio. Operação registrada para cliente inativo; dado íntegro e visível, reversível
+(cliente pode ser reativado, venda pode ser cancelada). Cenário 2: alto. Titular da venda perdido sem
+erro, não recuperável pela tela. Pela `ENGINEERING_GUIDE.md` §11, o cenário 2 atende **C-01, C-02 e
+C-04**; a política indica `hotfix/`. A análise foi registrada primeiro sem código (PO restringiu aquela
+etapa a documentação); o PO aprovou a alternativa A e o hotfix foi aberto em seguida.
+
+Alternativas avaliadas (SQLite, sem mudar schema):
+
+- **A — Revalidar dentro da transação de escrita com `BEGIN IMMEDIATE`** (escolhida). Venda e troca abrem
+  a conexão de escrita com `BEGIN IMMEDIATE`, releem `clientes` (existe e `ativo = 1`) e só então gravam;
+  inativar/reativar e excluir também passam a `BEGIN IMMEDIATE` antes de ler. Com um único escritor no
+  SQLite, as operações ficam serializadas: ou a venda termina antes (e a exclusão encontra o vínculo e
+  responde 409), ou a inativação/exclusão termina antes e a venda é recusada.
+- **B — `INSERT` condicional** (`INSERT ... SELECT ... WHERE EXISTS (SELECT 1 FROM clientes WHERE id = ?
+  AND ativo = 1)` + `rowcount`), no padrão de `marcar_vendida`. Fecha o lado da venda, mas o `DELETE` do
+  cliente continua precisando checar vínculos na mesma transação de escrita (A) para fechar o cenário 2.
+- **C — `FOREIGN KEY` + `PRAGMA foreign_keys = ON`.** Fecha a órfã no banco, mas exige recriar tabelas no
+  SQLite (migration não aditiva) e não resolve o `ativo`. Fora de escopo de hotfix; exige ADR.
+
+Status:
+Resolvido em 2026-11-13 (commit `cf2be1d`, branch `hotfix/atomicidade-venda-cliente`, base `1794763` do
+PR #104; alternativa A aprovada pelo PO).
+
+Correção: as quatro operações (venda, compra por troca, inativação/reativação e exclusão de cliente)
+abrem a transação com `BEGIN IMMEDIATE` (`clientes_service.iniciar_transacao_de_escrita`) e leem o
+cliente no mesmo cursor que grava (`validar_cliente_na_transacao`); a pré-checagem em conexão própria
+continua só para manter a ordem das mensagens de erro. As operações concorrentes ficam em fila no
+`busy_timeout` (30 s, abaixo do `timeout = 60` do Gunicorn); fila acima disso responde **503** com
+`MSG_ESCRITA_OCUPADA` em vez de 500, sem gravar nada. Erro de disco (`disk I/O error`) não é confundido
+com "ocupado": não vira 503, segue o tratamento de erro já existente de cada operação, e a transação é
+revertida. Sem mudança de schema, sem migration.
+
+Testes — 26 em `tests/test_clientes_atomicidade.py` (banco temporário do conftest):
+
+- A (3): os três cenários da análise invertidos — venda/troca recusadas, exclusão sem venda órfã.
+- B (6): ordem fixada com threads e conexões SQLite reais; a segunda operação fica comprovadamente
+  bloqueada no `BEGIN IMMEDIATE` até a primeira terminar (inclui exclusão via HTTP depois da venda → 409).
+- C (6): disputa sem patch (`threading.Barrier`) para venda × inativação, venda × exclusão e troca ×
+  inativação, nas duas ordens, 25 repetições cada; invariantes: nenhuma venda/troca criada depois da
+  inativação, nenhum `cliente_id` sem cliente, `integrity_check` ok.
+- D (1): banco travado por outra conexão → as cinco rotas (venda, troca, inativar, reativar, excluir)
+  respondem 503 com `MSG_ESCRITA_OCUPADA`, nunca 500, e nada é gravado.
+- E (10): rollback em falha intermediária — falha injetada depois de gravar no caixa (venda), na unidade,
+  na auditoria e no caixa (troca), na auditoria (inativar, reativar, excluir) e erro de disco (troca,
+  inativar, excluir). O conteúdo de todas as tabelas (inclusive `sqlite_sequence`) fica idêntico ao de
+  antes, a trava é liberada e a nova tentativa grava uma única vez.
+
+Contra o código anterior à correção, 9 dos 16 testes então existentes (A–D) falharam, inclusive uma
+disputa real sem patch (venda e exclusão vencendo juntas = venda órfã). Suítes no fechamento: backend
+completo da branch 1.030 aprovados; integração dos cinco hotfixes (#101–#104 + KI-067) 1.328 aprovados,
+incluindo os 12 testes cruzados (`tests/test_hotfixes_pos_qa_cruzados.py`, branch
+`docs/ki-067-ki-068-e2e`).
+
+Desempenho (`BEGIN IMMEDIATE` × base, duas rodadas, banco local; `fluxoly-qa-evidencias/
+2026-11-13-hotfix-ki067/logs/bench_*`): sem regressão relevante. Sequencial (n = 500): mediana igual
+(venda ~3,1 ms, troca ~1,9 ms, inativação/reativação/exclusão ~0,9–1,0 ms). Carga moderada e pares
+concorrentes: média e p95 na mesma faixa da base (diferença < 1 ms na média; p95 até ~3,7 ms acima em
+uma rodada de venda moderada), espera pela trava com p95 ≤ ~4,5 ms. Saturada: médias e p95 equivalentes,
+mas máximos isolados de **39–94 ms** com espera pela trava de até ~89 ms. Zero falhas em todas as
+séries.
+
+Validação do 503 (app real, banco travado por outra conexão; `logs/ui503*.log` e capturas
+`venda_503.png`, `troca_503.png`, `inativar_503.png`): venda, troca, inativar e excluir responderam 503
+com a mensagem "O sistema está ocupado com outra operação. Tente novamente em instantes.", banco
+inalterado; após liberar a trava, a nova tentativa gravou normalmente (201/200), exclusão repetida → 404,
+cliente com venda e troca → 409, `integrity_check` ok.
+
+Riscos residuais e limitações:
+
+- **Picos sob saturação:** os máximos de 39–94 ms observados com escrita saturada são risco operacional a
+  acompanhar em produção; acima do `busy_timeout` (30 s) a operação é recusada com 503.
+- **Inativação sem indicador de carregamento:** o diálogo de confirmação fecha imediatamente, mesmo com a
+  API ainda aguardando a trava (~5,9 s no teste de UI); a mensagem de erro aparece corretamente e nada é
+  gravado. Melhoria de UX, não bloqueante; fora do escopo deste hotfix.
+- **Integridade referencial:** a correção protege só as quatro operações ligadas à regra do cliente.
+  Outros fluxos de escrita do sistema continuam com transação `DEFERRED` e não há `FOREIGN KEY`; a
+  proteção geral contra referências órfãs continua como risco de arquitetura (alternativa C exige ADR).
+- **Dados anteriores:** vendas/trocas órfãs ou de cliente inativo gravadas antes da correção não são
+  corrigidas retroativamente; o diagnóstico em produção depende de autorização do PO.
+
+Sprint prevista:
+Hotfix complementar ao P1-3 (fase de correções pós-QA, 2026-11-13).
+
+Responsável:
+—

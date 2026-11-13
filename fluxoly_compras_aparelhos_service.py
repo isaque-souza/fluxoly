@@ -146,6 +146,14 @@ def registrar_compra(
     conn = conectar()
     try:
         cursor = conn.cursor()
+        # KI-067: na troca, o cliente é conferido de novo na mesma transação de escrita que grava a compra
+        # (a checagem acima é só pré-checagem) -- inativação ou exclusão concorrente fica em fila.
+        clientes_service.iniciar_transacao_de_escrita(cursor)
+        if cliente_id:
+            _cliente_row, erro_cliente = clientes_service.validar_cliente_na_transacao(cursor, cliente_id)
+            if erro_cliente:
+                raise _CompraConflitoError(erro_cliente)
+
         unidade_id, erro = unidades_service.criar_unidade_de_compra(
             cursor, usuario_id, produto_id, imei, com_defeito=bool(defeito)
         )
@@ -192,6 +200,11 @@ def registrar_compra(
     except sqlite3.IntegrityError:
         conn.rollback()
         return None, "Não foi possível registrar a compra (conflito de dados)."
+    except sqlite3.OperationalError as exc:
+        conn.rollback()
+        if not clientes_service.escrita_ocupada(exc):
+            raise
+        return None, clientes_service.MSG_ESCRITA_OCUPADA
     finally:
         conn.close()
 
