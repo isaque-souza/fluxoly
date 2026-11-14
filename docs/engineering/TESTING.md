@@ -215,6 +215,13 @@ fail_under = 40
 
 O CI falha automaticamente se a cobertura cair abaixo do threshold.
 
+### Cobertura por rota HTTP
+
+A cobertura de linhas não mostra quais rotas têm teste HTTP nem quais checagens de 401/403 estão
+comprovadas. Para isso, ver a auditoria de 2026-11-14
+([`ROUTE_COVERAGE_AUDIT_2026-11.md`](ROUTE_COVERAGE_AUDIT_2026-11.md)): matriz de cada rota com método,
+autorização e testes. É um retrato da `main` em `1e9c265`; as lacunas estão registradas como KI-069 a KI-076.
+
 ---
 
 ## Convenções
