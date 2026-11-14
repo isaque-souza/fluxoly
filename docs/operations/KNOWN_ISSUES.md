@@ -2284,3 +2284,226 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## KI-069
+
+Descrição:
+As 19 rotas HTTP do financeiro não têm nenhum teste HTTP: caixa (`GET/POST /api/caixa`, `GET
+/api/caixa/saldo`, `GET /api/caixa/relatorio`, `POST /api/caixa/<id>/estornar`), contas a pagar e contas a
+receber (listar, obter, criar, editar, excluir, pagar/receber, cancelar). `tests/test_caixa.py`,
+`tests/test_contas_pagar.py` e `tests/test_contas_receber.py` testam só a camada de serviço (0 chamadas
+HTTP). A checagem de sessão (401) e de perfil (`usuario_pode_financeiro()`, só `admin`/`financeiro`, 403)
+fica no controller e, por isso, não é exercitada por nenhum teste. Achado na auditoria de cobertura de rotas
+de 2026-11-14 (`docs/engineering/ROUTE_COVERAGE_AUDIT_2026-11.md`, retrato de `1e9c265`).
+
+Impacto:
+Médio. Lacuna de comprovação, não defeito confirmado: a leitura do código mostra a checagem nas rotas, mas
+uma regressão (rota nova sem checagem, helper alterado) que liberasse o financeiro para `vendedor` ou
+`tecnico` não seria detectada pela suíte. Não atende critério de `ENGINEERING_GUIDE.md` §11 (nenhum
+comportamento incorreto observado).
+
+Status:
+Aberto (2026-11-14). Primeira prioridade da sprint de cobertura HTTP, planejada para depois da integração
+dos hotfixes #101 a #106: testes HTTP de comportamento e de 401/403 por perfil para os 19 pares.
+
+Sprint prevista:
+Sprint de cobertura HTTP e autorização (a definir, após a integração dos hotfixes).
+
+Responsável:
+—
+
+---
+
+## KI-070
+
+Descrição:
+Faltam testes de autorização (401 e 403) em boa parte das rotas. Das 136 rotas que exigem sessão, 87 não
+têm nenhum teste identificado que confira o 401 sem login. Das 64 rotas que restringem perfil com 403, 30
+não têm nenhum teste identificado de 403: as 19 do financeiro (KI-069), `PATCH /api/ordens/<id>/status`
+(admin/técnico), `DELETE /api/shopping-list/<id>`, `POST /api/tipos-garantia`, `POST
+/api/compras-aparelhos/<id>/cancelar`, as 3 rotas de ação da integração MercadoPhone (desligada pela
+ADR-014) e as 4 views legadas de admin (`/relatorios`, `/relatorios/pdf/tecnicos`, `/backup`,
+`/backup/download/<nome>`). Como a API não tem decorator central de autenticação (cada handler faz a própria
+checagem), cada rota precisa do seu teste. Lista completa: colunas 401/403 da matriz em
+`docs/engineering/ROUTE_COVERAGE_AUDIT_2026-11.md`.
+
+Impacto:
+Médio. Descreve **ausência de testes de autorização, não falha de autorização**: a auditoria não encontrou
+nenhuma rota que deixe de checar sessão ou perfil quando deveria. O risco é uma regressão nessas checagens
+passar despercebida pela suíte. Não atende critério de `ENGINEERING_GUIDE.md` §11.
+
+Status:
+Aberto (2026-11-14). Separar por módulo e risco na sprint de cobertura HTTP (financeiro primeiro, depois
+operações administrativas), não numa tarefa única.
+
+Sprint prevista:
+Sprint de cobertura HTTP e autorização (a definir, após a integração dos hotfixes).
+
+Responsável:
+—
+
+---
+
+## KI-071
+
+Descrição:
+Rotas de funcionalidades em uso sem nenhum teste HTTP identificado (todas autenticadas):
+- Reparos: `GET/POST /api/reparos`, `PUT/DELETE /api/reparos/<id>` (`api_os.py:1318-1383`).
+- Custos operacionais: `GET /api/custos`, `DELETE /api/custos/<id>` (`api_costs.py`).
+- Relatórios: `GET /api/relatorios/tecnicos`, `/custos-operacionais`, `/pdf/tecnicos`,
+  `/pdf/custos-operacionais` (`api_reports.py`).
+- Backup: `GET /api/backup/listar`, `GET /api/backup/download/<arquivo>` (`api_backup.py`).
+- `GET /api/alertas` (`api_system.py:97`) e `GET /api/shopping-list/logs/export` (`api_shopping.py:491`).
+Achado na auditoria de cobertura de rotas de 2026-11-14.
+
+Impacto:
+Baixo/médio. Lacuna de comprovação, sem defeito observado: o comportamento dessas rotas depende só de QA
+manual. Não atende critério de `ENGINEERING_GUIDE.md` §11.
+
+Status:
+Aberto (2026-11-14). Para a sprint de cobertura HTTP, depois do KI-069 e do KI-070.
+
+Sprint prevista:
+Sprint de cobertura HTTP e autorização (a definir, após a integração dos hotfixes).
+
+Responsável:
+—
+
+---
+
+## KI-072
+
+Descrição:
+Os 4 cenários do E2E (`frontend/tests/e2e/app.spec.js`) percorrem cerca de 6 das 28 telas do SPA: login,
+dashboard, estoque, ordens (nova/editar), backup e usuários. Sem E2E: vendas e detalhe da venda, lembretes,
+clientes, produtos, unidades serializadas, financeiro, lista de compras, compras de aparelhos, garantias,
+tipos de garantia, kanban, reparos, preços, custos, relatórios, dados da loja, auditoria e checklist
+público. Em `1e9c265` a infraestrutura do E2E ainda é a anterior ao KI-068 (corrigida no PR #106, ainda não
+integrado), e o E2E não roda no CI.
+
+Impacto:
+Baixo/médio. Os fluxos de venda, financeiro e compra de aparelhos não têm verificação automatizada de ponta
+a ponta. Não atende critério de `ENGINEERING_GUIDE.md` §11.
+
+Status:
+Aberto (2026-11-14). Ampliar aos poucos, depois do #106 e do job de Playwright no CI (PR `chore/`
+separado). Priorizar vendas e financeiro.
+
+Sprint prevista:
+—
+
+Responsável:
+—
+
+---
+
+## KI-073
+
+Descrição:
+**Ponto a investigar, não bug confirmado.** `GET /api/constantes` (`api_system.py:76`) responde sem exigir
+login. Além de listas de referência (modelos, cores, status, categorias), devolve os nomes de vendedores
+(`vendedores`) e técnicos (`tecnicos`). Não está claro se a rota é pública de propósito (por exemplo, para
+alguma tela antes do login) ou se a falta de checagem é um esquecimento. Os testes existentes chamam a rota
+com sessão; nenhum confere o comportamento sem login. Achado na auditoria de cobertura de rotas de
+2026-11-14.
+
+Impacto:
+A definir. Depende da decisão do PO sobre a exposição dos nomes. Se a exposição não for aceitável, avaliar
+contra o critério C-03 de `ENGINEERING_GUIDE.md` §11 antes de qualquer correção.
+
+Status:
+Investigação pendente (2026-11-14). Nenhuma alteração antes de uma investigação específica: verificar quem
+consome a rota sem sessão e decidir se a exposição é aceitável.
+
+Sprint prevista:
+—
+
+Responsável:
+PO (decisão sobre a exposição).
+
+---
+
+## KI-074
+
+Descrição:
+**Ponto a investigar, não bug confirmado.** Há inconsistência entre as listas de perfil. `api_shopping.py:293`
+e `:393` liberam alterar status e excluir item da lista de compras para `("admin", "tecnico", "comprador")`,
+mas `comprador` não existe em `PERFIS_OPCOES` (`fluxoly_core.py:44`: `admin`, `tecnico`, `vendedor`,
+`estoque`, `financeiro`), então nenhum usuário pode ter esse perfil. Ao mesmo tempo, o perfil `estoque`
+existe e não aparece nessas listas. Pode ser um resquício de um perfil renomeado ou uma permissão que
+deveria valer para `estoque`. Achado na auditoria de cobertura de rotas de 2026-11-14.
+
+Impacto:
+A definir. A entrada `comprador` sozinha não libera nada (o perfil não pode ser atribuído). A dúvida é de
+regra de negócio: o perfil `estoque` deveria operar a lista de compras?
+
+Status:
+Investigação pendente (2026-11-14). Nenhuma alteração antes de uma análise própria, com decisão do PO sobre
+a matriz de permissões.
+
+Sprint prevista:
+—
+
+Responsável:
+—
+
+---
+
+## KI-075
+
+Descrição:
+**Ponto a investigar, não confirmado em execução.** `frontend/src/App.jsx` declara a rota `/compras` duas
+vezes: linha 81 (`ShoppingList`) e linha 93 (`Compras`). `pages/Compras.jsx` usa
+`components/ui/EditShoppingItemModal.jsx`, que chama `fetch('/api/shopping-list/<id>')` direto
+(linha 22), sem o `BASE` do `client.js`. Na produção (frontend na Vercel, backend separado), um caminho
+relativo `/api/...` não chegaria ao backend: o `vercel.json` não encaminha `/api` para fora. Pela leitura
+do código, o React Router renderiza só a primeira declaração (`ShoppingList`), o que deixaria `Compras.jsx`
+e o modal inalcançáveis. Isso não foi verificado em execução. Achado na auditoria de cobertura de rotas de
+2026-11-14.
+
+Impacto:
+A definir. Se `Compras.jsx` for inalcançável, é código morto (sem efeito para o usuário). Se for
+alcançável, salvar no modal falharia em produção.
+
+Status:
+Investigação pendente (2026-11-14). Confirmar em execução qual componente `/compras` renderiza antes de
+qualquer alteração. Nenhum código removido sem confirmação.
+
+Sprint prevista:
+—
+
+Responsável:
+—
+
+---
+
+## KI-076
+
+Descrição:
+Achados menores da auditoria de cobertura de rotas de 2026-11-14 (dívida de documentação e código
+possivelmente morto, sem efeito observado):
+- `frontend/src/api/client.js:266` define `estoque.get(id)`, que chama `GET /api/estoque/<id>`, uma rota
+  que não existe no backend. Nenhum lugar chama a função.
+- `client.js:13` usa `https://<projeto>.onrender.com/api` como fallback quando `VITE_API_URL` não está
+  definida na Vercel. O backend saiu do Render; a configuração da variável na Vercel não foi verificada.
+- `docs/engineering/ARCHITECTURE.md` (revisão de 2026-07-07) ainda descreve módulos `irflow_*`, um
+  `irflow_blueprints_api.py` único e o deploy no Render, que não correspondem mais ao código.
+- Rotas sem consumidor no frontend: `GET /api/shopping-list/grouped`, `GET /api/shopping-list/<id>/logs`,
+  `GET /api/shopping-list/logs/export`, `POST /api/usuarios/<id>/reset-token`, `POST
+  /api/password-reset/<token>`, `GET /api/caixa/relatorio`. Podem ser usadas por fora do SPA.
+
+Impacto:
+Baixo. Nenhum comportamento incorreto observado. O fallback do Render só importa se a variável sumir da
+Vercel.
+
+Status:
+Aberto (2026-11-14). Atualizar o `ARCHITECTURE.md` num PR `docs:` próprio. Para as rotas e a função sem uso,
+confirmar com o PO antes de remover qualquer coisa.
+
+Sprint prevista:
+—
+
+Responsável:
+—

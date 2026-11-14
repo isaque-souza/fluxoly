@@ -9,6 +9,18 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Documentação (2026-11-14 — Auditoria de cobertura de rotas)
+- **docs: auditoria de cobertura de rotas** em `docs/engineering/ROUTE_COVERAGE_AUDIT_2026-11.md`. Retrato
+  de `main` em `1e9c265`, por análise estática: 150 rotas e 151 pares rota + método, com autorização e
+  testes HTTP de cada um. 45 pares sem teste HTTP identificado; 87 de 136 rotas autenticadas sem teste de 401;
+  30 de 64 rotas restritas por perfil sem teste de 403. Ausência de teste não é vulnerabilidade confirmada.
+  Linkada em `TESTING.md` e `docs/README.md`.
+- **docs: KI-069 a KI-076 registrados** em `KNOWN_ISSUES.md`: financeiro sem teste HTTP (KI-069), testes
+  de 401/403 ausentes (KI-070), outras rotas sem teste HTTP (KI-071), E2E restrito a cerca de 6 telas
+  (KI-072) e achados menores (KI-076). KI-073 (`/api/constantes` sem login), KI-074 (perfis `comprador` e
+  `estoque`) e KI-075 (`/compras` duplicada) ficam como investigação pendente, não como bugs confirmados.
+  Nenhum código alterado.
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no
