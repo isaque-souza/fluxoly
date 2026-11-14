@@ -75,6 +75,7 @@ Decisões de marca, produto e mercado — do Product Owner, não da engenharia:
 - [`engineering/DATA_DICTIONARY.md`](engineering/DATA_DICTIONARY.md) — Governança de dados: quem cria/altera/exclui/vê cada campo.
 - [`engineering/SECURITY.md`](engineering/SECURITY.md) — Política de segurança e checklist OWASP adaptado ao projeto.
 - [`engineering/TESTING.md`](engineering/TESTING.md) — Estratégia oficial de testes: pirâmide, ferramentas, quando usar cada tipo.
+- [`engineering/ROUTE_COVERAGE_AUDIT_2026-11.md`](engineering/ROUTE_COVERAGE_AUDIT_2026-11.md) — Auditoria de cobertura de rotas (2026-11-14, retrato de `1e9c265`): cada rota com método, autorização e testes HTTP; lacunas em KI-069 a KI-076.
 - [`engineering/CODE_STYLE.md`](engineering/CODE_STYLE.md) — Guia de estilo: Python, React, Git. Elimina discussões subjetivas.
 - [`engineering/QUALITY_GATES.md`](engineering/QUALITY_GATES.md) — Contrato de qualidade: critérios objetivos para aprovação de PR.
 - [`engineering/AI_WORKFLOW.md`](engineering/AI_WORKFLOW.md) — Protocolo de trabalho para qualquer IA.
