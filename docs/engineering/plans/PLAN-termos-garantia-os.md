@@ -4,20 +4,21 @@
 **Origem:** pedido do PO (2026-11-17): "tem uma função chamada termos de garantia que a gente cria termos
 diferentes e dentro da OS escolhemos qual termo usar". Lacuna registrada em `MERCADO_PHONE.md` → "Garantia,
 Checklist e Auditoria" e em `PRODUCT_BACKLOG.md` (item 26).
-**Status:** **Rascunho, aguardando aprovação do PO**. Muda o schema (migration nova) e cria uma feature nova,
-então exige aprovação antes de qualquer código (CLAUDE.md; ADR-010).
+**Status:** Aprovado pelo PO em 2026-11-17, com as decisões 3 a 6 como propostas. **Muda o schema**
+(migration `m0007`).
 
 > Documento efêmero (ADR-010).
 
 **Estado**
 
 - [x] Discovery: ver "Situação atual" e "Decisões"
-- [ ] Plano Técnico: este documento (aguardando aprovação)
-- [ ] Implementação
-- [ ] Testes
-- [ ] QA Manual (inclui aplicar a migration numa cópia do banco de produção)
-- [ ] Revisão Arquitetural
-- [ ] Encerramento: `CHANGELOG.md`, BR nova, `DATABASE.md`, `DATA_DICTIONARY.md`, `PRODUCT_BACKLOG.md`
+- [x] Plano Técnico: este documento
+- [x] Implementação: branch `feat/termos-garantia-os`
+- [x] Testes: `tests/test_termos_garantia.py` (22), `test_migrations.py` atualizado; `TermosGarantia.test.jsx`
+      (4), `EditOrder.test.jsx` (+4). Backend 1000 passed; frontend 219/219; eslint sem erro; build ok
+- [ ] QA Manual: pendente (inclui aplicar `m0007` numa cópia do banco de produção)
+- [x] Revisão Arquitetural: abaixo
+- [x] Encerramento: `CHANGELOG.md`, BR-105, `DATABASE.md`, `DATA_DICTIONARY.md`, `PRODUCT_BACKLOG.md`
 
 ## Situação atual (verificada no código em 2026-11-17)
 
@@ -36,7 +37,7 @@ escolher qual sai no comprovante de uma OS.
 2. Nesta etapa, **só a OS**. A venda fica para uma etapa posterior. O cadastro já nasce sem nada que o
    prenda à OS, para a venda poder reutilizá-lo depois.
 
-**Pendentes (proposta entre parênteses):**
+**Aprovadas pelo PO em 2026-11-17, como propostas (texto entre parênteses):**
 3. **O termo é obrigatório ao finalizar?** (Proposta: **opcional**. Sem termo escolhido, o PDF usa o texto de
    Dados da Loja, como hoje, então nenhuma OS existente nem fluxo atual muda de comportamento.)
 4. **Pode trocar o termo de uma OS já finalizada?** (Proposta: **sim, só `admin`, com `audit_log`**, mesmo
@@ -126,3 +127,17 @@ São mais de 3 arquivos, há mudança em `api_os.py` e no schema, então o plano
 Termo na venda (próxima etapa); termo de compra do usado (backlog item 23); aplicação retroativa de termos
 (sugerido não implementar); editor de texto rico ou pré-visualização com cabeçalho (o PDF já monta o
 cabeçalho da loja); finalizar pelo Kanban.
+
+## Revisão Arquitetural
+
+- **Camadas:** o cadastro segue controller/service/repository (`fluxoly_termos_garantia_*`). A OS só usa
+  `obter_termo_garantia` do service; o SQL do snapshot vive em `fluxoly_os.py`, junto com o resto da OS.
+- **Duplicação:** as duas rotas que finalizam (PUT e PATCH) e a rota de troca usam os mesmos dois helpers de
+  `api_os.py` (`_resolver_termo_garantia`, `_definir_termo_garantia`), então validação, gravação e auditoria
+  ficam num lugar só. O limite do texto vem de `fluxoly_dados_loja_service.LIMITES`, sem número repetido.
+- **Auditoria:** `audit_log` com `entidade='os'`, ações `termo_garantia_definido` (finalização) e
+  `termo_garantia_alterado` (troca e cancelamento), guardando só id e nome (o texto completo fica na OS).
+- **Documento (BR-097):** só o texto do termo entra no comprovante. `GET /ordens/<id>` devolve apenas id e
+  nome.
+- **Legado:** `api_os.py` segue sem controller/service, como o resto do arquivo. O formatador acusa
+  trechos antigos de `fluxoly_os.py` que já estavam assim no `main`; não foram tocados.

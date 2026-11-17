@@ -78,6 +78,8 @@ Autenticação e perfis de acesso.
 | `relato_cliente` | TEXT | *(migration `m0006`, 2026-11-11)* — o que o cliente contou do defeito, nullable. Sai no documento do cliente (BR-102) |
 | `laudo_tecnico` | TEXT | *(migration `m0006`)* — diagnóstico do técnico, nullable. Sai no documento do cliente (BR-102) |
 | `observacao_interna` | TEXT | *(migration `m0006`)* — nota só da equipe, nullable. **Nunca** sai em documento do cliente (BR-102) |
+| `termo_garantia_id` | INTEGER | *(migration `m0007`, 2026-11-17)* — FK lógica para `termos_garantia_modelos.id`, nullable. Termo escolhido ao finalizar a OS (BR-105); `NULL` = usa o texto padrão de `dados_loja.termos_garantia` |
+| `termo_garantia_nome` / `termo_garantia_texto` | TEXT | *(migration `m0007`)* — **snapshot** do termo no momento da finalização (BR-105): editar ou inativar o termo não muda a OS. Zerados no cancelamento; regravados ao finalizar de novo. Só o texto sai no comprovante de entrega |
 
 Sem índice declarado explicitamente (candidato a `idx_os_status_data_tecnico` — ver KI-005/Sprint 5).
 
@@ -443,6 +445,21 @@ Dados da Loja para o cabeçalho dos documentos da OS para o cliente (2026-11-10,
 | `termos_entrada` / `termos_garantia` | TEXT NOT NULL | `DEFAULT ''` — até 4000; impressos no comprovante de entrada/entrega |
 | `atualizado_por` | INTEGER | FK lógica — `usuarios.id` do último salvamento |
 | `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
+
+### `termos_garantia_modelos`
+
+Cadastro de Termos de Garantia (2026-11-17, migration `migrations/versions/m0007_termos_garantia.py`, BR-105,
+`docs/engineering/plans/PLAN-termos-garantia-os.md`). `fluxoly_termos_garantia_controller.py`/`_service.py`/
+`_repository.py`. Escrita só `admin`; sem exclusão, só inativação. O nome evita confusão com a coluna
+`dados_loja.termos_garantia`, que segue como texto padrão.
+
+| Coluna | Tipo | Observação |
+|--------|------|------------|
+| `id` | INTEGER PK | autoincrement |
+| `nome` | TEXT NOT NULL | obrigatório no service (até 120) |
+| `texto` | TEXT NOT NULL | obrigatório no service (até 4000, mesmo limite de `dados_loja`) |
+| `ativo` | INTEGER NOT NULL | `DEFAULT 1`; inativo some do select da OS, mas OS que já o usam mantêm o snapshot |
+| `criado_em` / `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
 
 ### `compras` — lista de compras (versão legada/simplificada)
 

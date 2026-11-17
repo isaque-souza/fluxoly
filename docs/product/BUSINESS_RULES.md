@@ -674,6 +674,18 @@ vendem (admin/vendedor).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); marcos 7/30/365 e textos
 por decisão de engenharia — revisáveis no QA.*
 
+**BR-105 — ✅ Implementado (2026-11-17)**
+A loja cadastra **Termos de Garantia** (nome + texto, até 4000 caracteres; só `admin`; sem exclusão, só
+inativação). Ao **finalizar** uma OS de cliente, escolhe-se **um** termo para a OS inteira, **opcional**:
+sem termo, o comprovante de entrega usa o texto padrão de Dados da Loja, como antes. O termo é gravado na
+OS como **snapshot** (nome e texto do momento) — editar ou inativar o termo depois não muda OS já
+finalizadas (mesmo princípio de BR-062). O termo **não tem prazo**: o prazo continua no Tipo de Garantia de
+cada reparo (BR-061). Cancelar a OS zera o termo (como BR-064); reabrir e finalizar de novo pede o termo
+outra vez. `admin` pode trocar ou remover o termo de uma OS já finalizada, com auditoria (como BR-065). O
+comprovante de entrada não muda. Venda ainda não usa termos cadastrados (recibo segue com o texto padrão).
+*Fonte: pedido do PO (2026-11-17), "um termo por OS"; decisões 3 a 6 de
+`docs/engineering/plans/PLAN-termos-garantia-os.md` aprovadas pelo PO como propostas.*
+
 ---
 
 ## Documentos da OS para o cliente (PDF) e Dados da Loja
