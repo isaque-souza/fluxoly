@@ -9,6 +9,8 @@ const mockConstGet = vi.fn();
 const mockReparosList = vi.fn();
 const mockEstoqueList = vi.fn();
 const mockTiposGarantiaList = vi.fn();
+const mockTermosGarantiaList = vi.fn().mockResolvedValue({ ok: true, items: [] });
+const mockPatchStatus = vi.fn();
 const mockChecklistGetByOrder = vi.fn().mockResolvedValue({ ok: true, checklist: null });
 const mockDocumento = vi.fn();
 const mockBaixarPdfOs = vi.fn();
@@ -17,7 +19,7 @@ vi.mock("@/api/client", () => ({
   ordens: {
     get: (...args) => mockOrdensGet(...args),
     update: vi.fn(),
-    patchStatus: vi.fn(),
+    patchStatus: (...args) => mockPatchStatus(...args),
     documento: (...args) => mockDocumento(...args),
   },
   constantes: { get: (...args) => mockConstGet(...args) },
@@ -30,6 +32,7 @@ vi.mock("@/api/client", () => ({
   },
   precos: { sugerir: vi.fn() },
   tiposGarantia: { list: (...args) => mockTiposGarantiaList(...args) },
+  termosGarantia: { list: (...args) => mockTermosGarantiaList(...args) },
 }));
 
 vi.mock("@/lib/osPdf", () => ({
@@ -154,5 +157,48 @@ describe("EditOrder — PDF para o cliente (BR-095 a BR-098)", () => {
     await screen.findByRole("button", { name: /Finalizar OS/ });
     expect(screen.queryByRole("button", { name: /PDF de entrada/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /PDF de entrega/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("EditOrder — Termo de Garantia (BR-105)", () => {
+  const carregar = (ordem) => {
+    mockOrdensGet.mockResolvedValue({ ok: true, ordem: { ...ordemValida, ...ordem } });
+    mockConstGet.mockResolvedValue({ ok: true, os_tipos: [], iphone_models: [] });
+    mockReparosList.mockResolvedValue({ ok: true, reparos: [] });
+    mockEstoqueList.mockResolvedValue({ ok: true, items: [] });
+    mockTiposGarantiaList.mockResolvedValue({ ok: true, items: [] });
+    mockTermosGarantiaList.mockResolvedValue({ ok: true, items: [{ id: 7, nome: "Assistência 90 dias" }] });
+    renderEditOrder();
+  };
+
+  beforeEach(() => {
+    mockPatchStatus.mockReset();
+  });
+
+  it("OS finalizada mostra o termo gravado", async () => {
+    carregar({ status: "Finalizado", termo_garantia: { id: 7, nome: "Assistência 90 dias" } });
+    expect(await screen.findByText(/Assistência 90 dias — sai no PDF de entrega/)).toBeInTheDocument();
+  });
+
+  it("OS finalizada sem termo mostra o texto padrão da loja", async () => {
+    carregar({ status: "Finalizado", termo_garantia: null });
+    expect(await screen.findByText(/Texto padrão da loja \(Dados da Loja\)/)).toBeInTheDocument();
+  });
+
+  it("OS em andamento não mostra o painel do termo", async () => {
+    carregar({ status: "Em andamento" });
+    await screen.findByRole("button", { name: /Finalizar OS/ });
+    expect(screen.queryByText(/sai no PDF de entrega/)).not.toBeInTheDocument();
+  });
+
+  it("finalizar pede o termo e, no padrão, envia sem termo", async () => {
+    mockPatchStatus.mockResolvedValue({ ok: true });
+    carregar({ status: "Em andamento" });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Finalizar OS/ }));
+    expect(await screen.findByText(/Termo de garantia \(sai no PDF de entrega\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar e concluir/ }));
+
+    await waitFor(() => expect(mockPatchStatus).toHaveBeenCalledWith("1", "Finalizado", {}, null));
   });
 });
