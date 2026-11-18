@@ -9,6 +9,15 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Alterado (2026-11-18 — Termo de Garantia único)
+- **feat: termo de garantia = tipo de garantia** (BR-105 revisada) — o cadastro "Tipos de Garantia" ganha o
+  texto do termo e passa a se chamar **Termos de Garantia** na tela (menu Assistência; a rota antiga
+  `/termos-garantia` redireciona). Na finalização da OS escolhe-se **um** termo: o prazo vale para todos os
+  reparos e o texto sai no PDF de entrega (sem texto, vale o de Dados da Loja). Admin troca o termo da OS
+  finalizada (regrava também o prazo dos reparos). Removidos o cadastro separado de termos (só texto) e
+  `/api/termos-garantia` entregues no dia anterior. **Migration `m0008`** (coluna `tipos_garantia.texto`,
+  aditiva); `termos_garantia_modelos` fica sem uso. Plano: `docs/engineering/plans/PLAN-termo-unico-garantia.md`.
+
 ### Adicionado (2026-11-17 — Termos de garantia na OS)
 - **feat: termos de garantia cadastrados e escolhidos na OS** (BR-105) — nova tela `/termos-garantia`
   (menu Assistência, só admin) com nome e texto de cada termo; ao finalizar a OS, o diálogo de garantia

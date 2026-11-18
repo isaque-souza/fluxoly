@@ -69,7 +69,7 @@ perfil autenticado, ver achado no topo do documento).
 | `vendedor` | TEXT | Não | Sim | Deve ser vendedor cadastrado válido (BR-014) |
 | `observacoes` | TEXT | Não | Sim | — |
 | `origem_integracao` / `id_externo_integracao` | TEXT | Não | Não (setado só na criação via integração) | Usado para deduplicação (`integracao_os_vistas`) |
-| `termo_garantia_id` / `termo_garantia_nome` / `termo_garantia_texto` | INTEGER / TEXT | Não | Gravado ao finalizar (quem finaliza); troca só `admin` (`PATCH /api/ordens/<id>/termo-garantia`, auditado) | Snapshot do termo (BR-105); zerado no cancelamento; o texto sai no comprovante de entrega |
+| `termo_garantia_id` / `termo_garantia_nome` / `termo_garantia_texto` | INTEGER / TEXT | Não | Gravado ao finalizar (quem finaliza); troca só `admin` (`PATCH /api/ordens/<id>/termo-garantia`, auditado) | Snapshot do Termo de Garantia (= `tipos_garantia`, BR-105); zerado no cancelamento; o texto sai no comprovante de entrega |
 
 ---
 
@@ -169,7 +169,8 @@ gera log automaticamente (BR-016), nunca editável.
 | `custos_operacionais` | Qualquer usuário autenticado | Todos | Sem regra de negócio própria identificada além de CRUD simples |
 | `compras` (legado) | Nenhuma rota ativa aponta para esta tabela hoje | — | Candidata a remoção (KI-014); ver `docs/engineering/DATABASE.md` |
 | `dados_loja` | Só `admin` (`PUT /api/dados-loja`, auditado) | Todo usuário autenticado; impresso nos documentos da OS para o cliente | Linha única (BR-094) |
-| `termos_garantia_modelos` | Só `admin` (`/api/termos-garantia`) | Todo usuário autenticado (só ativos; inativos só para admin) | Sem exclusão, só inativação (BR-105) |
+| `tipos_garantia` (Termos de Garantia) | Só `admin` (`/api/tipos-garantia`) | Todo usuário autenticado (só ativos; inativos só para admin) | Nome + prazo + texto (BR-055/BR-105); sem exclusão, só inativação |
+| `termos_garantia_modelos` | Ninguém (sem rota desde 2026-11-18) | — | Sem uso, vazia; candidata a remoção (ver `DATABASE.md`) |
 | `integracao_sync_estado` / `integracao_os_vistas` | Sistema apenas (sincronização MercadoPhone) | Não exposto por rota própria | Autenticação por token, fora de `ROUTE_PERMISSIONS` (R-07) |
 
 ---

@@ -98,7 +98,7 @@ como fundação, não como item isolado.
 
 | # | Candidato | Prioridade sugerida | Esforço | Item Release 1.0 | Evidência / nota |
 |---|---|---|---|---|---|
-| 26 | **Termos de garantia cadastrados e escolhidos na OS** (vários termos com texto; um por OS; impresso no comprovante de entrega) | P1 | Médio | Assistência completa | Garantia, Checklist e Auditoria — lacuna não captada no walkthrough (o benchmark tratou tipos + texto único da loja como equivalentes). Muda schema: plano em `PLAN-termos-garantia-os.md`. Venda fica para depois. **Implementado em 2026-11-17** (BR-105, branch `feat/termos-garantia-os`, migration `m0007`; QA manual pendente) |
+| 26 | **Termos de garantia cadastrados e escolhidos na OS** (vários termos com texto; um por OS; impresso no comprovante de entrega) | P1 | Médio | Assistência completa | Garantia, Checklist e Auditoria — lacuna não captada no walkthrough (o benchmark tratou tipos + texto único da loja como equivalentes). Muda schema: plano em `PLAN-termos-garantia-os.md`. Venda fica para depois. **Implementado em 2026-11-17** (BR-105, `m0007`, PRs #108/#109) e **revisado em 2026-11-18** a pedido do PO: termo = tipo de garantia (nome + prazo + texto), um por OS (`m0008`, `PLAN-termo-unico-garantia.md`) |
 
 ### Status da execução (2026-11-11, noite)
 
