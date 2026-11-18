@@ -1,11 +1,10 @@
 """
-Termos de garantia cadastrados e escolhidos na OS (BR-105,
-docs/engineering/plans/PLAN-termos-garantia-os.md).
+Termo de Garantia único (BR-105, docs/engineering/plans/PLAN-termo-unico-garantia.md).
 
-Cobre o cadastro `/api/termos-garantia`, a escolha opcional do termo ao
-finalizar a OS (PATCH de status e PUT completo), o snapshot, o fallback para o
-texto padrão de Dados da Loja no comprovante de entrega, o cancelamento e a
-troca do termo por admin.
+O Tipo de Garantia é o Termo de Garantia: nome + prazo (meses) + texto. Na OS se
+escolhe um termo para a OS inteira (`tipo_garantia_id`): o prazo vale para todos
+os reparos (snapshot por linha, BR-062) e o texto sai no comprovante de entrega.
+Sem texto no termo, o comprovante usa o texto padrão de Dados da Loja.
 """
 
 import pytest
@@ -13,13 +12,13 @@ import pytest
 import app as _app
 
 
-def _inserir_termo(nome="Termo Teste", texto="Texto do termo teste.", ativo=1):
+def _inserir_tipo(nome="Garantia 3 meses", meses=3, texto="Cobre o serviço por 3 meses.", ativo=1):
     conn = _app.conectar()
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO termos_garantia_modelos (nome, texto, ativo) VALUES (?, ?, ?)",
-            (nome, texto, ativo),
+            "INSERT INTO tipos_garantia (nome, duracao_meses, texto, ativo) VALUES (?, ?, ?, ?)",
+            (nome, meses, texto, ativo),
         )
         conn.commit()
         return cursor.lastrowid
@@ -28,7 +27,7 @@ def _inserir_termo(nome="Termo Teste", texto="Texto do termo teste.", ativo=1):
 
 
 @pytest.fixture(autouse=True)
-def _limpar_termos_e_loja():
+def _loja_e_limpeza():
     conn = _app.conectar()
     try:
         conn.execute("DELETE FROM dados_loja")
@@ -39,11 +38,11 @@ def _limpar_termos_e_loja():
         conn.commit()
     finally:
         conn.close()
-    yield
+    criados = []
+    yield criados
     conn = _app.conectar()
     try:
         conn.execute("UPDATE os SET termo_garantia_id=NULL, termo_garantia_nome=NULL, termo_garantia_texto=NULL")
-        conn.execute("DELETE FROM termos_garantia_modelos")
         conn.execute("DELETE FROM dados_loja")
         conn.commit()
     finally:
@@ -51,8 +50,31 @@ def _limpar_termos_e_loja():
 
 
 @pytest.fixture
-def termo_id():
-    return _inserir_termo("Assistência 90 dias", "Cobre defeito do serviço executado por 90 dias.")
+def termo_3m():
+    tipo_id = _inserir_tipo()
+    yield tipo_id
+    _apagar_tipo(tipo_id)
+
+
+@pytest.fixture
+def termo_6m():
+    tipo_id = _inserir_tipo("Garantia 6 meses", 6, "Cobre o serviço por 6 meses.")
+    yield tipo_id
+    _apagar_tipo(tipo_id)
+
+
+def _apagar_tipo(tipo_id):
+    conn = _app.conectar()
+    try:
+        conn.execute(
+            "UPDATE os_reparos SET tipo_garantia_id=NULL, garantia_nome=NULL, garantia_duracao_meses=NULL, "
+            "garantia_data_inicio=NULL, garantia_data_fim=NULL WHERE tipo_garantia_id=?",
+            (tipo_id,),
+        )
+        conn.execute("DELETE FROM tipos_garantia WHERE id=?", (tipo_id,))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _snapshot(os_id):
@@ -65,10 +87,21 @@ def _snapshot(os_id):
         conn.close()
 
 
-def _finalizar(client, os_id, reparo_id, tipo_garantia_id, **extra):
+def _garantias_reparos(os_id):
+    conn = _app.conectar()
+    try:
+        return conn.execute(
+            "SELECT reparo_id, tipo_garantia_id, garantia_duracao_meses, garantia_data_inicio, garantia_data_fim "
+            "FROM os_reparos WHERE os_id=? ORDER BY reparo_id",
+            (os_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+
+def _finalizar(client, os_id, tipo_garantia_id):
     return client.patch(
-        f"/api/ordens/{os_id}/status",
-        json={"status": "Finalizado", "garantias": {str(reparo_id): tipo_garantia_id}, **extra},
+        f"/api/ordens/{os_id}/status", json={"status": "Finalizado", "tipo_garantia_id": tipo_garantia_id}
     )
 
 
@@ -79,184 +112,180 @@ def _termos_do_documento(client, os_id):
 
 
 class TestCadastro:
-    def test_admin_cria_lista_e_edita(self, client, login_como, usuario_admin):
+    def test_admin_cria_e_edita_termo_com_texto(self, client, login_como, usuario_admin):
         login_como(client, usuario_admin)
-        resp = client.post("/api/termos-garantia", json={"nome": "  Troca de tela ", "texto": " Texto. "})
+        resp = client.post("/api/tipos-garantia", json={"nome": "Troca de tela", "duracao_meses": 3, "texto": " T. "})
         assert resp.status_code == 201
-        novo_id = resp.get_json()["id"]
+        tipo_id = resp.get_json()["id"]
+        try:
+            item = next(t for t in client.get("/api/tipos-garantia").get_json()["items"] if t["id"] == tipo_id)
+            assert item["texto"] == "T."
 
-        itens = client.get("/api/termos-garantia").get_json()["items"]
-        assert {"id": novo_id, "nome": "Troca de tela", "texto": "Texto.", "ativo": True} in itens
+            resp = client.put(
+                f"/api/tipos-garantia/{tipo_id}", json={"nome": "Troca de tela", "duracao_meses": 3, "texto": "Novo."}
+            )
+            assert resp.status_code == 200
+            item = next(t for t in client.get("/api/tipos-garantia").get_json()["items"] if t["id"] == tipo_id)
+            assert item["texto"] == "Novo."
+        finally:
+            _apagar_tipo(tipo_id)
 
-        resp = client.put(
-            f"/api/termos-garantia/{novo_id}", json={"nome": "Troca de tela", "texto": "Novo.", "ativo": False}
-        )
+    def test_put_sem_texto_mantem_o_texto(self, client, login_como, usuario_admin, termo_3m):
+        login_como(client, usuario_admin)
+        resp = client.put(f"/api/tipos-garantia/{termo_3m}", json={"nome": "Renomeado", "duracao_meses": 3})
         assert resp.status_code == 200
-        assert all(t["id"] != novo_id for t in client.get("/api/termos-garantia").get_json()["items"])
-        inativos = client.get("/api/termos-garantia?incluir_inativos=1").get_json()["items"]
-        assert any(t["id"] == novo_id and t["ativo"] is False for t in inativos)
+        item = next(t for t in client.get("/api/tipos-garantia").get_json()["items"] if t["id"] == termo_3m)
+        assert item["texto"] == "Cobre o serviço por 3 meses."
 
-    @pytest.mark.parametrize(
-        "payload",
-        [{"nome": "", "texto": "x"}, {"nome": "x", "texto": "  "}, {"nome": "x", "texto": "a" * 4001}],
-    )
-    def test_validacao(self, client, login_como, usuario_admin, payload):
+    def test_texto_acima_do_limite_400(self, client, login_como, usuario_admin):
         login_como(client, usuario_admin)
-        assert client.post("/api/termos-garantia", json=payload).status_code == 400
+        resp = client.post("/api/tipos-garantia", json={"nome": "X", "duracao_meses": 1, "texto": "a" * 4001})
+        assert resp.status_code == 400
 
-    def test_editar_inexistente_404(self, client, login_como, usuario_admin):
+    def test_cadastro_separado_de_termos_nao_existe_mais(self, client, login_como, usuario_admin):
         login_como(client, usuario_admin)
-        resp = client.put("/api/termos-garantia/999999", json={"nome": "x", "texto": "y"})
-        assert resp.status_code == 404
-
-    def test_nao_admin_so_le_ativos(self, client, login_como, usuario_tecnico):
-        _inserir_termo("Inativo", ativo=0)
-        login_como(client, usuario_tecnico)
-        assert client.post("/api/termos-garantia", json={"nome": "x", "texto": "y"}).status_code == 403
-        assert client.put("/api/termos-garantia/1", json={"nome": "x", "texto": "y"}).status_code == 403
-        itens = client.get("/api/termos-garantia?incluir_inativos=1").get_json()["items"]
-        assert all(t["ativo"] for t in itens)
-
-    def test_sem_login_401(self, client):
-        assert client.get("/api/termos-garantia").status_code == 401
+        assert client.get("/api/termos-garantia").status_code == 404
 
 
 class TestFinalizacao:
-    def test_sem_termo_usa_texto_padrao_da_loja(
-        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
+    def test_um_termo_aplica_prazo_a_todos_os_reparos_e_texto_ao_documento(
+        self, client, login_como, usuario_tecnico, criar_os, termo_3m
     ):
-        login_como(client, usuario_tecnico)
-        os_id = criar_os()
-        assert _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id).status_code == 200
-        assert _snapshot(os_id) == (None, None, None)
-        assert _termos_do_documento(client, os_id) == "Garantia padrão da loja."
+        from tests.conftest import _reparo_ids_existentes
 
-    def test_com_termo_grava_snapshot_e_sai_no_documento(
-        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, termo_id
-    ):
+        reparos = _reparo_ids_existentes(2)
         login_como(client, usuario_tecnico)
-        os_id = criar_os()
-        resp = _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=termo_id)
-        assert resp.status_code == 200
-        assert _snapshot(os_id) == (
-            termo_id,
-            "Assistência 90 dias",
-            "Cobre defeito do serviço executado por 90 dias.",
-        )
-        assert _termos_do_documento(client, os_id) == "Cobre defeito do serviço executado por 90 dias."
+        os_id = criar_os(reparo_ids=reparos)
+        assert _finalizar(client, os_id, termo_3m).status_code == 200
+
+        linhas = _garantias_reparos(os_id)
+        assert len(linhas) == 2
+        assert all(linha[1] == termo_3m and linha[2] == 3 and linha[4] for linha in linhas)
+        assert _snapshot(os_id) == (termo_3m, "Garantia 3 meses", "Cobre o serviço por 3 meses.")
+        assert _termos_do_documento(client, os_id) == "Cobre o serviço por 3 meses."
         ordem = client.get(f"/api/ordens/{os_id}").get_json()["ordem"]
-        assert ordem["termo_garantia"] == {"id": termo_id, "nome": "Assistência 90 dias"}
+        assert ordem["termo_garantia"] == {"id": termo_3m, "nome": "Garantia 3 meses"}
 
-    def test_documento_de_entrada_nao_muda(
-        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, termo_id
-    ):
+    def test_termo_sem_texto_usa_texto_padrao_da_loja(self, client, login_como, usuario_tecnico, criar_os):
+        tipo_id = _inserir_tipo("Sem texto", 3, "")
+        try:
+            login_como(client, usuario_tecnico)
+            os_id = criar_os()
+            assert _finalizar(client, os_id, tipo_id).status_code == 200
+            assert _termos_do_documento(client, os_id) == "Garantia padrão da loja."
+        finally:
+            _apagar_tipo(tipo_id)
+
+    def test_sem_termo_recusa_quando_ha_reparo(self, client, login_como, usuario_tecnico, criar_os):
         login_como(client, usuario_tecnico)
         os_id = criar_os()
-        _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=termo_id)
-        resp = client.get(f"/api/ordens/{os_id}/documento?tipo=entrada")
-        assert resp.get_json()["documento"]["termos"] == "Entrada padrão."
-
-    def test_editar_termo_depois_nao_altera_os_finalizada(
-        self, client, login_como, usuario_admin, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, termo_id
-    ):
-        login_como(client, usuario_admin)
-        os_id = criar_os()
-        _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=termo_id)
-        client.put(f"/api/termos-garantia/{termo_id}", json={"nome": "Outro", "texto": "Texto novo.", "ativo": False})
-        assert _termos_do_documento(client, os_id) == "Cobre defeito do serviço executado por 90 dias."
-
-    @pytest.mark.parametrize("valor", ["abc", True, 999999])
-    def test_termo_invalido_recusa_e_nao_finaliza(
-        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, valor
-    ):
-        login_como(client, usuario_tecnico)
-        os_id = criar_os()
-        resp = _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=valor)
+        resp = client.patch(f"/api/ordens/{os_id}/status", json={"status": "Finalizado"})
         assert resp.status_code == 400
         assert client.get(f"/api/ordens/{os_id}").get_json()["ordem"]["status"] == "Em andamento"
 
-    def test_termo_inativo_recusa(
-        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
-    ):
-        inativo = _inserir_termo("Inativo", ativo=0)
+    @pytest.mark.parametrize("valor", ["abc", True, 999999])
+    def test_termo_invalido_recusa(self, client, login_como, usuario_tecnico, criar_os, valor):
         login_como(client, usuario_tecnico)
         os_id = criar_os()
-        resp = _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=inativo)
-        assert resp.status_code == 400
+        assert _finalizar(client, os_id, valor).status_code == 400
 
-    def test_finalizar_via_put_grava_snapshot(
-        self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, termo_id
-    ):
-        login_como(client, usuario_tecnico)
-        os_id = criar_os()
-        resp = client.put(
-            f"/api/ordens/{os_id}", json=payload_os_valido(status="Finalizado", termo_garantia_id=termo_id)
-        )
-        assert resp.status_code == 200, resp.get_json()
-        assert _snapshot(os_id)[0] == termo_id
-
-    def test_editar_os_finalizada_via_put_preserva_termo(
-        self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, termo_id
-    ):
-        login_como(client, usuario_tecnico)
-        os_id = criar_os()
-        client.put(f"/api/ordens/{os_id}", json=payload_os_valido(status="Finalizado", termo_garantia_id=termo_id))
-        resp = client.put(f"/api/ordens/{os_id}", json=payload_os_valido(status="Finalizado", observacoes="depois"))
-        assert resp.status_code == 200
-        assert _snapshot(os_id)[0] == termo_id
-
-    def test_cancelar_zera_o_termo_e_audita(
-        self, client, login_como, usuario_admin, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, termo_id
-    ):
-        login_como(client, usuario_admin)
-        os_id = criar_os()
-        _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id, termo_garantia_id=termo_id)
-        assert client.patch(f"/api/ordens/{os_id}/status", json={"status": "Cancelado"}).status_code == 200
-        assert _snapshot(os_id) == (None, None, None)
-        conn = _app.conectar()
+    def test_termo_inativo_recusa(self, client, login_como, usuario_tecnico, criar_os):
+        tipo_id = _inserir_tipo("Inativo", 3, "x", ativo=0)
         try:
-            acoes = [
-                r[0]
-                for r in conn.execute(
-                    "SELECT acao FROM audit_log WHERE entidade='os' AND entidade_id=? ORDER BY id", (os_id,)
-                ).fetchall()
-            ]
+            login_como(client, usuario_tecnico)
+            os_id = criar_os()
+            assert _finalizar(client, os_id, tipo_id).status_code == 400
         finally:
-            conn.close()
-        assert "termo_garantia_definido" in acoes
-        assert "termo_garantia_alterado" in acoes
+            _apagar_tipo(tipo_id)
 
-
-class TestTrocaPorAdmin:
-    def test_admin_troca_e_remove(
-        self, client, login_como, usuario_admin, criar_os, reparo_padrao_id, tipo_garantia_padrao_id, termo_id
+    def test_editar_termo_depois_nao_altera_os_finalizada(
+        self, client, login_como, usuario_admin, criar_os, termo_3m
     ):
         login_como(client, usuario_admin)
         os_id = criar_os()
-        _finalizar(client, os_id, reparo_padrao_id, tipo_garantia_padrao_id)
-        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"termo_garantia_id": termo_id})
-        assert resp.status_code == 200
-        assert resp.get_json()["termo_garantia"] == {"id": termo_id, "nome": "Assistência 90 dias"}
-        assert _snapshot(os_id)[0] == termo_id
+        _finalizar(client, os_id, termo_3m)
+        client.put(f"/api/tipos-garantia/{termo_3m}", json={"nome": "Outro", "duracao_meses": 9, "texto": "Novo."})
+        assert _termos_do_documento(client, os_id) == "Cobre o serviço por 3 meses."
+        assert _garantias_reparos(os_id)[0][2] == 3
 
-        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"termo_garantia_id": None})
+    def test_finalizar_via_put(self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, termo_3m):
+        login_como(client, usuario_tecnico)
+        os_id = criar_os()
+        payload = payload_os_valido(status="Finalizado", tipo_garantia_id=termo_3m)
+        payload.pop("garantias")
+        resp = client.put(f"/api/ordens/{os_id}", json=payload)
+        assert resp.status_code == 200, resp.get_json()
+        assert _snapshot(os_id)[0] == termo_3m
+        assert _garantias_reparos(os_id)[0][1] == termo_3m
+
+    def test_mapa_antigo_por_reparo_continua_aceito_sem_termo_na_os(
+        self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, termo_3m
+    ):
+        login_como(client, usuario_tecnico)
+        os_id = criar_os()
+        resp = client.patch(
+            f"/api/ordens/{os_id}/status",
+            json={"status": "Finalizado", "garantias": {str(reparo_padrao_id): termo_3m}},
+        )
         assert resp.status_code == 200
         assert _snapshot(os_id) == (None, None, None)
         assert _termos_do_documento(client, os_id) == "Garantia padrão da loja."
 
-    def test_nao_admin_403(self, client, login_como, usuario_tecnico, criar_os, termo_id):
+    def test_cancelar_zera_o_termo(self, client, login_como, usuario_admin, criar_os, termo_3m):
+        login_como(client, usuario_admin)
+        os_id = criar_os()
+        _finalizar(client, os_id, termo_3m)
+        assert client.patch(f"/api/ordens/{os_id}/status", json={"status": "Cancelado"}).status_code == 200
+        assert _snapshot(os_id) == (None, None, None)
+
+
+class TestTrocaPorAdmin:
+    def test_troca_regrava_termo_e_prazo_dos_reparos(
+        self, client, login_como, usuario_admin, criar_os, termo_3m, termo_6m
+    ):
+        login_como(client, usuario_admin)
+        os_id = criar_os()
+        _finalizar(client, os_id, termo_3m)
+        inicio_antes = _garantias_reparos(os_id)[0][3]
+
+        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"tipo_garantia_id": termo_6m})
+        assert resp.status_code == 200
+        assert resp.get_json()["termo_garantia"] == {"id": termo_6m, "nome": "Garantia 6 meses"}
+        linha = _garantias_reparos(os_id)[0]
+        assert linha[1] == termo_6m and linha[2] == 6 and linha[3] == inicio_antes
+        assert _termos_do_documento(client, os_id) == "Cobre o serviço por 6 meses."
+
+        conn = _app.conectar()
+        try:
+            acoes = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT acao FROM audit_log WHERE entidade IN ('os', 'os_reparo') AND entidade_id=?", (os_id,)
+                ).fetchall()
+            }
+        finally:
+            conn.close()
+        assert {"termo_garantia_alterado", "garantia_alterada"} <= acoes
+
+    def test_sem_termo_400(self, client, login_como, usuario_admin, criar_os):
+        login_como(client, usuario_admin)
+        os_id = criar_os(status="Finalizado")
+        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"tipo_garantia_id": None})
+        assert resp.status_code == 400
+
+    def test_nao_admin_403(self, client, login_como, usuario_tecnico, criar_os, termo_3m):
         login_como(client, usuario_tecnico)
         os_id = criar_os(status="Finalizado")
-        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"termo_garantia_id": termo_id})
+        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"tipo_garantia_id": termo_3m})
         assert resp.status_code == 403
 
-    def test_os_nao_finalizada_409(self, client, login_como, usuario_admin, criar_os, termo_id):
+    def test_os_nao_finalizada_409(self, client, login_como, usuario_admin, criar_os, termo_3m):
         login_como(client, usuario_admin)
         os_id = criar_os(status="Em andamento")
-        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"termo_garantia_id": termo_id})
+        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"tipo_garantia_id": termo_3m})
         assert resp.status_code == 409
 
-    def test_os_inexistente_404(self, client, login_como, usuario_admin, termo_id):
+    def test_os_inexistente_404(self, client, login_como, usuario_admin, termo_3m):
         login_como(client, usuario_admin)
-        resp = client.patch("/api/ordens/999999/termo-garantia", json={"termo_garantia_id": termo_id})
+        resp = client.patch("/api/ordens/999999/termo-garantia", json={"tipo_garantia_id": termo_3m})
         assert resp.status_code == 404

@@ -444,6 +444,9 @@ Sem default automático vindo do cadastro de Tipos de Reparo (`reparos`) — dec
 de BR-056. Aplica-se às duas rotas que podem levar uma OS a `Finalizado` (`PATCH /api/ordens/<id>/status`
 e `PUT /api/ordens/<id>`, achado durante a implementação — o formulário completo de edição também finaliza
 OS, não só o botão de status dedicado).
+**Revisão (2026-11-18, BR-105):** na tela, a escolha passou a ser **um Termo de Garantia para a OS inteira**,
+aplicado a todas as linhas de reparo (`tipo_garantia_id` no payload). O snapshot continua por linha; a API
+ainda aceita o mapa antigo por reparo (`garantias`) por compatibilidade.
 
 **Exceção deliberada (decisão do CTO, 2026-07-30):** OS finalizadas automaticamente pela sincronização do
 Mercado Phone (`irflow_mercadophone.py::importar_os_mercado_phone`/`reimportar_todas_os_mercado_phone`, que
@@ -674,17 +677,20 @@ vendem (admin/vendedor).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); marcos 7/30/365 e textos
 por decisão de engenharia — revisáveis no QA.*
 
-**BR-105 — ✅ Implementado (2026-11-17)**
-A loja cadastra **Termos de Garantia** (nome + texto, até 4000 caracteres; só `admin`; sem exclusão, só
-inativação). Ao **finalizar** uma OS de cliente, escolhe-se **um** termo para a OS inteira, **opcional**:
-sem termo, o comprovante de entrega usa o texto padrão de Dados da Loja, como antes. O termo é gravado na
-OS como **snapshot** (nome e texto do momento) — editar ou inativar o termo depois não muda OS já
-finalizadas (mesmo princípio de BR-062). O termo **não tem prazo**: o prazo continua no Tipo de Garantia de
-cada reparo (BR-061). Cancelar a OS zera o termo (como BR-064); reabrir e finalizar de novo pede o termo
-outra vez. `admin` pode trocar ou remover o termo de uma OS já finalizada, com auditoria (como BR-065). O
-comprovante de entrada não muda. Venda ainda não usa termos cadastrados (recibo segue com o texto padrão).
-*Fonte: pedido do PO (2026-11-17), "um termo por OS"; decisões 3 a 6 de
-`docs/engineering/plans/PLAN-termos-garantia-os.md` aprovadas pelo PO como propostas.*
+**BR-105 — ✅ Implementado (2026-11-17, revisado em 2026-11-18)**
+**Termo de Garantia = nome + prazo (meses) + texto** — é o próprio cadastro de Tipos de Garantia (BR-055),
+que ganhou o texto do termo (até 4000 caracteres, opcional) e na tela se chama "Termos de Garantia". Ao
+**finalizar** uma OS de cliente, escolhe-se **um** termo para a OS inteira (obrigatório quando a OS tem
+reparo, como BR-061): o **prazo vale para todos os reparos** (vencimento calculado e gravado por linha,
+BR-062) e o **texto sai no comprovante de entrega**. Termo sem texto → o comprovante usa o texto padrão de
+Dados da Loja. O termo é gravado na OS como snapshot (nome e texto do momento): editar ou inativar depois
+não muda OS já finalizadas. Cancelar a OS zera o termo (como BR-064); reabrir e finalizar de novo pede o
+termo outra vez. `admin` pode trocar o termo de uma OS finalizada: regrava o termo e o prazo de cada
+reparo mantendo a data de início, com auditoria (como BR-065). Na venda, o termo continua escolhido por
+item (BR-056); o recibo ainda usa o texto padrão. Comprovante de entrada não muda.
+*Fonte: pedido do PO (2026-11-17) "um termo por OS"; revisão do PO (2026-11-18): "o termo é atrelado ao
+tipo — termo de 3 meses já vem com a contagem de 3 meses"; prazo em meses. A primeira versão (termo só com
+texto, cadastro separado, `m0007`) foi substituída — ver `PLAN-termo-unico-garantia.md`.*
 
 ---
 

@@ -5,7 +5,12 @@
 **Branch principal:** `main`
 **Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
-**Última revisão:** 2026-11-17 — **Termos de garantia na OS implementados** (BR-105,
+**Última revisão:** 2026-11-18 — **Termo de Garantia único** (BR-105 revisada,
+`docs/engineering/plans/PLAN-termo-unico-garantia.md`, branch `feat/termo-unico-garantia`, **migration
+`m0008`**): o PO apontou que termo e tipo separados não faziam sentido; agora o Tipo de Garantia tem o texto
+do termo, um termo por OS define o prazo de todos os reparos e o texto do PDF. Cadastro separado de termos
+removido (`termos_garantia_modelos` sem uso). Suíte backend 998 passed, frontend 219/219, eslint sem erro,
+build ok. Antes disso: 2026-11-17 — **Termos de garantia na OS implementados** (BR-105,
 `docs/engineering/plans/PLAN-termos-garantia-os.md`, branch `feat/termos-garantia-os`, **migration `m0007`**):
 cadastro de termos com texto, escolha opcional de um termo por OS na finalização, snapshot na OS e texto
 no PDF de entrega (sem termo, vale o texto padrão de Dados da Loja). Suíte backend 1000 passed, frontend

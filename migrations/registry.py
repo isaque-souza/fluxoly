@@ -11,6 +11,7 @@ from migrations.versions import (
     m0005_os_data_previsao,
     m0006_os_relato_laudo,
     m0007_termos_garantia,
+    m0008_tipos_garantia_texto,
 )
 
 MIGRATIONS = [
@@ -21,4 +22,5 @@ MIGRATIONS = [
     m0005_os_data_previsao,
     m0006_os_relato_laudo,
     m0007_termos_garantia,
+    m0008_tipos_garantia_texto,
 ]

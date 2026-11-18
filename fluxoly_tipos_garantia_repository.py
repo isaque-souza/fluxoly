@@ -15,22 +15,24 @@ nunca lida ao vivo daqui depois de concedida.
 """
 
 
-def inserir(cursor, nome, duracao_meses):
+def inserir(cursor, nome, duracao_meses, texto=""):
     cursor.execute(
-        "INSERT INTO tipos_garantia (nome, duracao_meses) VALUES (?, ?)",
-        (nome, duracao_meses),
+        "INSERT INTO tipos_garantia (nome, duracao_meses, texto) VALUES (?, ?, ?)",
+        (nome, duracao_meses, texto),
     )
     return cursor.lastrowid
 
 
-def atualizar(cursor, tipo_garantia_id, nome, duracao_meses, ativo):
+def atualizar(cursor, tipo_garantia_id, nome, duracao_meses, ativo, texto=None):
+    """`texto=None` mantém o texto atual (cliente antigo que não envia o campo)."""
     cursor.execute(
         """
         UPDATE tipos_garantia
-        SET nome = ?, duracao_meses = ?, ativo = ?, atualizado_em = datetime('now')
+        SET nome = ?, duracao_meses = ?, ativo = ?, texto = COALESCE(?, texto),
+            atualizado_em = datetime('now')
         WHERE id = ?
         """,
-        (nome, duracao_meses, 1 if ativo else 0, tipo_garantia_id),
+        (nome, duracao_meses, 1 if ativo else 0, texto, tipo_garantia_id),
     )
     return cursor.rowcount
 
@@ -40,7 +42,7 @@ def buscar_por_id(cursor, tipo_garantia_id):
     escolhido no momento da concessão -- nunca depois (a garantia já
     concedida é snapshot, não lê mais daqui)."""
     cursor.execute(
-        "SELECT id, nome, duracao_meses, ativo FROM tipos_garantia WHERE id = ?",
+        "SELECT id, nome, duracao_meses, ativo, texto FROM tipos_garantia WHERE id = ?",
         (tipo_garantia_id,),
     )
     return cursor.fetchone()
@@ -48,11 +50,7 @@ def buscar_por_id(cursor, tipo_garantia_id):
 
 def listar(cursor, incluir_inativos=False):
     if incluir_inativos:
-        cursor.execute(
-            "SELECT id, nome, duracao_meses, ativo FROM tipos_garantia ORDER BY nome"
-        )
+        cursor.execute("SELECT id, nome, duracao_meses, ativo, texto FROM tipos_garantia ORDER BY nome")
     else:
-        cursor.execute(
-            "SELECT id, nome, duracao_meses, ativo FROM tipos_garantia WHERE ativo = 1 ORDER BY nome"
-        )
+        cursor.execute("SELECT id, nome, duracao_meses, ativo, texto FROM tipos_garantia WHERE ativo = 1 ORDER BY nome")
     return cursor.fetchall()

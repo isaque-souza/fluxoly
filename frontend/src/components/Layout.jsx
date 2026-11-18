@@ -59,8 +59,7 @@ const navSections = [
       { path: "/kanban", label: "Kanban", icon: Kanban },
       { path: "/garantias", label: "Garantias", icon: Shield },
       { path: "/reparos", label: "Tipos de Reparo", icon: Wrench },
-      { path: "/tipos-garantia", label: "Tipos de Garantia", icon: Shield, adminOnly: true },
-      { path: "/termos-garantia", label: "Termos de Garantia", icon: FileText, adminOnly: true },
+      { path: "/tipos-garantia", label: "Termos de Garantia", icon: FileText, adminOnly: true },
     ],
   },
   {
