@@ -9,6 +9,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-18 — Nova OS já finalizada)
+- **fix: OS criada já como Finalizado exige o Termo de Garantia** (KI-077) — `POST /api/ordens` passa a aplicar
+  a mesma finalização da edição (termo obrigatório, `data_finalizado`, garantia por reparo e termo no PDF); a
+  Nova OS mostra o campo "Termo de Garantia *" quando o status é Finalizado.
+- **refactor:** concessão de garantia por reparo extraída para `_conceder_garantias_reparo` em `api_os.py`
+  (commit próprio, sem mudança de comportamento).
+
 ### Alterado (2026-11-18 — Termo de Garantia único)
 - **feat: termo de garantia = tipo de garantia** (BR-105 revisada) — o cadastro "Tipos de Garantia" ganha o
   texto do termo e passa a se chamar **Termos de Garantia** na tela (menu Assistência; a rota antiga

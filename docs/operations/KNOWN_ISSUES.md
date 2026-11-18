@@ -2284,3 +2284,33 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-077~~ — RESOLVIDO
+
+Descrição:
+A tela Nova OS oferecia o status "Finalizado" na criação, e `POST /api/ordens` aceitava a OS já finalizada
+sem nada da finalização: não exigia a garantia (BR-061), não gravava `data_finalizado`, não concedia garantia
+aos reparos nem gravava o termo (BR-105). A exigência só existia em `PUT /api/ordens/<id>` e
+`PATCH /api/ordens/<id>/status`. Apontado pelo PO em 2026-11-18 ("criei um tipo de garantia de 3 meses e não
+tem como aplicar na OS"). Numeração 077 para não colidir com KI-063 a KI-076, registrados em branches ainda
+não mergeadas.
+
+Impacto:
+Médio. OS de cliente finalizada sem garantia, sem vencimento (fora do painel Garantias) e com o PDF de
+entrega sem o termo escolhido; nenhum dado existente é alterado. Não atende critério de
+`ENGINEERING_GUIDE.md` §11 fora de sprint de teste — corrigido em branch `fix/` própria.
+
+Status:
+Resolvido em 2026-11-18 (branch `fix/nova-os-finalizada-sem-garantia`). `POST /api/ordens` com status
+Finalizado (OS de cliente) exige `tipo_garantia_id` e grava `data_finalizado` (hoje), a garantia de cada reparo
+e o termo, reutilizando os helpers da finalização pela edição. A Nova OS mostra "Termo de Garantia *" quando o
+status é Finalizado. Testes: `tests/test_termos_garantia.py::TestCriacaoJaFinalizada` (3) e
+`frontend/src/pages/NewOrder.termo.test.jsx` (3). OS já criadas assim antes da correção não foram alteradas.
+
+Sprint prevista:
+—
+
+Responsável:
+—
