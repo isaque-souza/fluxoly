@@ -528,6 +528,32 @@ def devolver_pecas_da_os(cursor, os_id, tipo_movimentacao):
         registrar_movimentacao(cursor, estoque_id, tipo_movimentacao, qtd or 0)
 
 
+# Termo de garantia da OS (BR-105, docs/engineering/plans/PLAN-termos-garantia-os.md).
+# Um termo por OS, opcional, gravado como snapshot (id, nome, texto) -- editar ou
+# inativar o termo no cadastro não muda OS já finalizadas.
+def buscar_termo_garantia_os(cursor, os_id):
+    """Snapshot atual do termo da OS como dict, ou None se a OS não tem termo."""
+    cursor.execute(
+        "SELECT termo_garantia_id, termo_garantia_nome FROM os WHERE id=? AND termo_garantia_id IS NOT NULL",
+        (os_id,),
+    )
+    row = cursor.fetchone()
+    return {"id": row[0], "nome": row[1] or ""} if row else None
+
+
+def gravar_termo_garantia_os(cursor, os_id, termo):
+    """Grava o snapshot do termo (dict do service) ou zera com `termo=None`."""
+    cursor.execute(
+        "UPDATE os SET termo_garantia_id=?, termo_garantia_nome=?, termo_garantia_texto=? WHERE id=?",
+        (
+            termo["id"] if termo else None,
+            termo["nome"] if termo else None,
+            termo["texto"] if termo else None,
+            os_id,
+        ),
+    )
+
+
 # Documentos da OS para o cliente (BR-095 a BR-098,
 # docs/engineering/plans/PLAN-documentos-os-cliente.md). A leitura do banco e a
 # montagem ficam separadas: `montar_documento_cliente` é pura e é ela que fecha
@@ -548,7 +574,7 @@ def buscar_os_para_documento(cursor, os_id):
                COALESCE(data, ''), COALESCE(data_finalizado, ''),
                COALESCE(observacoes, ''), COALESCE(valor_cobrado, 0),
                COALESCE(valor_descontado, 0), COALESCE(relato_cliente, ''),
-               COALESCE(laudo_tecnico, '')
+               COALESCE(laudo_tecnico, ''), COALESCE(termo_garantia_texto, '')
         FROM os WHERE id=?
         """,
         (os_id,),
@@ -571,7 +597,7 @@ def buscar_os_para_documento(cursor, os_id):
     chaves = (
         "id", "tipo", "cliente", "cliente_id", "aparelho", "modelo", "cor", "imei", "tecnico",
         "status", "data", "data_finalizado", "observacoes", "valor_cobrado", "valor_descontado",
-        "relato_cliente", "laudo_tecnico",
+        "relato_cliente", "laudo_tecnico", "termo_garantia_texto",
     )  # fmt: skip
     dados = dict(zip(chaves, row, strict=True))
     dados["servicos"] = [
@@ -629,7 +655,13 @@ def montar_documento_cliente(tipo_documento, os_dados, loja, cliente_cadastro, s
             chave: loja.get(chave) or ""
             for chave in ("nome_fantasia", "razao_social", "cnpj", "telefone", "email", "endereco")
         },
-        "termos": loja.get("termos_garantia" if entrega else "termos_entrada") or "",
+        # BR-105 -- na entrega, o termo escolhido na OS; sem ele, o texto padrão da loja.
+        "termos": (
+            (os_dados.get("termo_garantia_texto") or loja.get("termos_garantia"))
+            if entrega
+            else loja.get("termos_entrada")
+        )
+        or "",
         "cliente": cliente,
         "ordem": {
             "id": os_dados["id"],

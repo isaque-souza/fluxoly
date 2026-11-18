@@ -214,9 +214,17 @@ export const ordens = {
   update:        (id, data)   => put(`/ordens/${id}`, withPieceIds(data)),
   delete:        (id)         => del(`/ordens/${id}`),
   // V1.5 -- Garantia de Reparo (BR-061): `garantias` é opcional, {reparo_id: tipo_garantia_id} --
-  // só é exigido pelo backend na transição para Finalizado.
-  patchStatus:   (id, status, garantias) =>
-    request("PATCH", `/ordens/${id}/status`, garantias ? { status, garantias } : { status }),
+  // só é exigido pelo backend na transição para Finalizado. BR-105: `termoGarantiaId` é opcional
+  // (sem ele, o comprovante de entrega usa o texto padrão de Dados da Loja).
+  patchStatus:   (id, status, garantias, termoGarantiaId) =>
+    request("PATCH", `/ordens/${id}/status`, {
+      status,
+      ...(garantias ? { garantias } : {}),
+      ...(termoGarantiaId ? { termo_garantia_id: termoGarantiaId } : {}),
+    }),
+  // BR-105 -- só admin; `null` remove o termo (volta ao texto padrão da loja).
+  trocarTermoGarantia: (id, termoGarantiaId) =>
+    patch(`/ordens/${id}/termo-garantia`, { termo_garantia_id: termoGarantiaId }),
   clienteHistory:(nome)       => get(`/ordens/historico-cliente?cliente=${encodeURIComponent(nome)}`),
   corrigirGarantiaReparo: (osId, reparoId, data) =>
     patch(`/ordens/${osId}/reparos/${reparoId}/garantia`, data),
@@ -346,6 +354,16 @@ export const garantias = {
 };
 
 // V1.5 -- Tipos de Garantia (BR-055): cadastro compartilhado entre Vendas e Assistência.
+// ── Termos de Garantia (BR-105) ────────────────────────────────────────────
+export const termosGarantia = {
+  list:   (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return get(`/termos-garantia${qs ? "?" + qs : ""}`);
+  },
+  create: (data)     => post("/termos-garantia", data),
+  update: (id, data) => put(`/termos-garantia/${id}`, data),
+};
+
 export const tiposGarantia = {
   list:   (params = {}) => {
     const qs = new URLSearchParams(params).toString();

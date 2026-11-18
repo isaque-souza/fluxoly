@@ -122,6 +122,7 @@ from fluxoly_storage import (
     criar_backup,
     salvar_configuracoes_integracoes,
 )
+from fluxoly_termos_garantia_controller import create_termos_garantia_blueprint
 from fluxoly_tipos_garantia_controller import create_tipos_garantia_blueprint
 from fluxoly_auditoria_controller import create_auditoria_blueprint
 from fluxoly_tipos_garantia_service import obter_tipo_garantia
@@ -443,6 +444,12 @@ def registrar_blueprints(app, runtime: RuntimeDeps) -> None:
     # PLAN-V1.5-Garantia.md)
     # ========================================================================
     app.register_blueprint(create_tipos_garantia_blueprint({"conectar": conectar}))
+
+    # ========================================================================
+    # REGISTRO DO BLUEPRINT DE TERMOS DE GARANTIA (BR-105, texto do termo
+    # escolhido na OS -- ver docs/engineering/plans/PLAN-termos-garantia-os.md)
+    # ========================================================================
+    app.register_blueprint(create_termos_garantia_blueprint({"conectar": conectar}))
 
     # ========================================================================
     # REGISTRO DOS BLUEPRINTS DE FINANCEIRO MÍNIMO (Caixa, Contas a Pagar,

@@ -9,6 +9,16 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Adicionado (2026-11-17 — Termos de garantia na OS)
+- **feat: termos de garantia cadastrados e escolhidos na OS** (BR-105) — nova tela `/termos-garantia`
+  (menu Assistência, só admin) com nome e texto de cada termo; ao finalizar a OS, o diálogo de garantia
+  ganha o campo "Termo de garantia" (opcional: sem ele, vale o texto padrão de Dados da Loja); o texto
+  escolhido sai no PDF de entrega. OS finalizada mostra o termo e o admin pode trocá-lo. Novos
+  `GET/POST/PUT /api/termos-garantia` e `PATCH /api/ordens/<id>/termo-garantia`; `termo_garantia_id` aceito
+  nas duas rotas que finalizam a OS. **Migration `m0007`** (tabela `termos_garantia_modelos` e três colunas de
+  snapshot em `os`, aditiva). Em Dados da Loja, o campo passa a se chamar "Termos de garantia padrão".
+  Plano: `docs/engineering/plans/PLAN-termos-garantia-os.md`.
+
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só
   no plano e por quê, decisões pendentes do PO), nova revisão do `PROJECT_STATUS.md` e atualizações no

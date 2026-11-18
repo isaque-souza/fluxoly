@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CircleNotch, Plus, Minus, MagnifyingGlass, QrCode, Copy, ArrowSquareOut, FilePdf } from "@phosphor-icons/react";
 import ShoppingModal from "@/components/shopping/ShoppingModal";
-import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, ordens as ordensApi, checklist as checklistApi, precos as precosApi, tiposGarantia as tiposGarantiaApi } from "@/api/client";
+import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, ordens as ordensApi, checklist as checklistApi, precos as precosApi, tiposGarantia as tiposGarantiaApi, termosGarantia as termosGarantiaApi } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,25 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
   AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+
+const TERMO_PADRAO = "padrao";
+
+// BR-105 -- select de Termo de Garantia. `termoAtual` mantém visível o termo gravado na OS mesmo
+// que ele tenha sido inativado depois (a lista só traz ativos).
+function TermoGarantiaSelect({ id, value, onChange, termos, termoAtual = null }) {
+  const opcoes = termoAtual && !termos.some((t) => t.id === termoAtual.id) ? [termoAtual, ...termos] : termos;
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id}><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value={TERMO_PADRAO}>Texto padrão da loja</SelectItem>
+        {opcoes.map((t) => (
+          <SelectItem key={t.id} value={String(t.id)}>{t.nome}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export default function EditOrder() {
   const { id } = useParams();
@@ -54,6 +73,12 @@ export default function EditOrder() {
   const [garantiaPorReparo, setGarantiaPorReparo] = useState({});
   const [garantiaAcaoPendente, setGarantiaAcaoPendente] = useState(null);
   const [enviandoGarantiaDialog, setEnviandoGarantiaDialog] = useState(false);
+  // BR-105 -- um Termo de Garantia por OS, opcional (TERMO_PADRAO = texto padrão de Dados da Loja).
+  const [termosGarantiaList, setTermosGarantiaList] = useState([]);
+  const [termoEscolhido, setTermoEscolhido] = useState(TERMO_PADRAO);
+  const [termoAtual, setTermoAtual] = useState(null);
+  const [termoTroca, setTermoTroca] = useState(TERMO_PADRAO);
+  const [salvandoTermo, setSalvandoTermo] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -62,12 +87,16 @@ export default function EditOrder() {
       reparosApi.list(),
       estoqueApi.list(),
       tiposGarantiaApi.list(),
-    ]).then(([osRes, constRes, rRes, eRes, tgRes]) => {
+      termosGarantiaApi.list().catch(() => null),
+    ]).then(([osRes, constRes, rRes, eRes, tgRes, termosRes]) => {
       if (tgRes?.ok) setTiposGarantiaList(tgRes.items || []);
+      if (termosRes?.ok) setTermosGarantiaList(termosRes.items || []);
       if (osRes?.ok && osRes.ordem) {
         const os = osRes.ordem;
         setOrderDisplayNumber(getOrderDisplayNumber(os));
         setStatusOriginal(os.status || "Em andamento");
+        setTermoAtual(os.termo_garantia || null);
+        setTermoTroca(os.termo_garantia ? String(os.termo_garantia.id) : TERMO_PADRAO);
         setForm({
           tipo: os.tipo || "Assistencia",
           cliente: os.cliente || "",
@@ -189,7 +218,9 @@ export default function EditOrder() {
   const precisaSelecionarGarantia = !interna && form?.status === "Finalizado" && statusOriginal !== "Finalizado";
   const tiposDisponiveis = (constants?.os_tipos || OS_TYPES_FALLBACK).filter((t) => (t === TIPO_OS_INTERNA) === interna);
 
-  const executarSubmit = async (garantias) => {
+  const termoIdOuNull = (valor) => (valor && valor !== TERMO_PADRAO ? parseInt(valor, 10) : null);
+
+  const executarSubmit = async (garantias, termoGarantiaId) => {
     setSubmitting(true);
     try {
       const payload = {
@@ -199,6 +230,7 @@ export default function EditOrder() {
         reparo_ids: selectedReparos,
         pecas_ids: Object.entries(pecas).flatMap(([k, v]) => Array.from({ length: v }, () => parseInt(k, 10))),
         ...(garantias ? { garantias } : {}),
+        ...(termoGarantiaId ? { termo_garantia_id: termoGarantiaId } : {}),
       };
       const res = await ordensApi.update(id, payload);
       if (res?.ok) {
@@ -240,9 +272,9 @@ export default function EditOrder() {
     }
   };
 
-  const executarFinalize = async (garantias) => {
+  const executarFinalize = async (garantias, termoGarantiaId) => {
     try {
-      const res = await ordensApi.patchStatus(id, "Finalizado", garantias);
+      const res = await ordensApi.patchStatus(id, "Finalizado", garantias, termoGarantiaId);
       if (res?.ok) {
         toast.success("Ordem finalizada!");
         navigate("/ordens");
@@ -271,14 +303,33 @@ export default function EditOrder() {
     }
     setEnviandoGarantiaDialog(true);
     try {
+      const termoGarantiaId = termoIdOuNull(termoEscolhido);
       if (garantiaAcaoPendente === "finalize") {
-        await executarFinalize(garantiaPorReparo);
+        await executarFinalize(garantiaPorReparo, termoGarantiaId);
       } else if (garantiaAcaoPendente === "submit") {
-        await executarSubmit(garantiaPorReparo);
+        await executarSubmit(garantiaPorReparo, termoGarantiaId);
       }
       setGarantiaDialogOpen(false);
     } finally {
       setEnviandoGarantiaDialog(false);
+    }
+  };
+
+  // BR-105 -- troca do termo de uma OS já finalizada (só admin; o backend audita).
+  const salvarTrocaTermo = async () => {
+    setSalvandoTermo(true);
+    try {
+      const res = await ordensApi.trocarTermoGarantia(id, termoIdOuNull(termoTroca));
+      if (res?.ok) {
+        setTermoAtual(res.termo_garantia || null);
+        toast.success("Termo de garantia atualizado");
+      } else {
+        toast.error(res?.erro || "Não foi possível trocar o termo");
+      }
+    } catch {
+      toast.error("Não foi possível trocar o termo");
+    } finally {
+      setSalvandoTermo(false);
     }
   };
 
@@ -430,6 +481,37 @@ export default function EditOrder() {
           </PanelContent>
         </Panel>
       ) : null}
+
+      {!interna && statusOriginal === "Finalizado" && (
+        <Panel>
+          <PanelHeader>
+            <PanelTitle>Termo de garantia</PanelTitle>
+          </PanelHeader>
+          <PanelContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {termoAtual ? termoAtual.nome : "Texto padrão da loja (Dados da Loja)"} — sai no PDF de entrega.
+            </p>
+            {isAdmin && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[14rem] flex-1 space-y-1.5">
+                  <Label htmlFor="edit-order-termo-troca">Trocar termo</Label>
+                  <TermoGarantiaSelect
+                    id="edit-order-termo-troca"
+                    value={termoTroca}
+                    onChange={setTermoTroca}
+                    termos={termosGarantiaList}
+                    termoAtual={termoAtual}
+                  />
+                </div>
+                <Button type="button" variant="outline" onClick={salvarTrocaTermo} disabled={salvandoTermo}>
+                  {salvandoTermo && <CircleNotch className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar termo
+                </Button>
+              </div>
+            )}
+          </PanelContent>
+        </Panel>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Cliente / Tipo */}
@@ -772,6 +854,15 @@ export default function EditOrder() {
                 Nenhum Tipo de Garantia cadastrado — crie um em Tipos de Garantia antes de concluir.
               </p>
             )}
+            <div className="space-y-1.5 border-t border-border pt-3">
+              <Label htmlFor="edit-order-termo-garantia">Termo de garantia (sai no PDF de entrega)</Label>
+              <TermoGarantiaSelect
+                id="edit-order-termo-garantia"
+                value={termoEscolhido}
+                onChange={setTermoEscolhido}
+                termos={termosGarantiaList}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setGarantiaDialogOpen(false)} disabled={enviandoGarantiaDialog}>
