@@ -94,10 +94,17 @@ como fundação, não como item isolado.
 | 24 | Custos extras na unidade, etiqueta com código de barras, IMEI 2 | Compras / Estoque |
 | 25 | Despesas recorrentes, contas bancárias, caixa por sessão | Financeiro — caixa por sessão só se a loja for de fato fechar caixa (na conta observada, a maioria nunca fecha) |
 
+### Acréscimo posterior (2026-11-17)
+
+| # | Candidato | Prioridade sugerida | Esforço | Item Release 1.0 | Evidência / nota |
+|---|---|---|---|---|---|
+| 26 | **Termos de garantia cadastrados e escolhidos na OS** (vários termos com texto; um por OS; impresso no comprovante de entrega) | P1 | Médio | Assistência completa | Garantia, Checklist e Auditoria — lacuna não captada no walkthrough (o benchmark tratou tipos + texto único da loja como equivalentes). Muda schema: plano em `PLAN-termos-garantia-os.md`. Venda fica para depois |
+
 ### Status da execução (2026-11-11, noite)
 
-PRs empilhados, **nenhum mergeado em `main`** (merge faz deploy automático e duas etapas mudam o schema).
-Ordem de merge: #87 → #88 → … → #100, cada um sobre o anterior.
+PRs empilhados, mergeados em `main` na ordem #87 → #88 → … → #100 (merge faz deploy automático e duas
+etapas mudaram o schema). *Atualizado em 2026-11-17: o texto original dizia "nenhum mergeado", o que deixou
+de ser verdade quando a pilha entrou em `main`.*
 
 | # | Candidato | Resultado |
 |---|---|---|
