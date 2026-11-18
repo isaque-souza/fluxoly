@@ -246,7 +246,7 @@ export default function VendaDetalhe() {
 
   const confirmarGarantia = async () => {
     if (!novoTipoGarantiaId) {
-      toast.error("Selecione o Tipo de Garantia.");
+      toast.error("Selecione o Termo de Garantia.");
       return;
     }
     setEnviandoGarantia(true);
@@ -671,7 +671,7 @@ export default function VendaDetalhe() {
               {corrigindoGarantia && (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="garantia-tipo">Novo Tipo de Garantia</Label>
+                    <Label htmlFor="garantia-tipo">Novo Termo de Garantia</Label>
                     <Select value={novoTipoGarantiaId} onValueChange={setNovoTipoGarantiaId}>
                       <SelectTrigger id="garantia-tipo" className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
