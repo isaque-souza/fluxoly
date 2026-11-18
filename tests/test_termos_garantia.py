@@ -198,9 +198,7 @@ class TestFinalizacao:
         finally:
             _apagar_tipo(tipo_id)
 
-    def test_editar_termo_depois_nao_altera_os_finalizada(
-        self, client, login_como, usuario_admin, criar_os, termo_3m
-    ):
+    def test_editar_termo_depois_nao_altera_os_finalizada(self, client, login_como, usuario_admin, criar_os, termo_3m):
         login_como(client, usuario_admin)
         os_id = criar_os()
         _finalizar(client, os_id, termo_3m)
@@ -289,3 +287,61 @@ class TestTrocaPorAdmin:
         login_como(client, usuario_admin)
         resp = client.patch("/api/ordens/999999/termo-garantia", json={"tipo_garantia_id": termo_3m})
         assert resp.status_code == 404
+
+
+class TestCriacaoJaFinalizada:
+    """KI-077 -- Nova OS criada já com status Finalizado pulava garantia e termo."""
+
+    def _criar(self, client, payload):
+        resp = client.post("/api/ordens", json=payload)
+        os_id = (resp.get_json() or {}).get("os_id")
+        return resp, os_id
+
+    def _apagar_os(self, os_id):
+        if not os_id:
+            return
+        conn = _app.conectar()
+        try:
+            conn.execute("DELETE FROM os_reparos WHERE os_id=?", (os_id,))
+            conn.execute("DELETE FROM os WHERE id=?", (os_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def test_sem_termo_recusa_e_nao_cria(self, client, login_como, usuario_tecnico, payload_os_valido):
+        login_como(client, usuario_tecnico)
+        payload = payload_os_valido(status="Finalizado")
+        payload.pop("garantias")
+        resp, os_id = self._criar(client, payload)
+        self._apagar_os(os_id)
+        assert resp.status_code == 400
+        assert os_id is None
+
+    def test_com_termo_grava_garantia_termo_e_data(
+        self, client, login_como, usuario_tecnico, payload_os_valido, termo_3m
+    ):
+        login_como(client, usuario_tecnico)
+        payload = payload_os_valido(status="Finalizado", tipo_garantia_id=termo_3m)
+        payload.pop("garantias")
+        resp, os_id = self._criar(client, payload)
+        try:
+            assert resp.status_code == 201, resp.get_json()
+            assert _snapshot(os_id) == (termo_3m, "Garantia 3 meses", "Cobre o serviço por 3 meses.")
+            linha = _garantias_reparos(os_id)[0]
+            assert linha[1] == termo_3m and linha[2] == 3 and linha[3] and linha[4]
+            ordem = client.get(f"/api/ordens/{os_id}").get_json()["ordem"]
+            assert ordem["data_finalizado"] == linha[3]
+            assert _termos_do_documento(client, os_id) == "Cobre o serviço por 3 meses."
+        finally:
+            self._apagar_os(os_id)
+
+    def test_criacao_em_andamento_nao_exige_termo(self, client, login_como, usuario_tecnico, payload_os_valido):
+        login_como(client, usuario_tecnico)
+        payload = payload_os_valido(status="Em andamento")
+        payload.pop("garantias")
+        resp, os_id = self._criar(client, payload)
+        try:
+            assert resp.status_code == 201
+            assert _snapshot(os_id) == (None, None, None)
+        finally:
+            self._apagar_os(os_id)

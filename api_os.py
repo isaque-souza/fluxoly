@@ -789,6 +789,17 @@ def create_api_os_blueprint(deps):
             if not validar_reparo_ids(cursor, reparo_ids):
                 return err("Um ou mais reparos não existem.")
 
+            # KI-077 / BR-061 / BR-105 -- OS criada já finalizada também exige o Termo de
+            # Garantia e grava data de finalização, garantia por reparo e termo, como a
+            # finalização pela edição. OS interna não tem garantia (BR-090).
+            finalizando = status_finalizado(status) and not interna
+            resolvidos, termo_garantia = [], None
+            if finalizando:
+                resolvidos, termo_garantia, erro_garantia = _resolver_garantia_da_os(body, reparo_ids)
+                if erro_garantia:
+                    conn.rollback()
+                    return err(erro_garantia)
+
             if interna:
                 imei_aparelho, erro_aparelho = compras_aparelhos_service.abrir_reparo_interno(
                     cursor, unidade_serializada_id, session.get("usuario_id")
@@ -828,6 +839,11 @@ def create_api_os_blueprint(deps):
             novo_id = cursor.lastrowid
             _gravar_textos_os(cursor, novo_id, body)
             salvar_reparos_os(cursor, novo_id, reparo_ids)
+            if finalizando:
+                data_finalizado_valor = datetime.now().strftime("%Y-%m-%d")  # mesma regra do PUT/PATCH
+                cursor.execute("UPDATE os SET data_finalizado=? WHERE id=?", (data_finalizado_valor, novo_id))
+                _conceder_garantias_reparo(cursor, novo_id, resolvidos, data_finalizado_valor)
+                _definir_termo_garantia(cursor, novo_id, termo_garantia, "termo_garantia_definido")
 
             custo_total = 0.0
             for peca_id in pecas_ids:
