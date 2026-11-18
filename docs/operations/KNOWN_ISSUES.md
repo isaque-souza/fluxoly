@@ -2284,3 +2284,35 @@ Etapa 1 dos candidatos do benchmark Mercado Phone (`PRODUCT_BACKLOG.md`, 2026-11
 
 Responsável:
 —
+
+---
+
+## ~~KI-068~~ — RESOLVIDO
+
+Descrição:
+Trocar ou acrescentar reparo numa OS **já finalizada** (formulário de edição, `PUT /api/ordens/<id>`)
+fazia a garantia sumir em silêncio. `salvar_reparos_os` apaga a linha de `os_reparos` do reparo removido
+(e a garantia gravada nela, BR-062) e insere a do reparo novo sem garantia; a exigência de termo (BR-061/
+BR-105) só existe na transição **para** Finalizado, então o salvamento passava sem erro. O comprovante de
+entrega saía com "Sem garantia registrada" e a OS sumia da página Garantias. A troca de termo pelo admin
+(`PATCH /ordens/<id>/termo-garantia`) não recuperava, porque só regrava reparos que já têm garantia; a
+correção manual (`PATCH .../reparos/<id>/garantia`) recuperava, mas contando do dia da correção, não da
+data de finalização. Achado em 2026-11-18 pelo PO no PDF de entrega da OS nº 6 (produção).
+
+Impacto:
+Alto para o cliente final: comprovante de entrega sem garantia de um serviço coberto e garantia fora do
+painel/alertas. Perda silenciosa de dado já concedido → atende critério de `ENGINEERING_GUIDE.md` §11,
+tratado como `hotfix/`.
+
+Status:
+Resolvido em 2026-11-18 (commit `7b9f8f3`, branch `hotfix/garantia-servico-os-finalizada`). Reparo novo em
+OS finalizada herda a garantia que a OS já tem (snapshot nome/prazo, contada da data de finalização), com
+auditoria `garantia_concedida`; OS sem garantia concedida continua sem. Correção manual de reparo sem
+garantia conta da data de finalização. 4 casos novos em `tests/test_garantia_reparo.py`. OS já afetadas em
+produção (ex.: OS nº 6) precisam da correção manual uma vez, depois do deploy.
+
+Sprint prevista:
+Hotfix (fora de sprint).
+
+Responsável:
+—
