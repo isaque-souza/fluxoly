@@ -10,6 +10,19 @@ repository a repository, `ENGINEERING_GUIDE.md` §3.1).
 """
 
 import fluxoly_tipos_garantia_repository as repo
+from fluxoly_dados_loja_service import LIMITES as LIMITES_DADOS_LOJA
+
+# BR-105 -- o tipo de garantia é o Termo de Garantia (nome + prazo + texto). O texto
+# sai no comprovante de entrega da OS, no mesmo bloco do texto padrão de Dados da Loja.
+LIMITE_TEXTO = LIMITES_DADOS_LOJA["termos_garantia"]
+
+
+def _validar_texto(texto):
+    """Retorna (texto normalizado, erro). Texto é opcional."""
+    texto = texto.strip() if isinstance(texto, str) else ""
+    if len(texto) > LIMITE_TEXTO:
+        return None, f"Texto do termo deve ter no máximo {LIMITE_TEXTO} caracteres."
+    return texto, None
 
 
 def _tipo_garantia_para_dict(row):
@@ -18,10 +31,11 @@ def _tipo_garantia_para_dict(row):
         "nome": row[1],
         "duracao_meses": row[2],
         "ativo": bool(row[3]),
+        "texto": row[4] or "",
     }
 
 
-def criar_tipo_garantia(conectar, nome, duracao_meses):
+def criar_tipo_garantia(conectar, nome, duracao_meses, texto=""):
     """Retorna (id, erro). `nome` obrigatório; `duracao_meses` inteiro >= 0
     (0 = "sem garantia", uma política que a loja pode ou não cadastrar,
     BR-055 -- nunca obrigatório existir)."""
@@ -30,18 +44,21 @@ def criar_tipo_garantia(conectar, nome, duracao_meses):
         return None, "Nome é obrigatório."
     if not isinstance(duracao_meses, int) or isinstance(duracao_meses, bool) or duracao_meses < 0:
         return None, "Duração deve ser um número inteiro de meses maior ou igual a zero."
+    texto, erro = _validar_texto(texto)
+    if erro:
+        return None, erro
 
     conn = conectar()
     try:
         cursor = conn.cursor()
-        tipo_garantia_id = repo.inserir(cursor, nome, duracao_meses)
+        tipo_garantia_id = repo.inserir(cursor, nome, duracao_meses, texto)
         conn.commit()
     finally:
         conn.close()
     return tipo_garantia_id, None
 
 
-def atualizar_tipo_garantia(conectar, tipo_garantia_id, nome, duracao_meses, ativo=True):
+def atualizar_tipo_garantia(conectar, tipo_garantia_id, nome, duracao_meses, ativo=True, texto=None):
     """Retorna (sucesso, erro). Editar a política nunca altera garantias já
     concedidas -- essas vivem como snapshot em `vendas_itens`/`os_reparos`,
     nunca lidas ao vivo daqui (BR-057/BR-062)."""
@@ -50,11 +67,15 @@ def atualizar_tipo_garantia(conectar, tipo_garantia_id, nome, duracao_meses, ati
         return False, "Nome é obrigatório."
     if not isinstance(duracao_meses, int) or isinstance(duracao_meses, bool) or duracao_meses < 0:
         return False, "Duração deve ser um número inteiro de meses maior ou igual a zero."
+    if texto is not None:  # ausente = mantém o texto atual
+        texto, erro = _validar_texto(texto)
+        if erro:
+            return False, erro
 
     conn = conectar()
     try:
         cursor = conn.cursor()
-        linhas = repo.atualizar(cursor, tipo_garantia_id, nome, duracao_meses, ativo)
+        linhas = repo.atualizar(cursor, tipo_garantia_id, nome, duracao_meses, ativo, texto)
         if linhas == 0:
             conn.rollback()
             return False, "Tipo de Garantia não encontrado."

@@ -15,7 +15,6 @@ from flask import Blueprint, request, session
 import fluxoly_clientes_service as clientes_service
 import fluxoly_compras_aparelhos_service as compras_aparelhos_service
 import fluxoly_dados_loja_service as dados_loja_service
-import fluxoly_termos_garantia_service as termos_garantia_service
 import fluxoly_unidades_serializadas_service as unidades_service
 from fluxoly_api_helpers import _texto_limpo_local, err, ok, usuario_admin, usuario_logado
 from fluxoly_core import (
@@ -82,19 +81,35 @@ def create_api_os_blueprint(deps):
     integrations_config_path = deps["integrations_config_path"]
     carregar_configuracoes_integracoes = deps["carregar_configuracoes_integracoes"]
 
-    def _resolver_termo_garantia(body):
-        """BR-105 -- termo de garantia opcional, um por OS. Ausente/vazio = sem
-        termo (o comprovante usa o texto padrão de Dados da Loja). Retorna
-        (termo|None, erro)."""
-        if body.get("termo_garantia_id") in (None, ""):
+    def _obter_termo_ativo(valor):
+        """BR-105 -- o Termo de Garantia é o Tipo de Garantia (nome + prazo +
+        texto). Retorna (termo|None, erro); ausente/vazio = (None, None)."""
+        if valor in (None, ""):
             return None, None
-        termo_id = parse_int(body.get("termo_garantia_id"), default=None)
-        if termo_id is None or isinstance(body.get("termo_garantia_id"), bool):
+        termo_id = parse_int(valor, default=None)
+        if termo_id is None or isinstance(valor, bool):
             return None, "Termo de Garantia inválido."
-        termo = termos_garantia_service.obter_termo_garantia(conectar, termo_id)
+        termo = obter_tipo_garantia(conectar, termo_id)
         if not termo or not termo["ativo"]:
             return None, "Termo de Garantia inválido ou inativo."
         return termo, None
+
+    def _resolver_garantia_da_os(body, reparo_ids):
+        """BR-105 -- um Termo de Garantia por OS (`tipo_garantia_id`): o prazo vale
+        para todos os reparos (snapshot por linha, BR-062) e o texto vai para o
+        comprovante de entrega. Compatibilidade: sem `tipo_garantia_id`, aceita
+        o mapa antigo `garantias` {reparo_id: tipo_id} (BR-061), sem termo na OS.
+        Retorna (resolvidos, termo|None, erro)."""
+        termo, erro = _obter_termo_ativo(body.get("tipo_garantia_id"))
+        if erro:
+            return None, None, erro
+        garantias_payload = dict.fromkeys(reparo_ids, termo["id"]) if termo else body.get("garantias") or {}
+        resolvidos, erro = resolver_garantias_reparo(
+            garantias_payload, reparo_ids, lambda tid: obter_tipo_garantia(conectar, tid)
+        )
+        if erro:
+            return None, None, erro
+        return resolvidos, termo, None
 
     def _definir_termo_garantia(cursor, os_id, termo, acao):
         """Grava (ou zera, com `termo=None`) o snapshot do termo da OS e audita
@@ -911,17 +926,10 @@ def create_api_os_blueprint(deps):
             # BR-090 -- OS interna não concede Garantia de Reparo (não há cliente).
             finalizando = status_finalizado(status) and not status_finalizado(status_atual) and not interna
             if finalizando:
-                garantias_payload = body.get("garantias") or {}
-                resolvidos, erro_garantia = resolver_garantias_reparo(
-                    garantias_payload, reparo_ids, lambda tid: obter_tipo_garantia(conectar, tid)
-                )
+                resolvidos, termo_garantia, erro_garantia = _resolver_garantia_da_os(body, reparo_ids)
                 if erro_garantia:
                     conn.rollback()
                     return err(erro_garantia)
-                termo_garantia, erro_termo = _resolver_termo_garantia(body)
-                if erro_termo:
-                    conn.rollback()
-                    return err(erro_termo)
 
             cursor.execute(
                 """
@@ -1140,17 +1148,10 @@ def create_api_os_blueprint(deps):
             finalizando = status_finalizado(status) and not status_finalizado(status_atual) and not interna
             if finalizando:
                 reparo_ids = buscar_reparo_ids_da_os(cursor, os_id)
-                garantias_payload = body.get("garantias") or {}
-                resolvidos, erro_garantia = resolver_garantias_reparo(
-                    garantias_payload, reparo_ids, lambda tid: obter_tipo_garantia(conectar, tid)
-                )
+                resolvidos, termo_garantia, erro_garantia = _resolver_garantia_da_os(body, reparo_ids)
                 if erro_garantia:
                     conn.rollback()
                     return err(erro_garantia)
-                termo_garantia, erro_termo = _resolver_termo_garantia(body)
-                if erro_termo:
-                    conn.rollback()
-                    return err(erro_termo)
 
             cursor.execute(
                 "UPDATE os SET status=?, data_finalizado=? WHERE id=?",
@@ -1232,16 +1233,19 @@ def create_api_os_blueprint(deps):
 
     @api_os.route("/ordens/<int:os_id>/termo-garantia", methods=["PATCH"])
     def trocar_termo_garantia_os(os_id):
-        """BR-105 -- trocar (ou remover, com `termo_garantia_id` nulo) o termo de
-        uma OS já finalizada. Só `admin`, com auditoria, mesmo padrão de BR-065."""
+        """BR-105 -- trocar o Termo de Garantia de uma OS já finalizada: regrava o
+        termo da OS e o prazo de cada reparo com garantia (mantendo a data de
+        início, como BR-065). Só `admin`, com auditoria."""
         if not usuario_logado():
             return err("Não autenticado.", 401)
         if session.get("usuario_perfil") != "admin":
             return err("Permissão negada.", 403)
 
-        termo, erro_termo = _resolver_termo_garantia(safe_json(request))
+        termo, erro_termo = _obter_termo_ativo(safe_json(request).get("tipo_garantia_id"))
         if erro_termo:
             return err(erro_termo)
+        if not termo:
+            return err("tipo_garantia_id é obrigatório.")
 
         conn = conectar()
         cursor = conn.cursor()
@@ -1252,6 +1256,33 @@ def create_api_os_blueprint(deps):
                 return err("OS não encontrada.", 404)
             if row[1] == TIPO_OS_INTERNA or not status_finalizado(normalizar_status_os(row[0])):
                 return err("Só é possível trocar o termo de uma OS de cliente finalizada.", 409)
+            for linha in buscar_linhas_com_garantia_da_os(cursor, os_id):
+                reparo_id, tipo_id_ant, nome_ant, meses_ant, inicio_ant, fim_ant = linha
+                data_ref = parse_data_ymd(inicio_ant)
+                data_inicio = data_ref.date() if data_ref else date.today()
+                corrigir_garantia_reparo(cursor, os_id, reparo_id, termo, data_inicio)
+                registrar_log_auditoria(
+                    cursor,
+                    "os_reparo",
+                    os_id,
+                    session.get("usuario_id"),
+                    "garantia_alterada",
+                    antes={
+                        "reparo_id": reparo_id,
+                        "tipo_garantia_id": tipo_id_ant,
+                        "garantia_nome": nome_ant,
+                        "garantia_duracao_meses": meses_ant,
+                        "garantia_data_inicio": inicio_ant,
+                        "garantia_data_fim": fim_ant,
+                    },
+                    depois={
+                        "reparo_id": reparo_id,
+                        "tipo_garantia_id": termo["id"],
+                        "garantia_nome": termo["nome"],
+                        "garantia_duracao_meses": termo["duracao_meses"],
+                        "garantia_data_inicio": data_inicio.isoformat(),
+                    },
+                )
             _definir_termo_garantia(cursor, os_id, termo, "termo_garantia_alterado")
             conn.commit()
         except Exception as exc:
@@ -1260,7 +1291,7 @@ def create_api_os_blueprint(deps):
         finally:
             conn.close()
 
-        return ok(os_id=os_id, termo_garantia={"id": termo["id"], "nome": termo["nome"]} if termo else None)
+        return ok(os_id=os_id, termo_garantia={"id": termo["id"], "nome": termo["nome"]})
 
     @api_os.route("/ordens/<int:os_id>/reparos/<int:reparo_id>/garantia", methods=["PATCH"])
     def corrigir_garantia_reparo_route(os_id, reparo_id):
