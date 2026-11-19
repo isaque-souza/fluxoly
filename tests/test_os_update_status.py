@@ -49,6 +49,37 @@ def _quantidade_estoque(item_id):
         conn.close()
 
 
+def _pecas_da_os(os_id):
+    conn = _app.conectar()
+    try:
+        return [r[0] for r in conn.execute("SELECT estoque_id FROM os_pecas WHERE os_id=? ORDER BY id", (os_id,))]
+    finally:
+        conn.close()
+
+
+def _ultima_movimentacao(item_id):
+    conn = _app.conectar()
+    try:
+        row = conn.execute(
+            "SELECT tipo FROM movimentacoes WHERE estoque_id=? ORDER BY id DESC LIMIT 1", (item_id,)
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def _pecas_em_os_ativas(item_id):
+    conn = _app.conectar()
+    try:
+        return conn.execute(
+            """SELECT COUNT(*) FROM os_pecas op JOIN os ON os.id = op.os_id
+               WHERE op.estoque_id=? AND os.status != 'Cancelado'""",
+            (item_id,),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
 # ============================================================================
 # PUT /api/ordens/<id> — atualização de dados
 # ============================================================================
@@ -314,28 +345,95 @@ class TestTransicoesDeStatus:
         assert resp.status_code == 200
         assert _quantidade_estoque(peca) == 1
 
-    def test_reativar_de_cancelado_nao_re_consome_estoque_via_api(
-        self, client, login_como, usuario_tecnico, criar_os, criar_item_estoque, payload_os_valido
-    ):
-        """
-        Caracterização: diferente da rota legada POST /atualizar_status
-        (irflow_blueprints_orders.py), que re-consome peças e valida estoque
-        suficiente ao reativar uma OS Cancelada, a rota da API
-        (PATCH /api/ordens/<id>/status) não faz nenhum ajuste de estoque ao
-        sair do status Cancelado — só ajusta ao ENTRAR em Cancelado. As
-        peças devolvidas pelo cancelamento permanecem no estoque.
-        """
-        login_como(client, usuario_tecnico)
-        peca = criar_item_estoque(modelo="iPhone 13", quantidade=1)
+    def _os_cancelada_com_peca(self, client, criar_os, criar_item_estoque, payload_os_valido, quantidade=1):
+        peca = criar_item_estoque(modelo="iPhone 13", quantidade=quantidade)
         os_id = criar_os(modelo="iPhone 13")
         client.put(
             f"/api/ordens/{os_id}",
             json=payload_os_valido(modelo="iPhone 13", pecas_ids=[peca], status="Em andamento"),
         )
         client.patch(f"/api/ordens/{os_id}/status", json={"status": "Cancelado"})
-        assert _quantidade_estoque(peca) == 1
+        assert _quantidade_estoque(peca) == quantidade
+        return os_id, peca
+
+    def test_reativar_de_cancelado_re_consome_estoque(
+        self, client, login_como, usuario_tecnico, criar_os, criar_item_estoque, payload_os_valido
+    ):
+        """Hotfix P0-1 (KI-063): sair de Cancelado volta a consumir as peças da OS.
+        Antes, a peça ficava ligada à OS ativa e também contada como disponível
+        (estoque "fantasma")."""
+        login_como(client, usuario_tecnico)
+        os_id, peca = self._os_cancelada_com_peca(client, criar_os, criar_item_estoque, payload_os_valido)
 
         resp = client.patch(f"/api/ordens/{os_id}/status", json={"status": "Em andamento"})
 
         assert resp.status_code == 200
+        assert _quantidade_estoque(peca) == 0
+        assert _pecas_da_os(os_id) == [peca]
+        assert _ultima_movimentacao(peca) == "saida"
+
+    def test_reativar_de_cancelado_sem_estoque_e_rejeitado_sem_alterar_nada(
+        self, client, login_como, usuario_tecnico, criar_os, criar_item_estoque, payload_os_valido
+    ):
+        login_como(client, usuario_tecnico)
+        os_id, peca = self._os_cancelada_com_peca(client, criar_os, criar_item_estoque, payload_os_valido)
+        outra_os = criar_os(modelo="iPhone 13")
+        client.put(
+            f"/api/ordens/{outra_os}",
+            json=payload_os_valido(modelo="iPhone 13", pecas_ids=[peca], status="Em andamento"),
+        )
+        assert _quantidade_estoque(peca) == 0
+
+        resp = client.patch(f"/api/ordens/{os_id}/status", json={"status": "Em andamento"})
+
+        assert resp.status_code == 400
+        assert "estoque" in resp.get_json()["erro"].lower()
+        assert _obter_status_e_finalizado(os_id)[0] == "Cancelado"
+        assert _quantidade_estoque(peca) == 0
+        assert _pecas_da_os(os_id) == [peca]
+
+    def test_reativar_e_cancelar_de_novo_nao_cria_estoque_fantasma(
+        self, client, login_como, usuario_tecnico, criar_os, criar_item_estoque, payload_os_valido
+    ):
+        """Roteiro exato do relatório de QA (2026-11-12): 1 peça física nunca pode
+        aparecer como disponível enquanto está ligada a uma OS ativa."""
+        login_como(client, usuario_tecnico)
+        os_id, peca = self._os_cancelada_com_peca(client, criar_os, criar_item_estoque, payload_os_valido)
+
+        client.patch(f"/api/ordens/{os_id}/status", json={"status": "Em andamento"})
+        outra_os = criar_os(modelo="iPhone 13")
+        resp_outra = client.put(
+            f"/api/ordens/{outra_os}",
+            json=payload_os_valido(modelo="iPhone 13", pecas_ids=[peca], status="Em andamento"),
+        )
+        client.patch(f"/api/ordens/{os_id}/status", json={"status": "Cancelado"})
+
+        assert resp_outra.status_code == 400  # a peça já estava de volta na primeira OS
         assert _quantidade_estoque(peca) == 1
+        assert _pecas_em_os_ativas(peca) == 0
+
+    def test_finalizar_os_cancelada_re_consome_estoque(
+        self, client, login_como, usuario_tecnico, criar_os, criar_item_estoque, payload_os_valido,
+        reparo_padrao_id, tipo_garantia_padrao_id,
+    ):
+        login_como(client, usuario_tecnico)
+        os_id, peca = self._os_cancelada_com_peca(client, criar_os, criar_item_estoque, payload_os_valido)
+
+        resp = client.patch(
+            f"/api/ordens/{os_id}/status",
+            json={"status": "Finalizado", "garantias": {str(reparo_padrao_id): tipo_garantia_padrao_id}},
+        )
+
+        assert resp.status_code == 200
+        assert _quantidade_estoque(peca) == 0
+
+    def test_reativar_os_cancelada_sem_pecas_continua_funcionando(
+        self, client, login_como, usuario_tecnico, criar_os
+    ):
+        login_como(client, usuario_tecnico)
+        os_id = criar_os(status="Cancelado")
+
+        resp = client.patch(f"/api/ordens/{os_id}/status", json={"status": "Aguardando peca"})
+
+        assert resp.status_code == 200
+        assert _obter_status_e_finalizado(os_id)[0] == "Aguardando peca"
