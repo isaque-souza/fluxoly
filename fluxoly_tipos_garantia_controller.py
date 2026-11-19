@@ -62,7 +62,9 @@ def create_tipos_garantia_blueprint(deps: dict):
 
         body = safe_json(request)
         duracao_meses = parse_int(body.get("duracao_meses"), default=None)
-        tipo_garantia_id, erro = service.criar_tipo_garantia(conectar, body.get("nome"), duracao_meses)
+        tipo_garantia_id, erro = service.criar_tipo_garantia(
+            conectar, body.get("nome"), duracao_meses, body.get("texto") or ""
+        )
         if erro:
             return err(erro)
         return ok(id=tipo_garantia_id), 201
@@ -78,7 +80,7 @@ def create_tipos_garantia_blueprint(deps: dict):
         duracao_meses = parse_int(body.get("duracao_meses"), default=None)
         ativo = bool(body.get("ativo", True))
         sucesso, erro = service.atualizar_tipo_garantia(
-            conectar, tipo_garantia_id, body.get("nome"), duracao_meses, ativo
+            conectar, tipo_garantia_id, body.get("nome"), duracao_meses, ativo, body.get("texto")
         )
         if not sucesso:
             code = 404 if erro == "Tipo de Garantia não encontrado." else 400

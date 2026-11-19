@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import OrderTextosPanel from "@/components/orders/OrderTextosPanel";
+import TermoGarantiaSelect from "@/components/orders/TermoGarantiaSelect";
 import { formatCurrency, getOrderDisplayNumber, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK, TIPO_OS_INTERNA } from "@/lib/constants";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -51,9 +52,13 @@ export default function EditOrder() {
   const [statusOriginal, setStatusOriginal] = useState("");
   const [tiposGarantiaList, setTiposGarantiaList] = useState([]);
   const [garantiaDialogOpen, setGarantiaDialogOpen] = useState(false);
-  const [garantiaPorReparo, setGarantiaPorReparo] = useState({});
   const [garantiaAcaoPendente, setGarantiaAcaoPendente] = useState(null);
   const [enviandoGarantiaDialog, setEnviandoGarantiaDialog] = useState(false);
+  // BR-105 -- um Termo de Garantia por OS (= Tipo de Garantia): prazo para todos os reparos + texto do PDF.
+  const [termoEscolhido, setTermoEscolhido] = useState("");
+  const [termoAtual, setTermoAtual] = useState(null);
+  const [termoTroca, setTermoTroca] = useState("");
+  const [salvandoTermo, setSalvandoTermo] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -68,6 +73,8 @@ export default function EditOrder() {
         const os = osRes.ordem;
         setOrderDisplayNumber(getOrderDisplayNumber(os));
         setStatusOriginal(os.status || "Em andamento");
+        setTermoAtual(os.termo_garantia || null);
+        setTermoTroca(os.termo_garantia ? String(os.termo_garantia.id) : "");
         setForm({
           tipo: os.tipo || "Assistencia",
           cliente: os.cliente || "",
@@ -189,7 +196,7 @@ export default function EditOrder() {
   const precisaSelecionarGarantia = !interna && form?.status === "Finalizado" && statusOriginal !== "Finalizado";
   const tiposDisponiveis = (constants?.os_tipos || OS_TYPES_FALLBACK).filter((t) => (t === TIPO_OS_INTERNA) === interna);
 
-  const executarSubmit = async (garantias) => {
+  const executarSubmit = async (tipoGarantiaId) => {
     setSubmitting(true);
     try {
       const payload = {
@@ -198,7 +205,7 @@ export default function EditOrder() {
         valor_descontado: interna ? 0 : parseFloat(form.valor_descontado) || 0,
         reparo_ids: selectedReparos,
         pecas_ids: Object.entries(pecas).flatMap(([k, v]) => Array.from({ length: v }, () => parseInt(k, 10))),
-        ...(garantias ? { garantias } : {}),
+        ...(tipoGarantiaId ? { tipo_garantia_id: tipoGarantiaId } : {}),
       };
       const res = await ordensApi.update(id, payload);
       if (res?.ok) {
@@ -240,9 +247,9 @@ export default function EditOrder() {
     }
   };
 
-  const executarFinalize = async (garantias) => {
+  const executarFinalize = async (tipoGarantiaId) => {
     try {
-      const res = await ordensApi.patchStatus(id, "Finalizado", garantias);
+      const res = await ordensApi.patchStatus(id, "Finalizado", tipoGarantiaId);
       if (res?.ok) {
         toast.success("Ordem finalizada!");
         navigate("/ordens");
@@ -264,21 +271,43 @@ export default function EditOrder() {
   };
 
   const confirmarGarantiaDialog = async () => {
-    const faltando = selectedReparos.some((rid) => !garantiaPorReparo[rid]);
-    if (faltando) {
-      toast.error("Selecione um Tipo de Garantia para cada reparo.");
+    if (!termoEscolhido) {
+      toast.error("Selecione o Termo de Garantia da OS.");
       return;
     }
     setEnviandoGarantiaDialog(true);
     try {
+      const tipoGarantiaId = parseInt(termoEscolhido, 10);
       if (garantiaAcaoPendente === "finalize") {
-        await executarFinalize(garantiaPorReparo);
+        await executarFinalize(tipoGarantiaId);
       } else if (garantiaAcaoPendente === "submit") {
-        await executarSubmit(garantiaPorReparo);
+        await executarSubmit(tipoGarantiaId);
       }
       setGarantiaDialogOpen(false);
     } finally {
       setEnviandoGarantiaDialog(false);
+    }
+  };
+
+  // BR-105 -- troca do termo de uma OS já finalizada (só admin; o backend audita).
+  const salvarTrocaTermo = async () => {
+    if (!termoTroca) {
+      toast.error("Selecione o Termo de Garantia.");
+      return;
+    }
+    setSalvandoTermo(true);
+    try {
+      const res = await ordensApi.trocarTermoGarantia(id, parseInt(termoTroca, 10));
+      if (res?.ok) {
+        setTermoAtual(res.termo_garantia || null);
+        toast.success("Termo de garantia atualizado");
+      } else {
+        toast.error(res?.erro || "Não foi possível trocar o termo");
+      }
+    } catch {
+      toast.error("Não foi possível trocar o termo");
+    } finally {
+      setSalvandoTermo(false);
     }
   };
 
@@ -430,6 +459,37 @@ export default function EditOrder() {
           </PanelContent>
         </Panel>
       ) : null}
+
+      {!interna && statusOriginal === "Finalizado" && (
+        <Panel>
+          <PanelHeader>
+            <PanelTitle>Termo de garantia</PanelTitle>
+          </PanelHeader>
+          <PanelContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {termoAtual ? termoAtual.nome : "Sem termo registrado (o PDF usa o texto padrão de Dados da Loja)"} — o texto do termo sai no PDF de entrega.
+            </p>
+            {isAdmin && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[14rem] flex-1 space-y-1.5">
+                  <Label htmlFor="edit-order-termo-troca">Trocar termo</Label>
+                  <TermoGarantiaSelect
+                    id="edit-order-termo-troca"
+                    value={termoTroca}
+                    onChange={setTermoTroca}
+                    termos={tiposGarantiaList}
+                    termoAtual={termoAtual}
+                  />
+                </div>
+                <Button type="button" variant="outline" onClick={salvarTrocaTermo} disabled={salvandoTermo}>
+                  {salvandoTermo && <CircleNotch className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar termo
+                </Button>
+              </div>
+            )}
+          </PanelContent>
+        </Panel>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Cliente / Tipo */}
@@ -740,36 +800,22 @@ export default function EditOrder() {
       <Dialog open={garantiaDialogOpen} onOpenChange={(open) => !open && setGarantiaDialogOpen(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Garantia de Reparo</DialogTitle>
+            <DialogTitle>Termo de Garantia</DialogTitle>
             <DialogDescription>
-              Selecione o Tipo de Garantia para cada reparo antes de concluir a OS.
+              Escolha o termo da OS. O prazo vale para todos os reparos e o texto sai no PDF de entrega.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {selectedReparos.map((rid) => {
-              const reparo = reparosList.find((r) => r.id === rid);
-              return (
-                <div key={rid} className="space-y-1.5">
-                  <Label>{reparo?.nome || `Reparo #${rid}`}</Label>
-                  <Select
-                    value={garantiaPorReparo[rid] ? String(garantiaPorReparo[rid]) : ""}
-                    onValueChange={(v) => setGarantiaPorReparo((prev) => ({ ...prev, [rid]: parseInt(v, 10) }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione o Tipo de Garantia" /></SelectTrigger>
-                    <SelectContent>
-                      {tiposGarantiaList.map((tg) => (
-                        <SelectItem key={tg.id} value={String(tg.id)}>
-                          {tg.nome} ({tg.duracao_meses === 0 ? "sem garantia" : `${tg.duracao_meses}m`})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              );
-            })}
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-order-termo-garantia">Termo de Garantia *</Label>
+            <TermoGarantiaSelect
+              id="edit-order-termo-garantia"
+              value={termoEscolhido}
+              onChange={setTermoEscolhido}
+              termos={tiposGarantiaList}
+            />
             {tiposGarantiaList.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                Nenhum Tipo de Garantia cadastrado — crie um em Tipos de Garantia antes de concluir.
+                Nenhum Termo de Garantia cadastrado — crie um em Termos de Garantia antes de concluir.
               </p>
             )}
           </div>

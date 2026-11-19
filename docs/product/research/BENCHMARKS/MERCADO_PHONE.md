@@ -1004,6 +1004,13 @@ auditoria (um registro aberto) e Logs de acesso. Nenhum nome, IP ou valor regist
 **Não tem:** painel único de garantias (venda + OS, em garantia × vencidas, dias restantes); termo de
 compra do usado; checklist configurável; tela de auditoria; log de acesso por usuário.
 
+**Lacuna registrada depois (2026-11-17, apontada pelo PO):** a Fluxoly **não tem vários termos de garantia
+com texto próprio, escolhidos na OS**. O "já tem" acima juntou duas peças que não equivalem ao termo do
+Mercado Phone: `tipos_garantia` guarda só nome + prazo (sem texto) e `dados_loja.termos_garantia` é **um
+único texto** para a loja inteira, impresso igual em todo comprovante de entrega. Por isso o item ficou
+fora dos candidatos abaixo. Candidato acrescentado em `PRODUCT_BACKLOG.md` (item 26) e planejado em
+`docs/engineering/plans/PLAN-termos-garantia-os.md`.
+
 #### Decisão pendente do PO
 Candidatos (sugestão, não decisão):
 1. **Tela de auditoria** sobre o `audit_log` que já é gravado em quase todos os domínios: filtros por
@@ -1015,6 +1022,8 @@ Candidatos (sugestão, não decisão):
    aquém dos 16 que a loja usa; mexe em schema (`os_checklists`), exige plano aprovado.
 4. **Termo de compra do usado** — avaliar junto com Compras de aparelho (BR-092/093).
 5. Não implementar: aplicação retroativa de termos.
+6. **Termos de garantia cadastrados (vários, com texto) e escolhidos na OS** — acrescentado em
+   2026-11-17, ver "Lacuna registrada depois" acima.
 
 ---
 
