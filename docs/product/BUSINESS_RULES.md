@@ -692,6 +692,8 @@ item (BR-056); o recibo ainda usa o texto padrão. Comprovante de entrada não m
 que a OS já tem**, contada da data de finalização — a garantia só muda se a data de finalização mudar
 (reabrir e finalizar de novo). OS finalizada sem garantia concedida (anterior à V1.5 ou importada) continua
 sem. A correção manual de um reparo sem garantia (BR-065) também conta da data de finalização (KI-078).
+A troca de termo pelo admin vale para **todos** os reparos da OS: reparo com garantia mantém a data de
+início; reparo sem garantia ganha o termo contado da data de finalização.
 *Fonte: pedido do PO (2026-11-17) "um termo por OS"; revisão do PO (2026-11-18): "o termo é atrelado ao
 tipo — termo de 3 meses já vem com a contagem de 3 meses"; prazo em meses. A primeira versão (termo só com
 texto, cadastro separado, `m0007`) foi substituída — ver `PLAN-termo-unico-garantia.md`.*
