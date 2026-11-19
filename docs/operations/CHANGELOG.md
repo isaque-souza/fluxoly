@@ -16,6 +16,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **refactor:** concessão de garantia por reparo extraída para `_conceder_garantias_reparo` em `api_os.py`
   (commit próprio, sem mudança de comportamento).
 
+### Corrigido (2026-11-18 — Garantia de reparo em OS finalizada, hotfix)
+- **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-078) — trocar ou acrescentar reparo numa
+  OS já finalizada apagava a garantia em silêncio e o comprovante de entrega saía com "Sem garantia
+  registrada". O reparo novo agora herda a garantia da OS (BR-105), contada da data de finalização, com
+  auditoria. A correção manual de reparo sem garantia passa a contar da data de finalização. OS já afetadas
+  em produção precisam da correção manual uma vez.
+
 ### Alterado (2026-11-18 — Termo de Garantia único)
 - **feat: termo de garantia = tipo de garantia** (BR-105 revisada) — o cadastro "Tipos de Garantia" ganha o
   texto do termo e passa a se chamar **Termos de Garantia** na tela (menu Assistência; a rota antiga

@@ -132,6 +132,19 @@ def create_api_os_blueprint(deps):
                 },
             )
 
+    def _garantia_herdada_por_reparos_novos(cursor, os_id, reparo_ids):
+        """KI-078 -- (reparo_id, tipo_garantia) para cada reparo que ainda não está
+        na OS, com a garantia já concedida à OS (snapshot nome/prazo, BR-062). Com
+        garantias diferentes por reparo (OS anterior à BR-105), vale a do menor
+        `reparo_id`. OS sem garantia concedida (ex.: importada) -> lista vazia."""
+        linhas = sorted(buscar_linhas_com_garantia_da_os(cursor, os_id))
+        if not linhas:
+            return []
+        _reparo_id, tipo_id, nome, meses, _inicio, _fim = linhas[0]
+        tipo_garantia = {"id": tipo_id, "nome": nome, "duracao_meses": meses}
+        atuais = set(buscar_reparo_ids_da_os(cursor, os_id))
+        return [(reparo_id, tipo_garantia) for reparo_id in reparo_ids if reparo_id not in atuais]
+
     def _definir_termo_garantia(cursor, os_id, termo, acao):
         """Grava (ou zera, com `termo=None`) o snapshot do termo da OS e audita
         na mesma transação. Sem log quando não havia termo e continua sem."""
@@ -967,6 +980,12 @@ def create_api_os_blueprint(deps):
                 if erro_garantia:
                     conn.rollback()
                     return err(erro_garantia)
+            elif status_finalizado(status) and status_finalizado(status_atual) and not interna:
+                # KI-078 -- reparo que entra numa OS já finalizada herda a garantia que a OS já
+                # tem (BR-105: o termo vale para todos os reparos), contada da data de finalização.
+                # Lida antes de `salvar_reparos_os`, que apaga a linha do reparo removido junto
+                # com a garantia dela.
+                resolvidos = _garantia_herdada_por_reparos_novos(cursor, os_id, reparo_ids)
 
             cursor.execute(
                 """
@@ -1332,6 +1351,11 @@ def create_api_os_blueprint(deps):
             ) = linha
 
             data_ref = parse_data_ymd(garantia_data_inicio_anterior)
+            if not data_ref:
+                # KI-078 -- reparo sem garantia: a contagem começa na data de finalização
+                # da OS (BR-062), não no dia da correção.
+                cursor.execute("SELECT COALESCE(data_finalizado,'') FROM os WHERE id=?", (os_id,))
+                data_ref = parse_data_ymd(cursor.fetchone()[0])
             data_inicio = data_ref.date() if data_ref else date.today()
 
             linhas_afetadas = corrigir_garantia_reparo(cursor, os_id, reparo_id, tipo_garantia, data_inicio)
