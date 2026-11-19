@@ -13,6 +13,7 @@ aparelho (dado pessoal, BR-088).
 
 from flask import Blueprint, jsonify, request, session
 
+import fluxoly_clientes_service as clientes_service
 import fluxoly_compras_aparelhos_service as service
 from fluxoly_validation import parse_float, parse_int, safe_json
 
@@ -99,6 +100,8 @@ def create_compras_aparelhos_blueprint(deps: dict):
             code = (
                 404 if erro in ("Produto não encontrado.", "Cliente não encontrado.", "Venda não encontrada.") else 400
             )
+            if erro == clientes_service.MSG_ESCRITA_OCUPADA:
+                code = 503  # KI-067: fila de escrita passou do busy_timeout -- nada foi gravado.
             return err(erro, code)
         return ok(id=compra_id), 201
 

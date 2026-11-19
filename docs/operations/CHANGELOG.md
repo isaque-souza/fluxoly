@@ -9,6 +9,68 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-18 — Troca de termo cobre todos os reparos)
+- **fix: trocar o termo de uma OS finalizada vale para todos os reparos** (KI-078, BR-105) — antes só os
+  reparos que já tinham garantia eram regravados; reparo sem garantia (como os afetados pelo KI-078) ficava
+  sem. Agora ganha o termo contado da data de finalização, com auditoria `garantia_concedida`. É o caminho
+  para recuperar, pela tela, as OS já afetadas em produção.
+
+### Corrigido (2026-11-18 — Nova OS já finalizada)
+- **fix: OS criada já como Finalizado exige o Termo de Garantia** (KI-077) — `POST /api/ordens` passa a aplicar
+  a mesma finalização da edição (termo obrigatório, `data_finalizado`, garantia por reparo e termo no PDF); a
+  Nova OS mostra o campo "Termo de Garantia *" quando o status é Finalizado.
+- **refactor:** concessão de garantia por reparo extraída para `_conceder_garantias_reparo` em `api_os.py`
+  (commit próprio, sem mudança de comportamento).
+
+### Corrigido (2026-11-18 — Garantia de reparo em OS finalizada, hotfix)
+- **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-078) — trocar ou acrescentar reparo numa
+  OS já finalizada apagava a garantia em silêncio e o comprovante de entrega saía com "Sem garantia
+  registrada". O reparo novo agora herda a garantia da OS (BR-105), contada da data de finalização, com
+  auditoria. A correção manual de reparo sem garantia passa a contar da data de finalização. OS já afetadas
+  em produção precisam da correção manual uma vez.
+
+### Alterado (2026-11-18 — Termo de Garantia único)
+- **feat: termo de garantia = tipo de garantia** (BR-105 revisada) — o cadastro "Tipos de Garantia" ganha o
+  texto do termo e passa a se chamar **Termos de Garantia** na tela (menu Assistência; a rota antiga
+  `/termos-garantia` redireciona). Na finalização da OS escolhe-se **um** termo: o prazo vale para todos os
+  reparos e o texto sai no PDF de entrega (sem texto, vale o de Dados da Loja). Admin troca o termo da OS
+  finalizada (regrava também o prazo dos reparos). Removidos o cadastro separado de termos (só texto) e
+  `/api/termos-garantia` entregues no dia anterior. **Migration `m0008`** (coluna `tipos_garantia.texto`,
+  aditiva); `termos_garantia_modelos` fica sem uso. Plano: `docs/engineering/plans/PLAN-termo-unico-garantia.md`.
+
+### Adicionado (2026-11-17 — Termos de garantia na OS)
+- **feat: termos de garantia cadastrados e escolhidos na OS** (BR-105) — nova tela `/termos-garantia`
+  (menu Assistência, só admin) com nome e texto de cada termo; ao finalizar a OS, o diálogo de garantia
+  ganha o campo "Termo de garantia" (opcional: sem ele, vale o texto padrão de Dados da Loja); o texto
+  escolhido sai no PDF de entrega. OS finalizada mostra o termo e o admin pode trocá-lo. Novos
+  `GET/POST/PUT /api/termos-garantia` e `PATCH /api/ordens/<id>/termo-garantia`; `termo_garantia_id` aceito
+  nas duas rotas que finalizam a OS. **Migration `m0007`** (tabela `termos_garantia_modelos` e três colunas de
+  snapshot em `os`, aditiva). Em Dados da Loja, o campo passa a se chamar "Termos de garantia padrão".
+  Plano: `docs/engineering/plans/PLAN-termos-garantia-os.md`.
+
+### Corrigido (2026-11-13 — Hotfix KI-067: atomicidade cliente × venda/troca)
+- **fix: checagem do cliente e gravação de venda/troca na mesma transação** (KI-067, BR-024b) — a
+  checagem de cliente ativo do KI-066 rodava fora da transação que grava; uma inativação ou exclusão
+  simultânea gerava venda/troca de cliente inativo ou **venda órfã**. Venda, compra por troca,
+  inativação/reativação e exclusão de cliente abrem a transação com `BEGIN IMMEDIATE` e leem o cliente no
+  mesmo cursor que grava. Disputa acima do `busy_timeout` responde 503, sem gravar nada; falha no meio da
+  operação reverte tudo (erro de disco não vira 503). Sem mudança de schema. 26 testes em
+  `tests/test_clientes_atomicidade.py` (cenários reproduzidos, threads com conexões reais, disputa sem
+  patch, 503 e rollback); sem regressão de desempenho relevante. Riscos residuais no KI-067.
+
+### Corrigido (2026-11-12 — Hotfix P1-3: inativação de clientes)
+- **fix: cliente com venda ou compra por troca não é mais excluído fisicamente** (KI-066, BR-024 revisada,
+  BR-024a a BR-024d). O DELETE verificava só OS, e a venda, o recibo e a troca perdiam o titular. Agora:
+  - o `DELETE` responde 409 com a contagem de vínculos;
+  - o cliente com histórico é **inativado** (`POST /api/clientes/<id>/inativar` e `/reativar`, só admin,
+    idempotentes, auditados como `status_change`);
+  - venda nova e compra por troca recusam cliente inativo;
+  - `GET /api/clientes` aceita `status=ativos|inativos|todos`, com padrão `ativos`.
+
+  Na tela de Clientes, o botão Excluir virou Inativar/Reativar, com badge "Inativo" e filtro de situação.
+  **Migration `m0009`** (`clientes.ativo INTEGER NOT NULL DEFAULT 1`, aditiva, todo cliente existente
+  fica ativo). Plano: `docs/engineering/plans/PLAN-inativacao-clientes.md`.
+
 ### Segurança (2026-11-12 — Hotfix P1-2)
 - **fix: sessão passa a refletir desativação, exclusão e troca de perfil** (KI-064) — o perfil ficava
   gravado no cookie desde o login e nunca era conferido: usuário desativado continuava usando o sistema e

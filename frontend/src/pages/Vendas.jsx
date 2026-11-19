@@ -321,7 +321,7 @@ function NovaVenda() {
     }
     let ativo = true;
     setBuscandoCliente(true);
-    clientesApi.list({ q: clienteQueryDebounced }).then((res) => {
+    clientesApi.list({ q: clienteQueryDebounced, status: "ativos" }).then((res) => {
       if (!ativo) return;
       setClienteResultados(res?.ok ? res.items || [] : []);
     }).catch(() => {
@@ -393,7 +393,7 @@ function NovaVenda() {
       return;
     }
     if (!form.tipoGarantiaId) {
-      toast.error("Selecione o Tipo de Garantia.");
+      toast.error("Selecione o Termo de Garantia.");
       return;
     }
 
@@ -599,9 +599,9 @@ function NovaVenda() {
                 </Select>
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label htmlFor="venda-garantia">Tipo de Garantia *</Label>
+                <Label htmlFor="venda-garantia">Termo de Garantia *</Label>
                 <Select value={form.tipoGarantiaId} onValueChange={(v) => setForm((p) => ({ ...p, tipoGarantiaId: v }))}>
-                  <SelectTrigger id="venda-garantia" className="w-full"><SelectValue placeholder="Selecione o Tipo de Garantia" /></SelectTrigger>
+                  <SelectTrigger id="venda-garantia" className="w-full"><SelectValue placeholder="Selecione o Termo de Garantia" /></SelectTrigger>
                   <SelectContent>
                     {tiposGarantiaList.map((tg) => (
                       <SelectItem key={tg.id} value={String(tg.id)}>
@@ -612,7 +612,7 @@ function NovaVenda() {
                 </Select>
                 {tiposGarantiaList.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Nenhum Tipo de Garantia cadastrado — crie um em Tipos de Garantia antes de vender.
+                    Nenhum Termo de Garantia cadastrado — crie um em Termos de Garantia antes de vender.
                   </p>
                 )}
               </div>

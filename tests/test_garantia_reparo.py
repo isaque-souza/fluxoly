@@ -202,6 +202,100 @@ class TestGarantiaDeReparoViaEdicaoCompleta:
         assert _linha_os_reparo(os_id, reparo_padrao_id) == linha_antes
 
 
+def _fixar_data_finalizacao(os_id, data_ymd):
+    """Leva a OS e a garantia já concedida para uma data de finalização conhecida,
+    para provar que a contagem parte dela e não do dia do teste."""
+    conn = _app.conectar()
+    try:
+        conn.execute("UPDATE os SET data_finalizado=? WHERE id=?", (data_ymd, os_id))
+        conn.execute(
+            "UPDATE os_reparos SET garantia_data_inicio=?, garantia_data_fim=date(?, '+12 months') "
+            "WHERE os_id=? AND tipo_garantia_id IS NOT NULL",
+            (data_ymd, data_ymd, os_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _acoes_auditoria_os_reparo(os_id):
+    conn = _app.conectar()
+    try:
+        return [
+            r[0]
+            for r in conn.execute(
+                "SELECT acao FROM audit_log WHERE entidade='os_reparo' AND entidade_id=?", (os_id,)
+            ).fetchall()
+        ]
+    finally:
+        conn.close()
+
+
+class TestReparoNovoEmOsFinalizadaHerdaGarantia:
+    """KI-078 -- trocar ou acrescentar reparo numa OS já finalizada apagava a
+    linha antiga (com a garantia) e criava a nova sem garantia, em silêncio: o
+    comprovante de entrega saía com "Sem garantia registrada". O reparo novo
+    herda a garantia que a OS já tem (BR-105), contada da data de finalização."""
+
+    def test_trocar_reparo_herda_garantia_da_data_de_finalizacao(
+        self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, dois_reparos_ids,
+        tipo_garantia_padrao_id,
+    ):  # fmt: skip
+        login_como(client, usuario_tecnico)
+        reparo_a, reparo_b = dois_reparos_ids
+        os_id = criar_os(status="Em andamento", reparo_ids=[reparo_a])
+        assert _finalizar(client, os_id, reparo_a, tipo_garantia_padrao_id).status_code == 200
+        _fixar_data_finalizacao(os_id, "2026-01-10")
+        linha_a = _linha_os_reparo(os_id, reparo_a)
+
+        resp = client.put(
+            f"/api/ordens/{os_id}",
+            json=payload_os_valido(status="Finalizado", reparo_ids=[reparo_b], garantias={}),
+        )
+        assert resp.status_code == 200
+
+        assert _linha_os_reparo(os_id, reparo_a) is None
+        assert _linha_os_reparo(os_id, reparo_b) == linha_a
+        assert _linha_os_reparo(os_id, reparo_b)[3] == "2026-01-10"
+        assert "garantia_concedida" in _acoes_auditoria_os_reparo(os_id)
+
+    def test_acrescentar_reparo_mantem_o_existente_e_herda(
+        self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, dois_reparos_ids,
+        tipo_garantia_padrao_id,
+    ):  # fmt: skip
+        login_como(client, usuario_tecnico)
+        reparo_a, reparo_b = dois_reparos_ids
+        os_id = criar_os(status="Em andamento", reparo_ids=[reparo_a])
+        _finalizar(client, os_id, reparo_a, tipo_garantia_padrao_id)
+        _fixar_data_finalizacao(os_id, "2026-01-10")
+        linha_a = _linha_os_reparo(os_id, reparo_a)
+
+        resp = client.put(
+            f"/api/ordens/{os_id}",
+            json=payload_os_valido(status="Finalizado", reparo_ids=[reparo_a, reparo_b], garantias={}),
+        )
+        assert resp.status_code == 200
+
+        assert _linha_os_reparo(os_id, reparo_a) == linha_a
+        assert _linha_os_reparo(os_id, reparo_b) == linha_a
+
+    def test_os_finalizada_sem_garantia_continua_sem(
+        self, client, login_como, usuario_tecnico, criar_os, payload_os_valido, dois_reparos_ids
+    ):
+        """OS finalizada sem garantia concedida (anterior à V1.5 ou importada,
+        exceção da BR-061): nada a herdar -- nunca inventa uma garantia."""
+        login_como(client, usuario_tecnico)
+        reparo_a, reparo_b = dois_reparos_ids
+        os_id = criar_os(status="Finalizado", reparo_ids=[reparo_a])
+
+        resp = client.put(
+            f"/api/ordens/{os_id}",
+            json=payload_os_valido(status="Finalizado", reparo_ids=[reparo_b], garantias={}),
+        )
+        assert resp.status_code == 200
+        assert _linha_os_reparo(os_id, reparo_b) == (None, None, None, None, None)
+
+
 class TestCancelamentoPosConclusaoZeraGarantia:
     def test_cancelar_via_status_zera_garantia_com_auditoria(
         self, client, login_como, usuario_tecnico, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
@@ -253,6 +347,24 @@ class TestCorrigirGarantiaReparo:
             assert linha[2] == 24
         finally:
             _remover_tipo_garantia(tipo_novo)
+
+    def test_corrigir_reparo_sem_garantia_conta_da_data_de_finalizacao(
+        self, client, login_como, usuario_admin, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
+    ):
+        """KI-078 -- reparo de OS finalizada que ficou sem garantia: a correção
+        conta da data de finalização da OS (BR-062), não do dia da correção."""
+        login_como(client, usuario_admin)
+        os_id = criar_os(status="Finalizado", reparo_ids=[reparo_padrao_id])
+        _fixar_data_finalizacao(os_id, "2026-01-10")
+
+        resp = client.patch(
+            f"/api/ordens/{os_id}/reparos/{reparo_padrao_id}/garantia",
+            json={"tipo_garantia_id": tipo_garantia_padrao_id},
+        )
+        assert resp.status_code == 200
+        linha = _linha_os_reparo(os_id, reparo_padrao_id)
+        assert linha[3] == "2026-01-10"
+        assert linha[4] == "2027-01-10"
 
     def test_vendedor_nao_pode_corrigir(
         self, client, login_como, usuario_admin, usuario_vendedor, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
