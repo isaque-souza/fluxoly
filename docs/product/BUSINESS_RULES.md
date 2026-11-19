@@ -134,11 +134,42 @@ ser reencontrado depois.
 *Fonte: `irflow_clientes_service.py::criar_cliente`/`atualizar_cliente`; `docs/product/features/CLIENTES.md`
 "Decisões estruturais".*
 
-**BR-024 — ✅ Implementado**
-Cliente com OS vinculada (`os.cliente_id`) não pode ser excluído — mesmo padrão de BR-005 (item de
-estoque em uso não pode ser excluído).
-*Fonte: `irflow_clientes_service.py::excluir_cliente`, `irflow_clientes_repository.py::possui_os_vinculada`;
-`docs/product/features/CLIENTES.md` "Casos de erro".*
+**BR-024 — ✅ Implementado** *(revisada em 2026-11-12, hotfix P1-3 / KI-066)*
+Cliente com histórico (OS, venda ou compra por troca vinculada: `os`, `vendas` ou
+`compras_aparelhos.cliente_id`) não pode ser excluído fisicamente, nem por chamada direta à API
+(`DELETE` → 409 com a contagem de vínculos). No lugar da exclusão, o cliente é **inativado**: id e vínculos
+ficam intactos. Sem cascata. Cliente **sem nenhum vínculo** continua podendo ser excluído. Antes da
+revisão, só a OS era verificada, e cliente com venda era apagado, deixando a venda sem titular.
+*Fonte: `fluxoly_clientes_service.py::excluir_cliente`, `fluxoly_clientes_repository.py::contar_vinculos`;
+`docs/engineering/plans/PLAN-inativacao-clientes.md`.*
+
+**BR-024a — ✅ Implementado** *(2026-11-12)*
+Inativar um cliente não altera nem apaga nada além de `clientes.ativo`: OS, vendas, itens, garantias,
+recibos e compras continuam como estavam. A inativação é idempotente: repetir a ação não grava nada.
+*Fonte: `fluxoly_clientes_service.py::inativar_cliente`.*
+
+**BR-024b — ✅ Implementado** *(2026-11-12)*
+Cliente inativo não aparece nas seleções de novas operações (Nova Venda, Compra por troca) e a API recusa
+a operação mesmo quando chamada diretamente (`POST /api/vendas` e `POST /api/compras-aparelhos` com
+origem troca → 400). O cliente segue disponível para consulta (`GET /api/clientes/<id>`, filtro
+"Inativos"), documentos (recibo, documento da OS) e relatórios históricos. Quando a OS passar a gravar
+`os.cliente_id` pela tela (hoje não grava), a mesma validação
+(`validar_cliente_para_nova_operacao`) deve ser aplicada.
+Atomicidade (KI-067, 2026-11-13): a checagem que vale é a feita dentro da transação de escrita
+(`validar_cliente_na_transacao`, aberta com `BEGIN IMMEDIATE`) -- venda, troca, inativação e exclusão do
+mesmo cliente ficam em fila, e quem entra depois respeita o que o primeiro gravou. Fila acima do
+`busy_timeout` → 503, sem gravar nada. Uma nova operação que vincule cliente deve seguir o mesmo padrão.
+*Fonte: `fluxoly_clientes_service.py::validar_cliente_para_nova_operacao`.*
+
+**BR-024c — ✅ Implementado** *(2026-11-12)*
+A reativação devolve o cliente às novas operações sem alterar o histórico. Inativação e reativação ficam
+na auditoria como `status_change` (`{"ativo": true}` → `{"ativo": false}` e o inverso), com usuário e data.
+*Fonte: `fluxoly_clientes_service.py::reativar_cliente`.*
+
+**BR-024d — ✅ Implementado** *(2026-11-12)*
+Só **admin** inativa ou reativa um cliente, a mesma matriz já usada para excluir e anonimizar. A
+validação é feita no servidor (403 para os demais perfis).
+*Fonte: `fluxoly_clientes_controller.py::_mudar_situacao`.*
 
 ---
 
@@ -446,6 +477,9 @@ Sem default automático vindo do cadastro de Tipos de Reparo (`reparos`) — dec
 de BR-056. Aplica-se às duas rotas que podem levar uma OS a `Finalizado` (`PATCH /api/ordens/<id>/status`
 e `PUT /api/ordens/<id>`, achado durante a implementação — o formulário completo de edição também finaliza
 OS, não só o botão de status dedicado).
+**Revisão (2026-11-18, BR-105):** na tela, a escolha passou a ser **um Termo de Garantia para a OS inteira**,
+aplicado a todas as linhas de reparo (`tipo_garantia_id` no payload). O snapshot continua por linha; a API
+ainda aceita o mapa antigo por reparo (`garantias`) por compatibilidade.
 
 **Exceção deliberada (decisão do CTO, 2026-07-30):** OS finalizadas automaticamente pela sincronização do
 Mercado Phone (`irflow_mercadophone.py::importar_os_mercado_phone`/`reimportar_todas_os_mercado_phone`, que
@@ -675,6 +709,27 @@ com uma mensagem sugerida. O sistema não envia mensagem e não registra o conta
 vendem (admin/vendedor).
 *Fonte: proposta do benchmark Mercado Phone aprovada pelo PO (2026-11-11); marcos 7/30/365 e textos
 por decisão de engenharia — revisáveis no QA.*
+
+**BR-105 — ✅ Implementado (2026-11-17, revisado em 2026-11-18)**
+**Termo de Garantia = nome + prazo (meses) + texto** — é o próprio cadastro de Tipos de Garantia (BR-055),
+que ganhou o texto do termo (até 4000 caracteres, opcional) e na tela se chama "Termos de Garantia". Ao
+**finalizar** uma OS de cliente, escolhe-se **um** termo para a OS inteira (obrigatório quando a OS tem
+reparo, como BR-061): o **prazo vale para todos os reparos** (vencimento calculado e gravado por linha,
+BR-062) e o **texto sai no comprovante de entrega**. Termo sem texto → o comprovante usa o texto padrão de
+Dados da Loja. O termo é gravado na OS como snapshot (nome e texto do momento): editar ou inativar depois
+não muda OS já finalizadas. Cancelar a OS zera o termo (como BR-064); reabrir e finalizar de novo pede o
+termo outra vez. `admin` pode trocar o termo de uma OS finalizada: regrava o termo e o prazo de cada
+reparo mantendo a data de início, com auditoria (como BR-065). Na venda, o termo continua escolhido por
+item (BR-056); o recibo ainda usa o texto padrão. Comprovante de entrada não muda.
+**Reparo que entra numa OS já finalizada** (troca ou acréscimo no formulário de edição) **herda a garantia
+que a OS já tem**, contada da data de finalização — a garantia só muda se a data de finalização mudar
+(reabrir e finalizar de novo). OS finalizada sem garantia concedida (anterior à V1.5 ou importada) continua
+sem. A correção manual de um reparo sem garantia (BR-065) também conta da data de finalização (KI-078).
+A troca de termo pelo admin vale para **todos** os reparos da OS: reparo com garantia mantém a data de
+início; reparo sem garantia ganha o termo contado da data de finalização.
+*Fonte: pedido do PO (2026-11-17) "um termo por OS"; revisão do PO (2026-11-18): "o termo é atrelado ao
+tipo — termo de 3 meses já vem com a contagem de 3 meses"; prazo em meses. A primeira versão (termo só com
+texto, cadastro separado, `m0007`) foi substituída — ver `PLAN-termo-unico-garantia.md`.*
 
 ---
 

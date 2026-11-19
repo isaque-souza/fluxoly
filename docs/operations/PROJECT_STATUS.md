@@ -5,7 +5,21 @@
 **Branch principal:** `main`
 **Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
-**Última revisão:** 2026-11-11 — **Candidatos do benchmark Mercado Phone executados em PRs empilhados**
+**Última revisão:** 2026-11-18 — **Hotfix KI-078** (`hotfix/garantia-servico-os-finalizada`): reparo
+trocado/acrescentado em OS finalizada perdia a garantia em silêncio (PDF de entrega da OS nº 6); agora herda a
+garantia da OS, contada da data de finalização. Suíte backend 997 passed / 5 failed (KI-030, só Windows
+local). Depois do deploy: corrigir a garantia das OS já afetadas. Antes disso: 2026-11-18 — **Termo de Garantia único** (BR-105 revisada,
+`docs/engineering/plans/PLAN-termo-unico-garantia.md`, branch `feat/termo-unico-garantia`, **migration
+`m0008`**): o PO apontou que termo e tipo separados não faziam sentido; agora o Tipo de Garantia tem o texto
+do termo, um termo por OS define o prazo de todos os reparos e o texto do PDF. Cadastro separado de termos
+removido (`termos_garantia_modelos` sem uso). Suíte backend 998 passed, frontend 219/219, eslint sem erro,
+build ok. Antes disso: 2026-11-17 — **Termos de garantia na OS implementados** (BR-105,
+`docs/engineering/plans/PLAN-termos-garantia-os.md`, branch `feat/termos-garantia-os`, **migration `m0007`**):
+cadastro de termos com texto, escolha opcional de um termo por OS na finalização, snapshot na OS e texto
+no PDF de entrega (sem termo, vale o texto padrão de Dados da Loja). Suíte backend 1000 passed, frontend
+219/219, eslint sem erro, build ok. **Antes do merge:** backup do banco e aplicar `m0007` numa cópia; QA
+manual pendente. Lacuna registrada no benchmark e no backlog (item 26). Antes disso:
+2026-11-11 — **Candidatos do benchmark Mercado Phone executados em PRs empilhados**
 (#87 a #100, nenhum mergeado em `main`; ordem de merge = numérica). Entregues: KI-062, tela de auditoria,
 painel de garantias com vendas, dashboard somando vendas e OS, alertas de margem (BR-099), pendências de
 contas no Dashboard, dias em estoque, vendedor sem custo/lucro no Dashboard (BR-100), previsão de entrega e

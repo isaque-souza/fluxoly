@@ -63,8 +63,12 @@ def create_clientes_blueprint(deps: dict):
         per_page = parse_int(request.args.get("per_page"), default=20)
         if page is None or per_page is None:
             return err("Parâmetros page/per_page inválidos.")
+        # KI-066: padrão "ativos" -- seletores de nova operação não oferecem cliente inativo.
+        status = (request.args.get("status") or service.STATUS_PADRAO).strip().lower()
+        if status not in service.STATUS_VALIDOS:
+            return err("Parâmetro status inválido (use ativos, inativos ou todos).")
 
-        resultado = service.listar_clientes(conectar, termo, page, per_page)
+        resultado = service.listar_clientes(conectar, termo, page, per_page, status)
         if not usuario_pode_ver_cpf():
             resultado["items"] = [_sem_cpf(c) for c in resultado["items"]]
         return ok(**resultado)
@@ -130,11 +134,36 @@ def create_clientes_blueprint(deps: dict):
         if not usuario_logado() or not usuario_admin():
             return err("Acesso negado.", 403)
 
-        sucesso, erro = service.excluir_cliente(conectar, session.get("usuario_id"), cliente_id)
+        sucesso, erro, vinculos = service.excluir_cliente(conectar, session.get("usuario_id"), cliente_id)
         if not sucesso:
-            code = 404 if erro == "Cliente não encontrado." else 409
-            return err(erro, code)
+            if erro == "Cliente não encontrado.":
+                return err(erro, 404)
+            if erro == service.MSG_ESCRITA_OCUPADA:
+                return err(erro, 503)  # KI-067: fila de escrita passou do busy_timeout.
+            # BR-024 / KI-066: com histórico, a exclusão física é recusada -- a resposta diz o porquê.
+            return jsonify({"ok": False, "erro": erro, "vinculos": vinculos}), 409
         return ok()
+
+    def _mudar_situacao(cliente_id, acao):
+        # BR-024d: mesma matriz do DELETE -- só admin inativa/reativa.
+        if not usuario_logado() or not usuario_admin():
+            return err("Acesso negado.", 403)
+
+        alterado, erro = acao(conectar, session.get("usuario_id"), cliente_id)
+        if erro:
+            if erro == service.MSG_ESCRITA_OCUPADA:
+                return err(erro, 503)  # KI-067: fila de escrita passou do busy_timeout.
+            return err(erro, 404 if erro == "Cliente não encontrado." else 400)
+        cliente = service.obter_cliente(conectar, cliente_id)
+        return ok(alterado=alterado, ativo=cliente["ativo"])
+
+    @clientes_api.route("/<int:cliente_id>/inativar", methods=["POST"])
+    def inativar_cliente(cliente_id):
+        return _mudar_situacao(cliente_id, service.inativar_cliente)
+
+    @clientes_api.route("/<int:cliente_id>/reativar", methods=["POST"])
+    def reativar_cliente(cliente_id):
+        return _mudar_situacao(cliente_id, service.reativar_cliente)
 
     @clientes_api.route("/<int:cliente_id>/anonimizar", methods=["POST"])
     def anonimizar_cliente(cliente_id):
