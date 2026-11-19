@@ -321,7 +321,7 @@ function NovaVenda() {
     }
     let ativo = true;
     setBuscandoCliente(true);
-    clientesApi.list({ q: clienteQueryDebounced }).then((res) => {
+    clientesApi.list({ q: clienteQueryDebounced, status: "ativos" }).then((res) => {
       if (!ativo) return;
       setClienteResultados(res?.ok ? res.items || [] : []);
     }).catch(() => {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { CircleNotch, Plus, Pencil, Trash, MagnifyingGlass, User, Phone, EnvelopeSimple, FileText, UserMinus } from "@phosphor-icons/react";
+import { CircleNotch, Plus, Pencil, MagnifyingGlass, User, Phone, EnvelopeSimple, FileText, UserMinus, Prohibit, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { clientes as clientesApi, ordens as ordensApi, garantias as garantiasApi, vendas as vendasApi } from "@/api/client";
 import { formatCurrency } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,11 +19,23 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { ListSkeleton } from "@/components/ui/loading-state";
 import { Reveal } from "@/components/ui/reveal";
-import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
+import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
 import { DataTable } from "@/components/ui/data-table";
 import { LooseMetric } from "@/components/ui/loose-metric";
 
 const EMPTY_FORM = { nome: "", telefone: "", email: "", cpf_cnpj: "", observacoes: "" };
+
+// KI-066 / BR-024 -- situação do cadastro. Inativo some das novas operações, mas o histórico fica.
+const STATUS_OPTIONS = [
+  { value: "ativos", label: "Ativos" },
+  { value: "inativos", label: "Inativos" },
+  { value: "todos", label: "Todos" },
+];
+
+function SituacaoBadge({ ativo }) {
+  if (ativo !== false) return null;
+  return <Badge variant="neutral" data-testid="cliente-badge-inativo">Inativo</Badge>;
+}
 
 // GarantiaBadge -- status genuíno (vencida/vencendo/ativa), migrado para o
 // Badge semântico da Foundation no PR 5.
@@ -69,6 +81,7 @@ function PerfilCliente({ cliente, onClose }) {
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
             {cliente.nome}
+            <SituacaoBadge ativo={cliente.ativo} />
           </DialogTitle>
           <DialogDescription>Perfil do cliente — dados, histórico de OS, garantias e compras</DialogDescription>
         </DialogHeader>
@@ -191,16 +204,18 @@ export default function Clientes() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [statusFiltro, setStatusFiltro] = useState("ativos");
+  // { item, acao: "inativar" | "reativar" } -- confirmação da mudança de situação.
+  const [situacaoAlvo, setSituacaoAlvo] = useState(null);
+  const [mudandoSituacao, setMudandoSituacao] = useState(false);
   const [anonymizeId, setAnonymizeId] = useState(null);
   const [anonymizing, setAnonymizing] = useState(false);
   const [perfilCliente, setPerfilCliente] = useState(null);
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await clientesApi.list({ per_page: 500 });
+      const res = await clientesApi.list({ per_page: 500, status: statusFiltro });
       if (res?.ok) {
         setItems(res.items || []);
         setLoadError(false);
@@ -214,11 +229,11 @@ export default function Clientes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFiltro]);
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -264,21 +279,22 @@ export default function Clientes() {
     }
   };
 
-  const handleDelete = async () => {
-    setDeleting(true);
+  const handleMudarSituacao = async () => {
+    const { item, acao } = situacaoAlvo;
+    setMudandoSituacao(true);
     try {
-      const res = await clientesApi.delete(deleteId);
+      const res = acao === "inativar" ? await clientesApi.inativar(item.id) : await clientesApi.reativar(item.id);
       if (res?.ok) {
-        toast.success("Cliente excluído");
-        setItems((prev) => prev.filter((i) => i.id !== deleteId));
+        toast.success(acao === "inativar" ? "Cliente inativado" : "Cliente reativado");
+        fetchItems();
       } else {
-        toast.error(res?.erro || "Erro ao excluir cliente");
+        toast.error(res?.erro || "Erro ao alterar a situação do cliente");
       }
     } catch {
-      toast.error("Erro ao excluir cliente");
+      toast.error("Erro ao alterar a situação do cliente");
     } finally {
-      setDeleting(false);
-      setDeleteId(null);
+      setMudandoSituacao(false);
+      setSituacaoAlvo(null);
     }
   };
 
@@ -339,17 +355,36 @@ export default function Clientes() {
               <MagnifyingGlass className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
               <FilterInput placeholder="Buscar por nome, telefone, e-mail, CPF/CNPJ..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-8" />
             </div>
+            <FilterSelect value={statusFiltro} onValueChange={setStatusFiltro} placeholder="Situação" options={STATUS_OPTIONS} />
             <div className="ml-auto flex items-center text-xs text-muted-foreground">
               {filtered.length} {filtered.length === 1 ? "cliente" : "clientes"} exibidos
             </div>
           </FilterBar>
 
           {filtered.length === 0 ? (
-            <EmptyState title={search ? "Nenhum cliente corresponde à busca atual." : "Nenhum cliente cadastrado ainda."} />
+            <EmptyState
+              title={
+                search
+                  ? "Nenhum cliente corresponde à busca atual."
+                  : statusFiltro === "inativos"
+                    ? "Nenhum cliente inativo."
+                    : "Nenhum cliente cadastrado ainda."
+              }
+            />
           ) : (
             <DataTable
               columns={[
-                { key: "nome", header: "Nome", className: "font-medium text-card-foreground" },
+                {
+                  key: "nome",
+                  header: "Nome",
+                  className: "font-medium text-card-foreground",
+                  render: (item) => (
+                    <span className="inline-flex items-center gap-2">
+                      {item.nome}
+                      <SituacaoBadge ativo={item.ativo} />
+                    </span>
+                  ),
+                },
                 { key: "telefone", header: "Telefone", className: "text-muted-foreground", render: (item) => item.telefone || "—" },
                 { key: "email", header: "E-mail", className: "text-muted-foreground", render: (item) => item.email || "—" },
                 { key: "cpf_cnpj", header: "CPF/CNPJ", className: "text-muted-foreground", render: (item) => item.cpf_cnpj || "—" },
@@ -366,9 +401,14 @@ export default function Clientes() {
                           <UserMinus className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {isAdmin && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`Excluir cliente ${item.id}`} onClick={() => setDeleteId(item.id)}>
-                          <Trash className="h-3.5 w-3.5" />
+                      {isAdmin && item.ativo !== false && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`Inativar cliente ${item.id}`} title="Inativar" onClick={() => setSituacaoAlvo({ item, acao: "inativar" })}>
+                          <Prohibit className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {isAdmin && item.ativo === false && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label={`Reativar cliente ${item.id}`} title="Reativar" onClick={() => setSituacaoAlvo({ item, acao: "reativar" })}>
+                          <ArrowCounterClockwise className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
@@ -432,19 +472,23 @@ export default function Clientes() {
       </Dialog>
 
       {isAdmin && (
-        <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialog open={!!situacaoAlvo} onOpenChange={(open) => !open && setSituacaoAlvo(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir Cliente?</AlertDialogTitle>
+              <AlertDialogTitle>{situacaoAlvo?.acao === "reativar" ? "Reativar Cliente?" : "Inativar Cliente?"}</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Clientes com OS vinculada não podem ser excluídos.
+                {situacaoAlvo?.acao === "reativar"
+                  ? `${situacaoAlvo?.item.nome} volta a aparecer em novas vendas e trocas. O histórico não muda.`
+                  : `${situacaoAlvo?.item.nome} deixa de aparecer em novas vendas e trocas. Nada é apagado: OS, vendas, recibos e garantias continuam no histórico, e o cliente pode ser reativado depois.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleting && <CircleNotch className="mr-2 h-4 w-4 animate-spin" />}
-                {deleting ? "Excluindo..." : "Excluir"}
+              <AlertDialogCancel disabled={mudandoSituacao}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMudarSituacao} disabled={mudandoSituacao} data-testid="clientes-confirmar-situacao">
+                {mudandoSituacao && <CircleNotch className="mr-2 h-4 w-4 animate-spin" />}
+                {situacaoAlvo?.acao === "reativar"
+                  ? (mudandoSituacao ? "Reativando..." : "Reativar")
+                  : (mudandoSituacao ? "Inativando..." : "Inativar")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

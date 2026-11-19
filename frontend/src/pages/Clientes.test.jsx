@@ -7,9 +7,17 @@ const mockList = vi.fn();
 const mockGarantiasList = vi.fn();
 const mockClienteHistory = vi.fn().mockResolvedValue({ ok: true, ordens: [] });
 const mockVendasList = vi.fn().mockResolvedValue({ ok: true, items: [] });
+const mockInativar = vi.fn();
+const mockReativar = vi.fn();
+const mockDelete = vi.fn();
 
 vi.mock("@/api/client", () => ({
-  clientes: { list: (...args) => mockList(...args) },
+  clientes: {
+    list: (...args) => mockList(...args),
+    inativar: (...args) => mockInativar(...args),
+    reativar: (...args) => mockReativar(...args),
+    delete: (...args) => mockDelete(...args),
+  },
   ordens: { clienteHistory: (...args) => mockClienteHistory(...args) },
   garantias: { list: (...args) => mockGarantiasList(...args) },
   vendas: { list: (...args) => mockVendasList(...args) },
@@ -150,5 +158,59 @@ describe("Clientes — estados e status semântico (PR 5)", () => {
     await user.click(screen.getByText("Bruno Lima"));
 
     await waitFor(() => expect(screen.getByText("Nenhuma compra registrada para este cliente.")).toBeInTheDocument());
+  });
+});
+
+describe("Clientes — inativação no lugar da exclusão (KI-066, BR-024)", () => {
+  beforeEach(() => {
+    mockList.mockReset();
+    mockInativar.mockReset();
+    mockReativar.mockReset();
+    mockDelete.mockReset();
+    mockGarantiasList.mockResolvedValue({ ok: true, garantias: [] });
+    mockClienteHistory.mockResolvedValue({ ok: true, ordens: [] });
+  });
+
+  it("pede só clientes ativos por padrão", async () => {
+    mockList.mockResolvedValue({ ok: true, items: [] });
+    render(<Clientes />);
+
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ per_page: 500, status: "ativos" }));
+  });
+
+  it("não oferece Excluir: Inativar pede confirmação e chama a API de inativação", async () => {
+    mockList.mockResolvedValue({ ok: true, items: [{ id: 5, nome: "Ana Ativa", ativo: true }] });
+    mockInativar.mockResolvedValue({ ok: true, alterado: true, ativo: false });
+    render(<Clientes />);
+
+    await waitFor(() => expect(screen.getByText("Ana Ativa")).toBeInTheDocument());
+    expect(screen.queryByLabelText("Excluir cliente 5")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cliente-badge-inativo")).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Inativar cliente 5"));
+    expect(await screen.findByText("Inativar Cliente?")).toBeInTheDocument();
+    expect(screen.getByText(/Nada é apagado/)).toBeInTheDocument();
+    expect(mockInativar).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId("clientes-confirmar-situacao"));
+    await waitFor(() => expect(mockInativar).toHaveBeenCalledWith(5));
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("cliente inativo mostra o badge e a ação Reativar", async () => {
+    mockList.mockResolvedValue({ ok: true, items: [{ id: 6, nome: "Ivo Inativo", ativo: false }] });
+    mockReativar.mockResolvedValue({ ok: true, alterado: true, ativo: true });
+    render(<Clientes />);
+
+    await waitFor(() => expect(screen.getByText("Ivo Inativo")).toBeInTheDocument());
+    expect(screen.getByTestId("cliente-badge-inativo")).toHaveTextContent("Inativo");
+    expect(screen.queryByLabelText("Inativar cliente 6")).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("Reativar cliente 6"));
+    expect(await screen.findByText("Reativar Cliente?")).toBeInTheDocument();
+    await user.click(screen.getByTestId("clientes-confirmar-situacao"));
+    await waitFor(() => expect(mockReativar).toHaveBeenCalledWith(6));
   });
 });

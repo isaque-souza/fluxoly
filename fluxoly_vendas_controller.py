@@ -165,6 +165,8 @@ def create_vendas_blueprint(deps: dict):
         )
         if erro:
             code = 404 if erro in ("Cliente não encontrado.", "Unidade não encontrada.") else 400
+            if erro == clientes_service.MSG_ESCRITA_OCUPADA:
+                code = 503  # KI-067: fila de escrita passou do busy_timeout -- nada foi gravado.
             return err(erro, code)
         return ok(id=venda_id), 201
 
