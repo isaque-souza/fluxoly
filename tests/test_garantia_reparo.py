@@ -232,7 +232,7 @@ def _acoes_auditoria_os_reparo(os_id):
 
 
 class TestReparoNovoEmOsFinalizadaHerdaGarantia:
-    """KI-068 -- trocar ou acrescentar reparo numa OS já finalizada apagava a
+    """KI-078 -- trocar ou acrescentar reparo numa OS já finalizada apagava a
     linha antiga (com a garantia) e criava a nova sem garantia, em silêncio: o
     comprovante de entrega saía com "Sem garantia registrada". O reparo novo
     herda a garantia que a OS já tem (BR-105), contada da data de finalização."""
@@ -351,7 +351,7 @@ class TestCorrigirGarantiaReparo:
     def test_corrigir_reparo_sem_garantia_conta_da_data_de_finalizacao(
         self, client, login_como, usuario_admin, criar_os, reparo_padrao_id, tipo_garantia_padrao_id
     ):
-        """KI-068 -- reparo de OS finalizada que ficou sem garantia: a correção
+        """KI-078 -- reparo de OS finalizada que ficou sem garantia: a correção
         conta da data de finalização da OS (BR-062), não do dia da correção."""
         login_como(client, usuario_admin)
         os_id = criar_os(status="Finalizado", reparo_ids=[reparo_padrao_id])
