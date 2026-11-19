@@ -111,6 +111,27 @@ def create_api_os_blueprint(deps):
             return None, None, erro
         return resolvidos, termo, None
 
+    def _conceder_garantias_reparo(cursor, os_id, resolvidos, data_finalizado_valor):
+        """BR-061/BR-062 -- grava o snapshot de garantia de cada reparo, com início
+        na data de finalização, e audita cada concessão na mesma transação."""
+        data_ref = parse_data_ymd(data_finalizado_valor)
+        data_inicio = data_ref.date() if data_ref else date.today()
+        gravar_garantias_reparo(cursor, os_id, resolvidos, data_inicio)
+        for reparo_id, tipo_garantia in resolvidos:
+            registrar_log_auditoria(
+                cursor,
+                "os_reparo",
+                os_id,
+                session.get("usuario_id"),
+                "garantia_concedida",
+                depois={
+                    "reparo_id": reparo_id,
+                    "tipo_garantia_id": tipo_garantia["id"],
+                    "garantia_nome": tipo_garantia["nome"],
+                    "garantia_duracao_meses": tipo_garantia["duracao_meses"],
+                },
+            )
+
     def _garantia_herdada_por_reparos_novos(cursor, os_id, reparo_ids):
         """KI-078 -- (reparo_id, tipo_garantia) para cada reparo que ainda não está
         na OS, com a garantia já concedida à OS (snapshot nome/prazo, BR-062). Com
@@ -781,6 +802,17 @@ def create_api_os_blueprint(deps):
             if not validar_reparo_ids(cursor, reparo_ids):
                 return err("Um ou mais reparos não existem.")
 
+            # KI-077 / BR-061 / BR-105 -- OS criada já finalizada também exige o Termo de
+            # Garantia e grava data de finalização, garantia por reparo e termo, como a
+            # finalização pela edição. OS interna não tem garantia (BR-090).
+            finalizando = status_finalizado(status) and not interna
+            resolvidos, termo_garantia = [], None
+            if finalizando:
+                resolvidos, termo_garantia, erro_garantia = _resolver_garantia_da_os(body, reparo_ids)
+                if erro_garantia:
+                    conn.rollback()
+                    return err(erro_garantia)
+
             if interna:
                 imei_aparelho, erro_aparelho = compras_aparelhos_service.abrir_reparo_interno(
                     cursor, unidade_serializada_id, session.get("usuario_id")
@@ -820,6 +852,11 @@ def create_api_os_blueprint(deps):
             novo_id = cursor.lastrowid
             _gravar_textos_os(cursor, novo_id, body)
             salvar_reparos_os(cursor, novo_id, reparo_ids)
+            if finalizando:
+                data_finalizado_valor = datetime.now().strftime("%Y-%m-%d")  # mesma regra do PUT/PATCH
+                cursor.execute("UPDATE os SET data_finalizado=? WHERE id=?", (data_finalizado_valor, novo_id))
+                _conceder_garantias_reparo(cursor, novo_id, resolvidos, data_finalizado_valor)
+                _definir_termo_garantia(cursor, novo_id, termo_garantia, "termo_garantia_definido")
 
             custo_total = 0.0
             for peca_id in pecas_ids:
@@ -982,23 +1019,7 @@ def create_api_os_blueprint(deps):
             salvar_reparos_os(cursor, os_id, reparo_ids)
 
             if resolvidos:
-                data_ref = parse_data_ymd(data_finalizado_valor)
-                data_inicio = data_ref.date() if data_ref else date.today()
-                gravar_garantias_reparo(cursor, os_id, resolvidos, data_inicio)
-                for reparo_id, tipo_garantia in resolvidos:
-                    registrar_log_auditoria(
-                        cursor,
-                        "os_reparo",
-                        os_id,
-                        session.get("usuario_id"),
-                        "garantia_concedida",
-                        depois={
-                            "reparo_id": reparo_id,
-                            "tipo_garantia_id": tipo_garantia["id"],
-                            "garantia_nome": tipo_garantia["nome"],
-                            "garantia_duracao_meses": tipo_garantia["duracao_meses"],
-                        },
-                    )
+                _conceder_garantias_reparo(cursor, os_id, resolvidos, data_finalizado_valor)
 
             if finalizando:
                 # BR-105 -- regrava o snapshot a cada finalização (inclusive após reabrir).
@@ -1178,23 +1199,7 @@ def create_api_os_blueprint(deps):
             )
 
             if resolvidos:
-                data_ref = parse_data_ymd(data_finalizado_valor)
-                data_inicio = data_ref.date() if data_ref else date.today()
-                gravar_garantias_reparo(cursor, os_id, resolvidos, data_inicio)
-                for reparo_id, tipo_garantia in resolvidos:
-                    registrar_log_auditoria(
-                        cursor,
-                        "os_reparo",
-                        os_id,
-                        session.get("usuario_id"),
-                        "garantia_concedida",
-                        depois={
-                            "reparo_id": reparo_id,
-                            "tipo_garantia_id": tipo_garantia["id"],
-                            "garantia_nome": tipo_garantia["nome"],
-                            "garantia_duracao_meses": tipo_garantia["duracao_meses"],
-                        },
-                    )
+                _conceder_garantias_reparo(cursor, os_id, resolvidos, data_finalizado_valor)
 
             if finalizando:
                 # BR-105 -- regrava o snapshot a cada finalização (inclusive após reabrir).

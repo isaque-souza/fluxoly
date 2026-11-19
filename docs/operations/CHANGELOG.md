@@ -15,6 +15,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   sem. Agora ganha o termo contado da data de finalização, com auditoria `garantia_concedida`. É o caminho
   para recuperar, pela tela, as OS já afetadas em produção.
 
+### Corrigido (2026-11-18 — Nova OS já finalizada)
+- **fix: OS criada já como Finalizado exige o Termo de Garantia** (KI-077) — `POST /api/ordens` passa a aplicar
+  a mesma finalização da edição (termo obrigatório, `data_finalizado`, garantia por reparo e termo no PDF); a
+  Nova OS mostra o campo "Termo de Garantia *" quando o status é Finalizado.
+- **refactor:** concessão de garantia por reparo extraída para `_conceder_garantias_reparo` em `api_os.py`
+  (commit próprio, sem mudança de comportamento).
+
 ### Corrigido (2026-11-18 — Garantia de reparo em OS finalizada, hotfix)
 - **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-078) — trocar ou acrescentar reparo numa
   OS já finalizada apagava a garantia em silêncio e o comprovante de entrega saía com "Sem garantia
