@@ -2287,6 +2287,72 @@ Responsável:
 
 ---
 
+## ~~KI-063~~ — RESOLVIDO
+
+Descrição:
+Reativar uma OS cancelada não consumia de novo as peças do estoque. Cancelar devolve as peças (BR-010),
+mas `PATCH /api/ordens/<id>/status` (`api_os.py::atualizar_status_os`) só tratava a entrada em
+`Cancelado`, não a saída. A OS voltava a "Em andamento" (ou "Finalizado") com as peças em `os_pecas` e o
+estoque já devolvido, e outra OS podia consumir a mesma unidade: duas OS ativas com uma única peça física
+(estoque fantasma). Afeta o Kanban (arrastar para fora de "Cancelado") e o botão "Finalizar OS" da tela de
+edição, que usam o mesmo PATCH. Achado no QA completo de 2026-11-12 (P0-1), reproduzido com banco isolado.
+
+Impacto:
+Crítico. Corrompe o estoque e o custo das OS sem nenhum aviso. Atende ao critério de interrupção do
+`ENGINEERING_GUIDE.md` §11 (integridade de dado de negócio).
+
+Status:
+Resolvido em 2026-11-12 (commit `61467a0`, branch `hotfix/reativacao-os-cancelada-estoque`). Ao sair de
+`Cancelado`, o PATCH reconsome as peças da OS com `consumir_peca_da_os` (mesma rotina da criação/edição:
+FIFO de lotes e movimentação `saida`). Sem estoque para alguma, faz rollback e responde 400 ("Não é
+possível reativar a OS: ..."); a OS continua Cancelada e nada é alterado. O Kanban já desfazia o movimento
+otimista e mostrava o erro, então o frontend não mudou. Coberto por 5 testes em
+`tests/test_os_update_status.py` (substituem o teste de caracterização que travava o comportamento antigo).
+Limitações: o custo reconsumido é o valor atual da peça (igual ao `PUT`), e se a peça foi excluída do
+estoque depois do cancelamento a reativação é recusada. OS já reativadas antes da correção não são
+corrigidas retroativamente; ver consulta de verificação no relatório do hotfix.
+
+Sprint prevista:
+Hotfix P0-1 da fase de correções pós-QA (2026-11-12).
+
+Responsável:
+—
+
+---
+
+## ~~KI-064~~ — RESOLVIDO
+
+Descrição:
+A sessão não refletia mudanças no cadastro do usuário. O login (`api_auth.py` e `fluxoly_blueprints_auth.py`)
+grava `usuario_id`, `usuario_nome` e `usuario_perfil` no cookie assinado, e nada mais os conferia com o
+banco: `usuario_logado()` (`fluxoly_api_helpers.py:13`) só olha se há `usuario_id`, e as mais de 40
+checagens de perfil leem `session["usuario_perfil"]`. Consequência: usuário desativado ou excluído
+continuava usando o sistema, e admin rebaixado mantinha o acesso de admin (criar e excluir usuários,
+auditoria, financeiro) até a sessão expirar (30 min de inatividade ou 31 dias). Achado no QA completo de
+2026-11-12 (P1-2).
+
+Impacto:
+Alto (segurança/autorização). Desligar um funcionário pela tela de Usuários não tirava o acesso dele.
+
+Status:
+Resolvido em 2026-11-12 (commit `3fc565f`, branch `hotfix/invalidar-sessao-usuario-alterado`).
+`verificar_autenticacao()` (`app.py`, `before_request` global) chama `revalidar_usuario_da_sessao()` em
+toda requisição com sessão: relê `nome`, `perfil` e `ativo`; inativo ou excluído tem a sessão limpa (401
+na API, login na tela) e perfil e nome são atualizados antes da view rodar. Custo: uma consulta por
+chave primária em `usuarios` por requisição autenticada. Reativar o usuário não revive a sessão derrubada
+(exige novo login). Coberto por 13 testes em `tests/test_sessao_revalidacao.py` e validado no navegador.
+Pendência fora do escopo: o frontend só lê o perfil no carregamento (`AuthContext`), então uma tela já
+aberta mostra o menu antigo até recarregar; as ações recebem 403/401 do servidor. Trocar a senha não
+derruba sessões abertas do próprio usuário (não fazia parte do achado).
+
+Sprint prevista:
+Hotfix P1-2 da fase de correções pós-QA (2026-11-12).
+
+Responsável:
+—
+
+---
+
 ## ~~KI-065~~ — RESOLVIDO
 
 Descrição:

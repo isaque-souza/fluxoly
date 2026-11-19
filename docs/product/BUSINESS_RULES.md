@@ -75,6 +75,8 @@ ocorreu quando o status mudou, evitando duplicar o retorno ao estoque.
 
 **BR-010 — ✅ Implementado**
 Mudar o status de uma OS para `Cancelado` (vindo de um status não-cancelado) devolve as peças ao estoque.
+Tirar uma OS de `Cancelado` (reativar ou finalizar) consome as peças de novo; sem estoque para alguma,
+a mudança é recusada e a OS continua Cancelada (KI-063, 2026-11-12).
 *Fonte: `irflow_blueprints_api.py::atualizar_status_os`.*
 
 **BR-011 — ✅ Implementado**
