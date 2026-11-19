@@ -876,11 +876,87 @@ custo/PII/IMEI na Geral); `docs/engineering/plans/PLAN-lista-aparelhos-disponive
 
 ---
 
+## Equipe (técnicos e vendedores da OS)
+
+Arquitetura: ADR-016. Plano: `docs/engineering/plans/PLAN-equipe-tecnicos-vendedores.md`.
+
+**BR-106 — 📋 Aprovada, não implementada (2026-11-18)**
+A equipe da loja é um cadastro de **colaboradores**. Cada colaborador tem um nome e atua como técnico,
+como vendedor ou como os dois. Ele pode ou não ter acesso ao sistema (vínculo opcional com **um**
+usuário). **Nome não identifica a pessoa:** homônimos são permitidos, cada um com seu registro, e a
+diferenciação é feita por informação complementar (sobrenome, identificação interna ou vínculo com
+usuário). Ao cadastrar ou renomear com um **nome completo igual** ao de outro colaborador (ativo ou
+inativo), o sistema **avisa** e pede confirmação de que são pessoas diferentes, sem impedir o cadastro.
+"Igual" significa igual depois de ignorar maiúsculas e minúsculas, acentos e espaços excedentes. Não há
+comparação só pelo primeiro nome nem busca aproximada: "Isaque Souza" × "ISAQUE SOUZA" ou "Isáque Souza"
+avisa; "Camila Santos" × "Camila Oliveira" ou "Camila Santos Silva" não avisa.
+Cadastrar, editar, inativar, reativar, excluir e unificar colaboradores exige a permissão **gerenciar
+equipe**, que por padrão só o `admin` tem. A permissão pode ser concedida a outros perfis no futuro.
+Técnico e vendedor comuns só veem os colaboradores ativos nas listas de seleção da OS.
+*Fonte: decisões do PO Q3, Q7, Q8 e Q11 (2026-11-18).*
+
+**BR-107 — 📋 Aprovada, não implementada (2026-11-18)**
+Colaborador que já aparece em alguma OS **não é excluído**: ele é **inativado** e o histórico fica
+intacto. Só colaborador sem nenhuma OS pode ser excluído. Colaborador inativo não pode ser atribuído a
+novas OS. O vínculo com vendas vale quando a Venda passar a usar colaborador; hoje a Venda usa o usuário.
+**Usuário e colaborador são independentes:** inativar o usuário só bloqueia o acesso, e inativar o
+colaborador só impede novas atribuições. Quando um funcionário sai da empresa, o admin inativa os dois
+registros quando houver os dois.
+*Fonte: decisões do PO Q4 e Q8 (2026-11-18).*
+
+**BR-108 — 📋 Aprovada, não implementada (2026-11-18)**
+**A OS pode ficar sem técnico, mas não pode ser finalizada sem técnico.** "Aguardando definição" deixa
+de ser uma pessoa e passa a ser ausência de atribuição. Criar, salvar e editar uma OS sem técnico é
+permitido: quem abre a OS não precisa inventar um técnico para salvar. **Finalizar** exige um técnico
+atribuído, para preservar a rastreabilidade do serviço executado. Isso vale para qualquer caminho de
+finalização (formulário, mudança de status, Kanban, reabrir e finalizar de novo) e também para a OS
+interna. A tentativa é recusada com a mensagem "Atribua um técnico à OS antes de finalizá-la." e nada é
+alterado. OS que já estavam finalizadas sem técnico antes desta regra continuam como estão. Atribuir ou trocar o técnico (ou
+o vendedor) só aceita colaborador **ativo** e com a função correspondente. Ao editar uma OS, a pessoa já
+gravada pode permanecer mesmo que esteja inativa; trocar só é possível por uma ativa. Filtros e
+indicadores identificam as **OS sem técnico**, que não aparecem como se fossem uma pessoa.
+*Fonte: decisões do PO Q1 e Q10 (2026-11-18).*
+
+**BR-109 — 📋 Aprovada, não implementada (2026-11-18)**
+**O nome do técnico e do vendedor gravado na OS é um registro histórico, não uma referência ao
+cadastro.** Ele é gravado ao salvar a OS e não muda quando o colaborador é renomeado, inativado ou
+unificado. Exemplo: a OS criada com "Isaque Souza" continua mostrando "Isaque Souza" depois que o
+cadastro vira "Isaque S."; uma OS nova mostra "Isaque S.". Telas e documentos da OS mostram o nome
+histórico. **Relatórios e indicadores agrupam pela pessoa** (o mesmo colaborador, antes e depois da
+renomeação) e exibem o nome atual do cadastro.
+*Fonte: ressalva técnica A do PO (2026-11-18).*
+
+**BR-110 — 📋 Aprovada, não implementada (2026-11-18)**
+**Unificação de colaboradores duplicados**, só com a permissão gerenciar equipe:
+- O sistema mostra os dois cadastros e seus vínculos (quantidade de OS, usuário vinculado) e exige
+  confirmação explícita.
+- Todas as OS do colaborador descartado passam para o colaborador mantido, e o nome histórico das OS não
+  muda (BR-109).
+- O cadastro descartado não é apagado: fica inativo, marcado como unificado no mantido.
+- A operação é única e indivisível (ou tudo, ou nada) e fica registrada na auditoria: quem fez, quando,
+  quais cadastros e quantas OS foram transferidas.
+- Se os dois cadastros tiverem usuários diferentes vinculados, a unificação é recusada até o admin
+  resolver o vínculo.
+*Fonte: decisão do PO Q6 (2026-11-18).*
+
+**BR-111 — 📋 Aprovada, não implementada (2026-11-18)**
+**Trocar o técnico ou o vendedor de uma OS finalizada** só pode ser feito por `admin`, com **justificativa
+obrigatória**, e fica registrado na auditoria: quem alterou, data e hora, valor anterior, valor novo e
+justificativa. A alteração de dado histórico nunca é silenciosa.
+**Escopo:** esta regra cobre **somente** técnico e vendedor. As demais edições de OS finalizada seguem
+exatamente como antes: troca e acréscimo de reparo (KI-078), peças, valores, troca de termo (BR-105) e
+correção de garantia (BR-065). A política geral de edição de OS finalizada será definida em Discovery
+própria.
+*Fonte: decisões do PO Q5 e Q9 (2026-11-18).*
+
+---
+
 ## Documentos relacionados
 
 - `docs/product/features/VENDAS.md` — fonte das regras de Vendas (BR-017 a BR-022, BR-031 a BR-066)
 - `docs/product/features/CLIENTES.md` — fonte das regras de Clientes (BR-023, BR-024)
 - `docs/engineering/plans/PLAN-compra-aparelhos.md` — plano técnico de Compra de Aparelhos (BR-083 a BR-093)
+- `docs/engineering/plans/PLAN-equipe-tecnicos-vendedores.md` — plano técnico da Equipe (BR-106 a BR-111, ADR-016)
 - `docs/engineering/DOMAIN_MODEL.md` — domínios e arquivos onde cada regra implementada vive
 - `docs/engineering/DATABASE.md` — schema citado nas regras de Estoque/Compras
 - `docs/operations/KNOWN_ISSUES.md` — bugs já corrigidos que originaram alguma regra (ex.: BR-007 ↔ B-11)

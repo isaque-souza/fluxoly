@@ -2626,3 +2626,73 @@ Hotfix (fora de sprint).
 
 Responsável:
 —
+
+---
+
+## KI-079
+
+Descrição:
+`DELETE /api/usuarios/<id>` (`api_users.py:119`, `deletar_usuario`) apaga o usuário fisicamente
+(`DELETE FROM usuarios WHERE id=?`) sem checar se ele é referenciado. O banco não tem chave estrangeira
+(nenhum `REFERENCES` nas migrations, `PRAGMA foreign_keys` desligado), então nada impede a exclusão.
+Tabelas que guardam `usuarios.id` e ficam órfãs: `vendas.vendedor_id` (e `cancelado_por`),
+`audit_log.usuario_id`, `compras_aparelhos.usuario_id`, `shopping_list.responsavel_id`,
+`shopping_list_logs.usuario_id`, `password_reset_tokens`. Os `LEFT JOIN usuarios` passam a devolver nome
+`NULL`: a venda perde o nome do vendedor e a auditoria perde o autor. Achado em 2026-11-18 ao levantar o
+diagnóstico do `PLAN-equipe-tecnicos-vendedores.md`.
+
+Impacto:
+Médio. Não corrompe valores, mas apaga de forma irreversível quem vendeu ou quem fez cada ação no
+histórico. Ação restrita a admin e já existe a alternativa (inativar, `ativo = 0`). Não atende critério
+de `ENGINEERING_GUIDE.md` §11 (comportamento de sempre, não regressão).
+
+Status:
+Aberto (2026-11-18). Correção aprovada pelo PO em 2026-11-18. É o PR 1 do
+`PLAN-equipe-tecnicos-vendedores.md`, com branch, testes e revisão próprios (`fix/`), sem outras
+refatorações. Exigências do PO:
+- a proteção fica **no backend** (não basta esconder o botão);
+- exclusão física de usuário com qualquer registro relacionado é recusada, e a orientação é inativar;
+- autores de auditoria e vendedores históricos são preservados;
+- os demais pontos de exclusão física são revisados;
+- há testes de regressão.
+
+Colunas que guardam `usuarios.id` (inventário inicial, a confirmar no PR):
+- `vendas.vendedor_id`, `vendas.cancelado_por`
+- `audit_log.usuario_id`
+- `compras_aparelhos.usuario_id`, `compras_aparelhos.cancelado_por`
+- `unidades_serializadas.reservado_por`
+- `shopping_list.responsavel_id`, `shopping_list_logs.usuario_id`
+- `password_reset_tokens.usuario_id`, `password_reset_tokens.criado_por`
+- a coluna `usuario_id` da `m0002` (financeiro)
+- `dados_loja.atualizado_por`
+- futuramente, `colaboradores.usuario_id` (ADR-016)
+
+Testes de regressão previstos para o PR 1 (`tests/test_usuarios_exclusao.py`, banco temporário):
+- usuário sem nenhuma referência → excluído (comportamento atual preservado);
+- para **cada** coluna do inventário acima, um usuário referenciado só por ela → `DELETE` recusado
+  (409), com mensagem orientando a inativar, e o usuário continua no banco;
+- depois da recusa, venda, auditoria e compra continuam mostrando o nome do usuário;
+- a verificação e a exclusão acontecem na mesma transação (padrão do KI-067);
+- não-admin → 403 e excluir a própria conta → recusado (comportamento atual preservado);
+- inativar um usuário referenciado continua funcionando;
+- a resposta da API informa as contagens de vínculos (para a tela explicar o motivo), sem expor dados
+  dos registros.
+
+Outros pontos de exclusão física (revisão preliminar de 2026-11-18). O PR 1 confirma cada um. **Problema
+confirmado vira KI próprio, sem correção no PR 1:**
+
+| Ponto | Guarda atual | Avaliação preliminar |
+|---|---|---|
+| `DELETE /ordens/<id>` (`api_os.py:1144`) | perfis admin/tecnico; devolve peças se a OS está aberta | exclui OS **finalizada** (com garantia concedida e faturamento) e apaga `os_reparos`/`os_pecas`/`os_checklists`. Candidato a KI |
+| `excluir_produto` (`fluxoly_produtos_service.py:198`) | só auditoria | não checa `unidades_serializadas.produto_id` nem `vendas_itens.produto_id` (venda tem snapshot do nome). Candidato a KI |
+| `DELETE /estoque/<id>` (`api_stock.py:483`) | bloqueia só se houver peça em OS **aberta** | não checa `unidades_serializadas.estoque_id`; `os_pecas` finalizadas têm snapshot. A avaliar |
+| `DELETE /custos/<id>` (`api_costs.py:109`) | nenhuma | registro isolado; avaliar se há auditoria |
+| `deletar_reparo`, `excluir_cliente`, contas a pagar/receber | contam vínculos (KI-066/067) ou só excluem pendentes | OK |
+| expurgo de `audit_log` (`fluxoly_audit.py:113`) | política de retenção (LGPD) | intencional |
+| `os_pecas`/`os_reparos` dentro da edição de OS; MercadoPhone | fluxo de edição; integração desligada | fora do escopo |
+
+Sprint prevista:
+—
+
+Responsável:
+—
