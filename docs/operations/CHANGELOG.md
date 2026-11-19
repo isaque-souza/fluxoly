@@ -10,7 +10,7 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não lançado]
 
 ### Corrigido (2026-11-18 — Garantia de reparo em OS finalizada, hotfix)
-- **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-068) — trocar ou acrescentar reparo numa
+- **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-078) — trocar ou acrescentar reparo numa
   OS já finalizada apagava a garantia em silêncio e o comprovante de entrega saía com "Sem garantia
   registrada". O reparo novo agora herda a garantia da OS (BR-105), contada da data de finalização, com
   auditoria. A correção manual de reparo sem garantia passa a contar da data de finalização. OS já afetadas

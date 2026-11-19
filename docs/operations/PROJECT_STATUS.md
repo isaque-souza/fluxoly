@@ -5,7 +5,7 @@
 **Branch principal:** `main`
 **Ambiente de produção:** servidor próprio do CTO (backend — Docker Compose + Tailscale Funnel, deploy automático via GHCR + Watchtower, ADR-015) · Vercel (frontend) — `https://assistencia-system.vercel.app`
 
-**Última revisão:** 2026-11-18 — **Hotfix KI-068** (`hotfix/garantia-servico-os-finalizada`): reparo
+**Última revisão:** 2026-11-18 — **Hotfix KI-078** (`hotfix/garantia-servico-os-finalizada`): reparo
 trocado/acrescentado em OS finalizada perdia a garantia em silêncio (PDF de entrega da OS nº 6); agora herda a
 garantia da OS, contada da data de finalização. Suíte backend 997 passed / 5 failed (KI-030, só Windows
 local). Depois do deploy: corrigir a garantia das OS já afetadas. Antes disso: 2026-11-18 — **Termo de Garantia único** (BR-105 revisada,

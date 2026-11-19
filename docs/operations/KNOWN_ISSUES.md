@@ -2287,7 +2287,7 @@ Responsável:
 
 ---
 
-## ~~KI-068~~ — RESOLVIDO
+## ~~KI-078~~ — RESOLVIDO
 
 Descrição:
 Trocar ou acrescentar reparo numa OS **já finalizada** (formulário de edição, `PUT /api/ordens/<id>`)

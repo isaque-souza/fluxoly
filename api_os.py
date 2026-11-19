@@ -112,7 +112,7 @@ def create_api_os_blueprint(deps):
         return resolvidos, termo, None
 
     def _garantia_herdada_por_reparos_novos(cursor, os_id, reparo_ids):
-        """KI-068 -- (reparo_id, tipo_garantia) para cada reparo que ainda não está
+        """KI-078 -- (reparo_id, tipo_garantia) para cada reparo que ainda não está
         na OS, com a garantia já concedida à OS (snapshot nome/prazo, BR-062). Com
         garantias diferentes por reparo (OS anterior à BR-105), vale a do menor
         `reparo_id`. OS sem garantia concedida (ex.: importada) -> lista vazia."""
@@ -944,7 +944,7 @@ def create_api_os_blueprint(deps):
                     conn.rollback()
                     return err(erro_garantia)
             elif status_finalizado(status) and status_finalizado(status_atual) and not interna:
-                # KI-068 -- reparo que entra numa OS já finalizada herda a garantia que a OS já
+                # KI-078 -- reparo que entra numa OS já finalizada herda a garantia que a OS já
                 # tem (BR-105: o termo vale para todos os reparos), contada da data de finalização.
                 # Lida antes de `salvar_reparos_os`, que apaga a linha do reparo removido junto
                 # com a garantia dela.
@@ -1347,7 +1347,7 @@ def create_api_os_blueprint(deps):
 
             data_ref = parse_data_ymd(garantia_data_inicio_anterior)
             if not data_ref:
-                # KI-068 -- reparo sem garantia: a contagem começa na data de finalização
+                # KI-078 -- reparo sem garantia: a contagem começa na data de finalização
                 # da OS (BR-062), não no dia da correção.
                 cursor.execute("SELECT COALESCE(data_finalizado,'') FROM os WHERE id=?", (os_id,))
                 data_ref = parse_data_ymd(cursor.fetchone()[0])
