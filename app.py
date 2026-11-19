@@ -882,6 +882,26 @@ def destino_react_legado(path: str) -> str | None:
     return None
 
 
+def revalidar_usuario_da_sessao():
+    """Derruba a sessão de usuário excluído ou inativo e atualiza perfil e nome com o banco."""
+    conn = conectar()
+    try:
+        row = conn.execute(
+            "SELECT nome, perfil, ativo FROM usuarios WHERE id = ?",
+            (session["usuario_id"],),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row or row[2] != 1:
+        session.clear()
+        return
+    if session.get("usuario_perfil") != row[1]:
+        session["usuario_perfil"] = row[1]
+    if session.get("usuario_nome") != row[0]:
+        session["usuario_nome"] = row[0]
+
+
 @app.before_request
 def verificar_autenticacao():
     endpoint = request.endpoint
@@ -913,6 +933,12 @@ def verificar_autenticacao():
     # que já estará vazio quando a view rodar.
     if session.get("usuario_id") and not sessao_ainda_ativa(session):
         session.clear()
+
+    # P1-2 (QA 2026-11-12): o cookie guarda perfil e id desde o login. Relê o usuário a cada
+    # requisição autenticada para que desativar, excluir ou trocar o perfil valha na hora,
+    # inclusive nas rotas que leem session["usuario_perfil"] direto.
+    if session.get("usuario_id"):
+        revalidar_usuario_da_sessao()
 
     # Bypass por path (não só pelo blueprint "api.") — cobre também blueprints
     # de domínio novos sob /api/* (ex.: clientes_api, unidades_serializadas_api),

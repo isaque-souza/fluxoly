@@ -33,6 +33,7 @@ ambos os scans, cada item validado no código antes de classificar
 | Sessão invalidada completamente no logout | ⚠️ | `session.clear()` — validar que não há cookie residual |
 | Rate limiting em `/api/auth/login` | ✅ | KI-001 resolvido — 5 tentativas/minuto por identificador (`irflow_rate_limit.py`, tabela `login_attempts`, contador em SQLite em vez de memória — ver nota abaixo) |
 | Bloqueio após tentativas excessivas | ✅ | Mesma implementação acima — 429 na 6ª tentativa dentro da janela |
+| Sessão reflete o estado atual do usuário (desativado, excluído, perfil alterado) | ✅ | P1-2/KI-064 (2026-11-12). `revalidar_usuario_da_sessao()` em `verificar_autenticacao()` (`app.py`) relê `ativo`, `perfil` e `nome` de `usuarios` a cada requisição autenticada: usuário inativo ou excluído tem a sessão limpa (401); perfil alterado vale na requisição seguinte, sem logout |
 | Timeout de sessão por inatividade | ✅ | Janela deslizante de 30 min (`IR_FLOW_SESSION_INACTIVITY_MINUTES`), `irflow_core.py::sessao_ainda_ativa` aplicada em `verificar_autenticacao()` — cobre `/api/*` e views legadas no mesmo ponto (ver nota abaixo) |
 
 **Nota de implementação (rate limiting):** o Gunicorn de produção roda com `--workers 2` (`Dockerfile`) — um

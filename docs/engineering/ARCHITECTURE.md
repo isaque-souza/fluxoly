@@ -128,6 +128,9 @@ implementações separadas e podem divergir silenciosamente.
   - `None` — qualquer perfil autenticado.
   - `["admin"]` (ou outra lista) — apenas perfis listados.
 - Logout: `session.clear()` — invalida todos os campos de sessão de uma vez.
+- O cookie guarda `usuario_perfil` desde o login, mas `verificar_autenticacao()` o revalida a cada
+  requisição autenticada (`revalidar_usuario_da_sessao()`, KI-064): usuário inativo ou excluído perde a
+  sessão; perfil e nome são atualizados com o banco antes de qualquer view ler a sessão.
 - A API (`/api/*`) reimplementa a própria checagem por endpoint (`usuario_logado()`,
   `session.get("usuario_perfil") == "admin"`) — não há um decorator/middleware único compartilhado
   entre a API e as rotas legadas.
