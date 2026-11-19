@@ -29,8 +29,34 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   - `GET /api/clientes` aceita `status=ativos|inativos|todos`, com padrão `ativos`.
 
   Na tela de Clientes, o botão Excluir virou Inativar/Reativar, com badge "Inativo" e filtro de situação.
-  **Migration `m0007`** (`clientes.ativo INTEGER NOT NULL DEFAULT 1`, aditiva, todo cliente existente
+  **Migration `m0009`** (`clientes.ativo INTEGER NOT NULL DEFAULT 1`, aditiva, todo cliente existente
   fica ativo). Plano: `docs/engineering/plans/PLAN-inativacao-clientes.md`.
+
+### Corrigido (2026-11-18 — Garantia de reparo em OS finalizada, hotfix)
+- **fix: reparo novo em OS finalizada herda a garantia da OS** (KI-078) — trocar ou acrescentar reparo numa
+  OS já finalizada apagava a garantia em silêncio e o comprovante de entrega saía com "Sem garantia
+  registrada". O reparo novo agora herda a garantia da OS (BR-105), contada da data de finalização, com
+  auditoria. A correção manual de reparo sem garantia passa a contar da data de finalização. OS já afetadas
+  em produção precisam da correção manual uma vez.
+
+### Alterado (2026-11-18 — Termo de Garantia único)
+- **feat: termo de garantia = tipo de garantia** (BR-105 revisada) — o cadastro "Tipos de Garantia" ganha o
+  texto do termo e passa a se chamar **Termos de Garantia** na tela (menu Assistência; a rota antiga
+  `/termos-garantia` redireciona). Na finalização da OS escolhe-se **um** termo: o prazo vale para todos os
+  reparos e o texto sai no PDF de entrega (sem texto, vale o de Dados da Loja). Admin troca o termo da OS
+  finalizada (regrava também o prazo dos reparos). Removidos o cadastro separado de termos (só texto) e
+  `/api/termos-garantia` entregues no dia anterior. **Migration `m0008`** (coluna `tipos_garantia.texto`,
+  aditiva); `termos_garantia_modelos` fica sem uso. Plano: `docs/engineering/plans/PLAN-termo-unico-garantia.md`.
+
+### Adicionado (2026-11-17 — Termos de garantia na OS)
+- **feat: termos de garantia cadastrados e escolhidos na OS** (BR-105) — nova tela `/termos-garantia`
+  (menu Assistência, só admin) com nome e texto de cada termo; ao finalizar a OS, o diálogo de garantia
+  ganha o campo "Termo de garantia" (opcional: sem ele, vale o texto padrão de Dados da Loja); o texto
+  escolhido sai no PDF de entrega. OS finalizada mostra o termo e o admin pode trocá-lo. Novos
+  `GET/POST/PUT /api/termos-garantia` e `PATCH /api/ordens/<id>/termo-garantia`; `termo_garantia_id` aceito
+  nas duas rotas que finalizam a OS. **Migration `m0007`** (tabela `termos_garantia_modelos` e três colunas de
+  snapshot em `os`, aditiva). Em Dados da Loja, o campo passa a se chamar "Termos de garantia padrão".
+  Plano: `docs/engineering/plans/PLAN-termos-garantia-os.md`.
 
 ### Documentação (2026-11-11 — Encerramento dos candidatos do benchmark)
 - **docs: status da execução dos 25 candidatos** em `PRODUCT_BACKLOG.md` (PR de cada item, o que ficou só

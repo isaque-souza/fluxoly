@@ -140,7 +140,7 @@ export default function DadosLoja() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="dados-loja-termos_garantia">Termos de garantia</Label>
+            <Label htmlFor="dados-loja-termos_garantia">Termos de garantia padrão</Label>
             <Textarea
               id="dados-loja-termos_garantia"
               rows={5}

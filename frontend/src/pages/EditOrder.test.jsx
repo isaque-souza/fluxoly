@@ -9,6 +9,7 @@ const mockConstGet = vi.fn();
 const mockReparosList = vi.fn();
 const mockEstoqueList = vi.fn();
 const mockTiposGarantiaList = vi.fn();
+const mockPatchStatus = vi.fn();
 const mockChecklistGetByOrder = vi.fn().mockResolvedValue({ ok: true, checklist: null });
 const mockDocumento = vi.fn();
 const mockBaixarPdfOs = vi.fn();
@@ -17,7 +18,7 @@ vi.mock("@/api/client", () => ({
   ordens: {
     get: (...args) => mockOrdensGet(...args),
     update: vi.fn(),
-    patchStatus: vi.fn(),
+    patchStatus: (...args) => mockPatchStatus(...args),
     documento: (...args) => mockDocumento(...args),
   },
   constantes: { get: (...args) => mockConstGet(...args) },
@@ -154,5 +155,55 @@ describe("EditOrder — PDF para o cliente (BR-095 a BR-098)", () => {
     await screen.findByRole("button", { name: /Finalizar OS/ });
     expect(screen.queryByRole("button", { name: /PDF de entrada/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /PDF de entrega/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("EditOrder — Termo de Garantia (BR-105)", () => {
+  const TERMO = { id: 7, nome: "Garantia 3 meses", duracao_meses: 3, texto: "Cobre 3 meses.", ativo: true };
+  const carregar = (ordem, termos = [TERMO]) => {
+    mockOrdensGet.mockResolvedValue({ ok: true, ordem: { ...ordemValida, ...ordem } });
+    mockConstGet.mockResolvedValue({ ok: true, os_tipos: [], iphone_models: [] });
+    mockReparosList.mockResolvedValue({ ok: true, reparos: [] });
+    mockEstoqueList.mockResolvedValue({ ok: true, items: [] });
+    mockTiposGarantiaList.mockResolvedValue({ ok: true, items: termos });
+    renderEditOrder();
+  };
+
+  beforeEach(() => {
+    mockPatchStatus.mockReset();
+    toast.error.mockReset();
+  });
+
+  it("OS finalizada mostra o termo gravado", async () => {
+    carregar({ status: "Finalizado", termo_garantia: { id: 7, nome: "Garantia 3 meses" } });
+    expect(await screen.findByText(/Garantia 3 meses — o texto do termo sai no PDF de entrega/)).toBeInTheDocument();
+  });
+
+  it("OS finalizada sem termo avisa que o PDF usa o texto padrão", async () => {
+    carregar({ status: "Finalizado", termo_garantia: null });
+    expect(await screen.findByText(/Sem termo registrado/)).toBeInTheDocument();
+  });
+
+  it("OS em andamento não mostra o painel do termo", async () => {
+    carregar({ status: "Em andamento" });
+    await screen.findByRole("button", { name: /Finalizar OS/ });
+    expect(screen.queryByText(/o texto do termo sai no PDF de entrega/)).not.toBeInTheDocument();
+  });
+
+  it("finalizar exige escolher um termo para a OS", async () => {
+    carregar({ status: "Em andamento" });
+
+    fireEvent.click(await screen.findByRole("button", { name: /Finalizar OS/ }));
+    expect(await screen.findByText("Termo de Garantia *")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar e concluir/ }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Selecione o Termo de Garantia da OS."));
+    expect(mockPatchStatus).not.toHaveBeenCalled();
+  });
+
+  it("sem termos cadastrados avisa onde criar", async () => {
+    carregar({ status: "Em andamento" }, []);
+    fireEvent.click(await screen.findByRole("button", { name: /Finalizar OS/ }));
+    expect(await screen.findByText(/crie um em Termos de Garantia/)).toBeInTheDocument();
   });
 });

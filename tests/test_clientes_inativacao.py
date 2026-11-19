@@ -15,7 +15,7 @@ import uuid
 import pytest
 
 import app as _app
-from migrations.versions import m0007_clientes_ativo
+from migrations.versions import m0009_clientes_ativo
 
 
 def _executar(sql, params=()):
@@ -190,8 +190,8 @@ class TestMigration:
         cursor.executemany("INSERT INTO vendas (id, cliente_id) VALUES (?, ?)", [(1, 3), (2, 42)])
         conn.commit()
 
-        m0007_clientes_ativo.apply(cursor, conn)
-        m0007_clientes_ativo.apply(cursor, conn)  # idempotente
+        m0009_clientes_ativo.apply(cursor, conn)
+        m0009_clientes_ativo.apply(cursor, conn)  # idempotente
 
         assert cursor.execute("SELECT id, nome, ativo FROM clientes ORDER BY id").fetchall() == [
             (3, "A", 1),

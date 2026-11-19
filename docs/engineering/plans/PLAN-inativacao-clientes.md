@@ -4,7 +4,7 @@
 **Origem:** QA pós-benchmark, achado P1-3 (KI-066); alternativa B, escolhida pelo Product Owner (inativação
 no lugar de exclusão física).
 **Status:** Arquitetura **aguardando revisão do Product Owner**. Implementada na branch
-`hotfix/inativacao-clientes-historico`, em PR **sem merge e sem deploy**. **Muda o schema** (`m0007`).
+`hotfix/inativacao-clientes-historico`, em PR **sem merge e sem deploy**. **Muda o schema** (`m0009`).
 
 > Documento efêmero (ADR-010).
 
@@ -17,7 +17,7 @@ no lugar de exclusão física).
       backend 999 passaram (só as 5 falhas de ambiente do KI-030), coverage 76%; frontend 214/214; build,
       ruff e eslint ok
 - [ ] QA Manual: E2E local feito (API 29/29 e tela no Playwright, numa cópia do banco de QA, com a
-      `m0007` aplicada sem alterar contagens nem hashes). Falta aplicar a `m0007` numa cópia do banco de
+      `m0009` aplicada sem alterar contagens nem hashes). Falta aplicar a `m0009` numa cópia do banco de
       produção (depois da aprovação)
 - [ ] Revisão Arquitetural: **pendente com o Product Owner**
 - [ ] Encerramento: depende do merge
@@ -45,7 +45,7 @@ cadastro, e só o documento da OS (`api_os.py:451`) o lê. Por isso a regra "OS 
 inativo" fica **registrada para quando o fluxo passar a vincular**, sem código novo agora; não há caminho
 de escrita para proteger.
 
-## Migration `m0007_clientes_ativo`
+## Migration `m0009_clientes_ativo`
 
 ```sql
 ALTER TABLE clientes ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1
@@ -60,7 +60,7 @@ ALTER TABLE clientes ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1
   - **Só do código:** seguro sem mexer no banco. O código antigo lista colunas explicitamente
     (`_COLUNAS`) e ignora `ativo`. O `INSERT` antigo não informa a coluna e recebe o default `1`.
   - **Do schema** (só se for preciso, com backup):
-    `ALTER TABLE clientes DROP COLUMN ativo; DELETE FROM schema_migrations WHERE id = '0007';`
+    `ALTER TABLE clientes DROP COLUMN ativo; DELETE FROM schema_migrations WHERE id = '0009';`
     O `DROP COLUMN` exige SQLite ≥ 3.35. Isso **perde quem estava inativo**, que fica registrado no
     `audit_log` como `status_change`, e por isso o caminho preferido é o rollback só do código.
 - **Antes do deploy:** backup e aplicação numa cópia do banco de produção, conferindo `COUNT(*)` de

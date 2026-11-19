@@ -78,6 +78,8 @@ Autenticação e perfis de acesso.
 | `relato_cliente` | TEXT | *(migration `m0006`, 2026-11-11)* — o que o cliente contou do defeito, nullable. Sai no documento do cliente (BR-102) |
 | `laudo_tecnico` | TEXT | *(migration `m0006`)* — diagnóstico do técnico, nullable. Sai no documento do cliente (BR-102) |
 | `observacao_interna` | TEXT | *(migration `m0006`)* — nota só da equipe, nullable. **Nunca** sai em documento do cliente (BR-102) |
+| `termo_garantia_id` | INTEGER | *(migration `m0007`, 2026-11-17)* — desde 2026-11-18, FK lógica para `tipos_garantia.id` (o Termo de Garantia escolhido ao finalizar a OS, BR-105), nullable. `NULL` = OS sem termo (finalizada antes, ou pela API antiga por reparo): o comprovante usa o texto padrão de `dados_loja.termos_garantia` |
+| `termo_garantia_nome` / `termo_garantia_texto` | TEXT | *(migration `m0007`)* — **snapshot** do termo no momento da finalização (BR-105): editar ou inativar o termo não muda a OS. Zerados no cancelamento; regravados ao finalizar de novo. Só o texto sai no comprovante de entrega |
 
 Sem índice declarado explicitamente (candidato a `idx_os_status_data_tecnico` — ver KI-005/Sprint 5).
 
@@ -268,13 +270,13 @@ Entidade Cliente (Sprint P0.1) — primeiro domínio a seguir a convenção cont
 | `observacoes` | TEXT NOT NULL | `''` |
 | `criado_em` | TEXT NOT NULL | `datetime('now')` |
 | `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
-| `ativo` | INTEGER NOT NULL | `1` — *(migration `m0007`, 2026-11-12)*. `0` = inativo: fora das novas operações, mantido no histórico (BR-024 a BR-024d, KI-066). Toda linha anterior à migration ficou `1` |
+| `ativo` | INTEGER NOT NULL | `1` — *(migration `m0009`, 2026-11-12)*. `0` = inativo: fora das novas operações, mantido no histórico (BR-024 a BR-024d, KI-066). Toda linha anterior à migration ficou `1` |
 
 **Exclusão (service, não schema):** sem `FOREIGN KEY` declarada, a exclusão física só acontece quando
 `os`, `vendas` e `compras_aparelhos` não têm nenhuma linha com aquele `cliente_id`
 (`fluxoly_clientes_repository.py::contar_vinculos`). Com histórico, o caminho é a inativação.
-Rollback da `m0007`: `ALTER TABLE clientes DROP COLUMN ativo` (SQLite ≥ 3.35) +
-`DELETE FROM schema_migrations WHERE id = '0007'`, com backup; isso perde quem estava inativo
+Rollback da `m0009`: `ALTER TABLE clientes DROP COLUMN ativo` (SQLite ≥ 3.35) +
+`DELETE FROM schema_migrations WHERE id = '0009'`, com backup; isso perde quem estava inativo
 (registrado no `audit_log`). O rollback só do código dispensa isso (`docs/engineering/plans/PLAN-inativacao-clientes.md`).
 
 **Regra de cadastro (service, não schema):** nome obrigatório + ao menos um contato (telefone OU
@@ -451,6 +453,28 @@ Dados da Loja para o cabeçalho dos documentos da OS para o cliente (2026-11-10,
 | `termos_entrada` / `termos_garantia` | TEXT NOT NULL | `DEFAULT ''` — até 4000; impressos no comprovante de entrada/entrega |
 | `atualizado_por` | INTEGER | FK lógica — `usuarios.id` do último salvamento |
 | `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
+
+### `tipos_garantia` — Termos de Garantia
+
+Cadastro de garantia (V1.5, BR-055), compartilhado entre Vendas e OS. Desde 2026-11-18 (migration
+`m0008_tipos_garantia_texto.py`, BR-105) é o **Termo de Garantia**: nome + prazo + texto. Escrita só `admin`;
+sem exclusão, só inativação. `fluxoly_tipos_garantia_controller.py`/`_service.py`/`_repository.py`.
+
+| Coluna | Tipo | Observação |
+|--------|------|------------|
+| `id` | INTEGER PK | autoincrement |
+| `nome` | TEXT NOT NULL | obrigatório |
+| `duracao_meses` | INTEGER NOT NULL | ≥ 0 (0 = sem garantia) |
+| `ativo` | INTEGER NOT NULL | `DEFAULT 1` |
+| `texto` | TEXT NOT NULL | *(migration `m0008`)* `DEFAULT ''`, até 4000; sai no comprovante de entrega da OS. Vazio = texto padrão de `dados_loja.termos_garantia`. `PUT` sem o campo mantém o texto |
+| `criado_em` / `atualizado_em` | TEXT NOT NULL | `datetime('now')` |
+
+### `termos_garantia_modelos` — sem uso desde 2026-11-18
+
+Criada pela migration `m0007` (2026-11-17) para um cadastro de termos só com texto, substituído no dia
+seguinte pelo texto em `tipos_garantia` (`m0008`, BR-105). Nenhuma rota lê ou grava esta tabela; ficou vazia
+em produção (o PO confirmou que nenhum termo foi cadastrado). **Não removida** (migrations são aditivas);
+candidata a `DROP` numa migration futura com plano aprovado.
 
 ### `compras` — lista de compras (versão legada/simplificada)
 

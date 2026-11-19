@@ -213,10 +213,13 @@ export const ordens = {
   create:        (data)       => post("/ordens", withPieceIds(data)),
   update:        (id, data)   => put(`/ordens/${id}`, withPieceIds(data)),
   delete:        (id)         => del(`/ordens/${id}`),
-  // V1.5 -- Garantia de Reparo (BR-061): `garantias` é opcional, {reparo_id: tipo_garantia_id} --
-  // só é exigido pelo backend na transição para Finalizado.
-  patchStatus:   (id, status, garantias) =>
-    request("PATCH", `/ordens/${id}/status`, garantias ? { status, garantias } : { status }),
+  // BR-061/BR-105: `tipoGarantiaId` é o Termo de Garantia da OS (um por OS) -- exigido pelo backend só
+  // na transição para Finalizado; o prazo vale para todos os reparos e o texto sai no PDF de entrega.
+  patchStatus:   (id, status, tipoGarantiaId) =>
+    request("PATCH", `/ordens/${id}/status`, tipoGarantiaId ? { status, tipo_garantia_id: tipoGarantiaId } : { status }),
+  // BR-105 -- só admin: troca o termo da OS finalizada (e o prazo dos reparos).
+  trocarTermoGarantia: (id, tipoGarantiaId) =>
+    patch(`/ordens/${id}/termo-garantia`, { tipo_garantia_id: tipoGarantiaId }),
   clienteHistory:(nome)       => get(`/ordens/historico-cliente?cliente=${encodeURIComponent(nome)}`),
   corrigirGarantiaReparo: (osId, reparoId, data) =>
     patch(`/ordens/${osId}/reparos/${reparoId}/garantia`, data),

@@ -8,13 +8,13 @@ default em toda linha existente -- todo cliente atual continua ativo; ids, conta
 (`os`/`vendas`/`compras_aparelhos.cliente_id`) não mudam. Sem backfill, sem tocar outra tabela.
 
 Rollback (só se necessário, com backup): `ALTER TABLE clientes DROP COLUMN ativo` (SQLite >= 3.35) e
-`DELETE FROM schema_migrations WHERE id = '0007'`. O rollback só do código dispensa isso -- o código
+`DELETE FROM schema_migrations WHERE id = '0009'`. O rollback só do código dispensa isso -- o código
 anterior lista as colunas explicitamente e ignora `ativo`.
 """
 
 import sqlite3
 
-ID = "0007"
+ID = "0009"
 DESCRICAO = "Clientes: coluna ativo (inativação no lugar de exclusão física)"
 
 

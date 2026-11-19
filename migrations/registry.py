@@ -10,7 +10,9 @@ from migrations.versions import (
     m0004_dados_loja,
     m0005_os_data_previsao,
     m0006_os_relato_laudo,
-    m0007_clientes_ativo,
+    m0007_termos_garantia,
+    m0008_tipos_garantia_texto,
+    m0009_clientes_ativo,
 )
 
 MIGRATIONS = [
@@ -20,5 +22,7 @@ MIGRATIONS = [
     m0004_dados_loja,
     m0005_os_data_previsao,
     m0006_os_relato_laudo,
-    m0007_clientes_ativo,
+    m0007_termos_garantia,
+    m0008_tipos_garantia_texto,
+    m0009_clientes_ativo,
 ]
