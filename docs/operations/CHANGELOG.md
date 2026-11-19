@@ -71,6 +71,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   **Migration `m0009`** (`clientes.ativo INTEGER NOT NULL DEFAULT 1`, aditiva, todo cliente existente
   fica ativo). Plano: `docs/engineering/plans/PLAN-inativacao-clientes.md`.
 
+### Corrigido (2026-11-12 — Hotfix P0-1)
+- **fix: reativar OS cancelada volta a consumir as peças** (KI-063, BR-010) — tirar uma OS de `Cancelado`
+  pelo Kanban ou por "Finalizar OS" deixava as peças sem baixa no estoque, e outra OS podia usar a mesma
+  unidade. Agora o `PATCH /api/ordens/<id>/status` reconsome as peças; sem estoque, recusa com 400 e a OS
+  continua Cancelada.
+
 ### Segurança (2026-11-12 — Hotfix P1-2)
 - **fix: sessão passa a refletir desativação, exclusão e troca de perfil** (KI-064) — o perfil ficava
   gravado no cookie desde o login e nunca era conferido: usuário desativado continuava usando o sistema e
