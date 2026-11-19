@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import time
 from datetime import datetime, timedelta
@@ -75,6 +76,18 @@ def atualizar_runtime_mercadophone(mp_cfg, mercado_phone_runtime_config):
         "sync_start_date": mercado_phone_runtime_config.get("sync_start_date") or "",
         "api_base": mercado_phone_runtime_config.get("api_base") or "",
     }
+
+
+def _float_finito(valor):
+    """float() que trata Infinity, NaN e números que estouram o float como valor inválido
+    (ValueError), igual a um texto não numérico -- o chamador já ignora valor inválido (P1-1)."""
+    try:
+        numero = float(valor)
+    except OverflowError as exc:
+        raise ValueError("valor fora do intervalo") from exc
+    if not math.isfinite(numero):
+        raise ValueError("valor não finito")
+    return numero
 
 
 def valor_payload(payload, *caminhos):
@@ -553,7 +566,7 @@ def importar_os_mercado_phone(cursor, payload, config, helpers, fallback_externa
         try:
             vt = valor_payload(payload, ("valorTotal",), ("valorTotalServicos",))
             if vt not in (None, "", 0):
-                valor_cobrado_novo = float(vt)
+                valor_cobrado_novo = _float_finito(vt)
         except (ValueError, TypeError):
             pass
 
@@ -563,7 +576,7 @@ def importar_os_mercado_phone(cursor, payload, config, helpers, fallback_externa
             try:
                 custo = valor_payload(s, ("valorCusto",))
                 if custo not in (None, "", 0):
-                    custo_pecas_novo += float(custo)
+                    custo_pecas_novo += _float_finito(custo)
             except (ValueError, TypeError):
                 pass
 
@@ -825,7 +838,7 @@ def importar_os_mercado_phone(cursor, payload, config, helpers, fallback_externa
     try:
         vt = valor_payload(payload, ("valorTotal",), ("valorTotalServicos",))
         if vt not in (None, "", 0):
-            valor_cobrado = float(vt)
+            valor_cobrado = _float_finito(vt)
     except (ValueError, TypeError):
         pass
     if not valor_cobrado:
@@ -833,7 +846,7 @@ def importar_os_mercado_phone(cursor, payload, config, helpers, fallback_externa
             try:
                 vc = valor_payload(servico, ("valorCobranca",))
                 if vc not in (None, "", 0):
-                    valor_cobrado += float(vc)
+                    valor_cobrado += _float_finito(vc)
             except (ValueError, TypeError):
                 pass
 
@@ -842,7 +855,7 @@ def importar_os_mercado_phone(cursor, payload, config, helpers, fallback_externa
         try:
             custo = valor_payload(servico, ("valorCusto",))
             if custo not in (None, "", 0):
-                custo_pecas += float(custo)
+                custo_pecas += _float_finito(custo)
         except (ValueError, TypeError):
             pass
 
@@ -1183,7 +1196,7 @@ def reprocessar_todas_os_mercado_phone(conectar, config, helpers):
             try:
                 vt = valor_payload(payload, ("valorTotal",), ("valorTotalServicos",))
                 if vt not in (None, "", 0):
-                    valor_cobrado = float(vt)
+                    valor_cobrado = _float_finito(vt)
             except (ValueError, TypeError):
                 pass
             if not valor_cobrado:
@@ -1191,7 +1204,7 @@ def reprocessar_todas_os_mercado_phone(conectar, config, helpers):
                     try:
                         vc = valor_payload(s, ("valorCobranca",))
                         if vc not in (None, "", 0):
-                            valor_cobrado += float(vc)
+                            valor_cobrado += _float_finito(vc)
                     except (ValueError, TypeError):
                         pass
 
@@ -1200,7 +1213,7 @@ def reprocessar_todas_os_mercado_phone(conectar, config, helpers):
                 try:
                     custo = valor_payload(s, ("valorCusto",))
                     if custo not in (None, "", 0):
-                        custo_pecas += float(custo)
+                        custo_pecas += _float_finito(custo)
                 except (ValueError, TypeError):
                     pass
 
