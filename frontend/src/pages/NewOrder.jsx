@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CircleNotch, Plus, Minus, MagnifyingGlass } from "@phosphor-icons/react";
-import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, ordens as ordensApi, precos as precosApi } from "@/api/client";
+import { constantes as constApi, reparos as reparosApi, estoque as estoqueApi, ordens as ordensApi, precos as precosApi, tiposGarantia as tiposGarantiaApi } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { Panel, PanelHeader, PanelTitle, PanelContent } from "@/components/ui/pa
 import { LooseMetric } from "@/components/ui/loose-metric";
 import { formatCurrency, OS_TYPES_FALLBACK, STATUS_OPTIONS_FALLBACK, TIPO_OS_INTERNA } from "@/lib/constants";
 import AparelhoCompradoPicker from "@/components/orders/AparelhoCompradoPicker";
+import TermoGarantiaSelect from "@/components/orders/TermoGarantiaSelect";
 
 const EMPTY_FORM = {
   tipo: "Assistencia",
@@ -47,6 +48,17 @@ export default function NewOrder() {
   // BR-090 -- OS interna: conserto de aparelho comprado (sem cliente, vendedor nem valores).
   const [aparelhoInterno, setAparelhoInterno] = useState(null);
   const interna = form.tipo === TIPO_OS_INTERNA;
+  // KI-077 / BR-105 -- OS criada já finalizada exige o Termo de Garantia (como na finalização pela edição).
+  const precisaTermo = !interna && form.status === "Finalizado";
+  const [termosGarantia, setTermosGarantia] = useState(null);
+  const [termoEscolhido, setTermoEscolhido] = useState("");
+
+  useEffect(() => {
+    if (!precisaTermo || termosGarantia !== null) return;
+    tiposGarantiaApi.list()
+      .then((res) => setTermosGarantia(res?.ok ? res.items || [] : []))
+      .catch(() => setTermosGarantia([]));
+  }, [precisaTermo, termosGarantia]);
 
   useEffect(() => {
     Promise.all([constApi.get(), reparosApi.list(), estoqueApi.list()]).then(([c, r, e]) => {
@@ -128,6 +140,10 @@ export default function NewOrder() {
       toast.error("Selecione o aparelho comprado que vai para o conserto.");
       return;
     }
+    if (precisaTermo && !termoEscolhido) {
+      toast.error("Selecione o Termo de Garantia da OS.");
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -137,6 +153,7 @@ export default function NewOrder() {
         reparo_ids: selectedReparos,
         pecas_ids: Object.entries(pecas).flatMap(([k, v]) => Array.from({ length: v }, () => parseInt(k, 10))),
         ...(interna ? { unidade_serializada_id: aparelhoInterno.id, cliente: "", vendedor: "" } : {}),
+        ...(precisaTermo ? { tipo_garantia_id: parseInt(termoEscolhido, 10) } : {}),
       };
       const res = await ordensApi.create(payload);
       if (res?.ok) {
@@ -320,6 +337,22 @@ export default function NewOrder() {
                   </SelectContent>
                 </Select>
               </div>
+              {precisaTermo && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="order-termo-garantia">Termo de Garantia *</Label>
+                  <TermoGarantiaSelect
+                    id="order-termo-garantia"
+                    value={termoEscolhido}
+                    onChange={setTermoEscolhido}
+                    termos={termosGarantia || []}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {termosGarantia && termosGarantia.length === 0
+                      ? "Nenhum Termo de Garantia cadastrado — crie um em Termos de Garantia."
+                      : "O prazo vale para todos os reparos e o texto sai no PDF de entrega."}
+                  </p>
+                </div>
+              )}
             </div>
 
             {reparosDisponiveis.length > 0 && (
