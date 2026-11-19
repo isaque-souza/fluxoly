@@ -2339,7 +2339,9 @@ Resolvido em 2026-11-18 (commit `7b9f8f3`, branch `hotfix/garantia-servico-os-fi
 OS finalizada herda a garantia que a OS já tem (snapshot nome/prazo, contada da data de finalização), com
 auditoria `garantia_concedida`; OS sem garantia concedida continua sem. Correção manual de reparo sem
 garantia conta da data de finalização. 4 casos novos em `tests/test_garantia_reparo.py`. OS já afetadas em
-produção (ex.: OS nº 6) precisam da correção manual uma vez, depois do deploy.
+produção (ex.: OS nº 6) se recuperam pela tela: admin abre a OS → "Trocar termo" → "Salvar termo"; desde
+`fix/troca-termo-todos-reparos` a troca vale para todos os reparos, inclusive os sem garantia (contados da
+data de finalização).
 
 Sprint prevista:
 Hotfix (fora de sprint).

@@ -9,6 +9,12 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado]
 
+### Corrigido (2026-11-18 — Troca de termo cobre todos os reparos)
+- **fix: trocar o termo de uma OS finalizada vale para todos os reparos** (KI-078, BR-105) — antes só os
+  reparos que já tinham garantia eram regravados; reparo sem garantia (como os afetados pelo KI-078) ficava
+  sem. Agora ganha o termo contado da data de finalização, com auditoria `garantia_concedida`. É o caminho
+  para recuperar, pela tela, as OS já afetadas em produção.
+
 ### Corrigido (2026-11-18 — Nova OS já finalizada)
 - **fix: OS criada já como Finalizado exige o Termo de Garantia** (KI-077) — `POST /api/ordens` passa a aplicar
   a mesma finalização da edição (termo obrigatório, `data_finalizado`, garantia por reparo e termo no PDF); a

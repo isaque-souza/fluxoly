@@ -265,6 +265,36 @@ class TestTrocaPorAdmin:
             conn.close()
         assert {"termo_garantia_alterado", "garantia_alterada"} <= acoes
 
+    def test_troca_cobre_reparo_sem_garantia_a_partir_da_finalizacao(
+        self, client, login_como, usuario_admin, criar_os, dois_reparos_ids, termo_3m, termo_6m
+    ):
+        """KI-078 -- OS finalizada com um reparo sem garantia (perdida antes do
+        hotfix #112, ou OS antiga): trocar o termo vale para todos os reparos; o
+        sem garantia conta da data de finalização, o com garantia mantém o início."""
+        login_como(client, usuario_admin)
+        reparo_a, reparo_b = dois_reparos_ids
+        os_id = criar_os(reparo_ids=[reparo_a, reparo_b])
+        _finalizar(client, os_id, termo_3m)
+        conn = _app.conectar()
+        try:
+            conn.execute("UPDATE os SET data_finalizado='2026-01-10' WHERE id=?", (os_id,))
+            conn.execute("UPDATE os_reparos SET garantia_data_inicio='2026-01-05' WHERE os_id=?", (os_id,))
+            conn.execute(
+                "UPDATE os_reparos SET tipo_garantia_id=NULL, garantia_nome=NULL, garantia_duracao_meses=NULL, "
+                "garantia_data_inicio=NULL, garantia_data_fim=NULL WHERE os_id=? AND reparo_id=?",
+                (os_id, reparo_b),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        resp = client.patch(f"/api/ordens/{os_id}/termo-garantia", json={"tipo_garantia_id": termo_6m})
+        assert resp.status_code == 200
+
+        linhas = {r[0]: r for r in _garantias_reparos(os_id)}
+        assert linhas[reparo_a][1:] == (termo_6m, 6, "2026-01-05", "2026-07-05")
+        assert linhas[reparo_b][1:] == (termo_6m, 6, "2026-01-10", "2026-07-10")
+
     def test_sem_termo_400(self, client, login_como, usuario_admin, criar_os):
         login_como(client, usuario_admin)
         os_id = criar_os(status="Finalizado")
